@@ -1,0 +1,43 @@
+{
+  "global": {
+    "default_www": "www",
+    "default_ssl": "conf/ssl",
+    "log_file": "",
+    "auto_start": false,
+    "minimize_to_tray": false,
+    "run_on_boot": false,
+    "last_service_state": {
+      "caddy": true,
+      "mariadb": true,
+      "php": {
+        "7.3.33": false,
+        "8.2.30": true
+      }
+    },
+    "log_level": "All",
+    "log_to_console": true,
+    "max_log_retention": 14,
+    "auto_update_hosts": true,
+    "php": {
+      "processes_per_version": 3,
+      "processes": {
+        "7.3": 3,
+        "8.2": 8
+      },
+      "base_port_mapping": null
+    }
+  },
+  "projects": [
+    {
+      "name": "example_project",
+      "domains": ["local.example.com"],
+      "type": "laravel",
+      "php_version": "8.2",
+      "root_path": "C:\\path\\to\\your\\www\\root\\example_project",
+      "ssl_crt": "C:\\path\\to\\your\\ssl\\directory\\example.com.crt",
+      "ssl_key": "C:\\path\\to\\your\\ssl\\directory\\example.com.key",
+      "use_ssl": true,
+      "enabled": true
+    }
+  ]
+}

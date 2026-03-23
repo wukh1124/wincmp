@@ -1,0 +1,18 @@
+{
+	admin localhost:2019
+	persist_config off
+	log {
+		output file ./logs/caddy.log {
+			roll_size 10mb
+			roll_keep 30
+			roll_local_time
+		}
+		level INFO
+	}
+}
+
+# 引入共用片段與 PHP 多進程設定
+import snippets/*.caddy
+
+# 引入所有啟用的專案
+import sites/*.caddy

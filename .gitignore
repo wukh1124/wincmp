@@ -1,0 +1,64 @@
+# --- Windows System Files ---
+[Dd]esktop.ini
+Thumbs.db
+.DS_Store
+
+# --- Go Specific ---
+/WinCMP.exe
+/WinCMP-debug.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# --- Project Specific Binaries ---
+# 忽略所有 bin 目錄下的內容，但保留目錄結構用的 .gitkeep
+/bin/*
+!/bin/.gitkeep
+/bin/php/*
+!/bin/php/.gitkeep
+/bin/mariadb/*
+!/bin/mariadb/.gitkeep
+/bin/caddy/*
+!/bin/caddy/.gitkeep
+/bin/heidisql/*
+!/bin/heidisql/.gitkeep
+
+# --- Data & Logs (忽略內容，保留目錄) ---
+# 使用 !.gitkeep 確保空目錄結構能被追蹤，但忽略實際產生的資料
+/data/mariadb/*
+!/data/mariadb/.gitkeep
+
+/logs/*
+!/logs/.gitkeep
+
+/www/*
+!/www/.gitkeep
+
+# --- Configuration & Sensitive Data ---
+# 忽略用戶本機產生的 UI 設定檔 (包含路徑、偏好設定等)
+/conf/wincmp.json
+
+# 如果未來有動態生成的憑證或密鑰
+*.key
+*.pem
+*.cer
+*.crt
+*.csr
+*.bak
+*.7z
+*.zip
+*.caddy
+/conf/certs/
+/conf/ssl/*
+!/conf/ssl/.gitkeep
+!/conf/ssl/cacert.pem
+/conf/wincmp.json
+/conf/my.ini
+/conf/Caddyfile
+
+.memory-bank/

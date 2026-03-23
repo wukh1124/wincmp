@@ -1,0 +1,5 @@
+*/data/mariadb/*
+*/bat/*.7z
+*/bat/*.zip
+*/logs/*.log
+*/www/*
