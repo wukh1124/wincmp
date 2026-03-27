@@ -27,10 +27,12 @@ type PHPVersionInfo struct {
 // ScanResult 掃描結果
 type ScanResult struct {
 	CaddyList    []ServiceInfo
+	ComposerList []ServiceInfo
+	HeidiSQLList []ServiceInfo
 	MariaDBList  []ServiceInfo
+	NodeList     []ServiceInfo
 	PHPList      []PHPVersionInfo
 	SkippedPHP   []string // 記錄被略過的舊 Patch 版本 (如 "8.2.28")
-	HeidiSQLPath string   // HeidiSQL 執行檔路徑 (若找到)
 }
 
 // ScanBinDir 掃描 bin/ 目錄，偵測已安裝的服務與版本
@@ -152,13 +154,55 @@ func ScanBinDir(baseDir string) (*ScanResult, error) {
 	heidisqlDir := filepath.Join(binDir, "heidisql")
 	if entries, err := os.ReadDir(heidisqlDir); err == nil {
 		for _, entry := range entries {
-			if !entry.IsDir() {
+			if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "heidisql-") {
 				continue
 			}
 			exePath := filepath.Join(heidisqlDir, entry.Name(), "heidisql.exe")
 			if _, err := os.Stat(exePath); err == nil {
-				result.HeidiSQLPath = exePath
-				break // 只取第一個找到的
+				version := strings.TrimPrefix(entry.Name(), "heidisql-")
+				result.HeidiSQLList = append(result.HeidiSQLList, ServiceInfo{
+					Name:    "heidisql",
+					Version: version,
+					ExePath: exePath,
+				})
+			}
+		}
+	}
+
+	// 5. 掃描 Composer
+	composerDir := filepath.Join(binDir, "composer")
+	if entries, err := os.ReadDir(composerDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "composer-") {
+				continue
+			}
+			composerBat := filepath.Join(composerDir, entry.Name(), "composer.bat")
+			if _, err := os.Stat(composerBat); err == nil {
+				version := strings.TrimPrefix(entry.Name(), "composer-")
+				result.ComposerList = append(result.ComposerList, ServiceInfo{
+					Name:    "composer",
+					Version: version,
+					ExePath: composerBat,
+				})
+			}
+		}
+	}
+
+	// 6. 掃描 Node 版本
+	nodeDir := filepath.Join(binDir, "node")
+	if entries, err := os.ReadDir(nodeDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "node-") {
+				continue
+			}
+			npmExe := filepath.Join(nodeDir, entry.Name(), "npm.cmd")
+			if _, err := os.Stat(npmExe); err == nil {
+				version := strings.TrimPrefix(entry.Name(), "node-")
+				result.NodeList = append(result.NodeList, ServiceInfo{
+					Name:    "node",
+					Version: version,
+					ExePath: npmExe,
+				})
 			}
 		}
 	}

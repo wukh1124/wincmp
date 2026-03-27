@@ -17,7 +17,7 @@ vendor/
 
 # --- Project Specific Binaries ---
 # 忽略所有 bin 目錄下的內容，但保留目錄結構用的 .gitkeep
-/bin/*
+/bin/*/*
 !/bin/.gitkeep
 /bin/php/*
 !/bin/php/.gitkeep
@@ -27,6 +27,10 @@ vendor/
 !/bin/caddy/.gitkeep
 /bin/heidisql/*
 !/bin/heidisql/.gitkeep
+/bin/composer/*
+!/bin/composer/.gitkeep
+/bin/node/*
+!/bin/node/.gitkeep
 
 # --- Data & Logs (忽略內容，保留目錄) ---
 # 使用 !.gitkeep 確保空目錄結構能被追蹤，但忽略實際產生的資料
