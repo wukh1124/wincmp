@@ -739,8 +739,7 @@ $result = app(TokenService::class)->verify($token);
         // 個別版本覆寫 (key = Minor Version)
         "8.2": 8,
         "7.3": 3,
-      },
-      "base_port_mapping": null, // (保留欄位：未來可自訂 Port 基數)
+      }
     },
   },
   "projects": [

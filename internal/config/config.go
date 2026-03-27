@@ -20,8 +20,8 @@ type GlobalConfig struct {
 	LogFile    string `json:"log_file"`
 
 	// 系統設定
-	RestoreLastState  bool             `json:"restore_last_state"`
-	MinimizeToTray    bool             `json:"minimize_to_tray"`
+	RestoreLastState bool             `json:"restore_last_state"`
+	MinimizeToTray   bool             `json:"minimize_to_tray"`
 	RunOnBoot        bool             `json:"run_on_boot"`
 	Theme            string           `json:"theme"` // 主題設定: "light", "dark", "system" (預設)
 	LastServiceState LastServiceState `json:"last_service_state,omitempty"`
@@ -34,6 +34,12 @@ type GlobalConfig struct {
 	AutoUpdateHosts bool `json:"auto_update_hosts"` // 自動更新 Hosts
 
 	PHP PHPSettings `json:"php,omitempty"`
+
+	MariaDBExternal bool   `json:"mariadb_external"`
+	MariaDBBasedir  string `json:"mariadb_basedir"`
+	MariaDBDatadir  string `json:"mariadb_datadir"`
+	MariaDBType     string `json:"mariadb_type"`
+	MariaDBPort     int    `json:"mariadb_port"`
 }
 
 // LastServiceState 記錄各個服務上次關閉時的狀態
@@ -47,21 +53,23 @@ type LastServiceState struct {
 type PHPSettings struct {
 	ProcessesPerVersion int            `json:"processes_per_version"` // 預設值 (例如 3)
 	Processes           map[string]int `json:"processes"`             // 個別版本設定 (key 為 Minor Version, 如 "8.2")
-	BasePortMapping     map[string]int `json:"base_port_mapping"`
 }
 
 // ProjectConfig 單一專案設定
 type ProjectConfig struct {
-	ID         string   `json:"id,omitempty"`
-	Name       string   `json:"name"`
-	Domains    []string `json:"domains"`
-	Type       string   `json:"type,omitempty"`
-	PHPVersion string   `json:"php_version"`
-	RootPath   string   `json:"root_path"`
-	SSLCrt     string   `json:"ssl_crt"`
-	SSLKey     string   `json:"ssl_key"`
-	UseSSL     bool     `json:"use_ssl"`
-	Enabled    bool     `json:"enabled"`
+	ID          string   `json:"id,omitempty"`
+	Name        string   `json:"name"`
+	Domains     []string `json:"domains"`
+	Type        string   `json:"type,omitempty"`
+	PHPVersion  string   `json:"php_version"`
+	RootPath    string   `json:"root_path"`
+	SSLCrt      string   `json:"ssl_crt"`
+	SSLKey      string   `json:"ssl_key"`
+	UseSSL      bool     `json:"use_ssl"`
+	Enabled     bool     `json:"enabled"`
+	NodePort    int      `json:"node_port,omitempty"`
+	NodeMode    string   `json:"node_mode,omitempty"`    // "Background" 或 "Terminal"
+	NodeVersion string   `json:"node_version,omitempty"` // "24.14.1" 等
 }
 
 // Load 從指定路徑載入 wincmp.json 設定檔

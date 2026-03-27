@@ -3,7 +3,7 @@
     "default_www": "\\www",
     "default_ssl": "\\conf\\ssl",
     "log_file": "",
-    "auto_start": true,
+    "restore_last_state": true,
     "minimize_to_tray": false,
     "run_on_boot": false,
     "theme": "Dark Gray",
@@ -26,11 +26,9 @@
         "7.3": 3,
         "8.2": 10,
         "8.3": 3
-      },
-      "base_port_mapping": null
+      }
     }
   },
   "projects": [
-
   ]
 }

@@ -5,107 +5,189 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
-// MariaDBServiceKey 產生 MariaDB 服務的唯一識別 key
+const MariaDBExternalServiceKey = "mariadb-external"
+
 func MariaDBServiceKey(version string) string {
 	return "mariadb-" + version
 }
 
-// StartMariaDB 啟動 MariaDB 服務
-// 對應 bat 指令: bin\mariadb\mariadb-11.4.10\bin\mariadbd.exe --defaults-file=conf\my.ini --console
-func (m *Manager) StartMariaDB(version string) error {
-	serviceKey := MariaDBServiceKey(version)
-
-	if m.IsRunning(serviceKey) {
-		return fmt.Errorf("MariaDB %s 已經在運行中", version)
+func (m *Manager) getDBExecutableName(dbType string) string {
+	if strings.EqualFold(dbType, "mysql") {
+		return "mysqld.exe"
 	}
-
-	// 驗證設定檔是否存在
-	myIniPath := filepath.Join(m.baseDir, "conf", "my.ini")
-
-	// 執行檔路徑 (根據使用者結構: bin/mariadb/mariadb-version/bin/mariadbd.exe)
-	exePath := filepath.Join(m.baseDir, "bin", "mariadb", "mariadb-"+version, "bin", "mariadbd.exe")
-
-	// 檢查資料目錄是否已初始化 (檢查 data/mariadb/mysql 是否存在)
-	dataDir := filepath.Join(m.baseDir, "data", "mariadb")
-	mysqlDBPath := filepath.Join(dataDir, "mysql")
-	if _, err := os.Stat(mysqlDBPath); os.IsNotExist(err) {
-		m.log("mariadb", "目錄 %s 不存在，正在初始化 MariaDB 資料庫...", mysqlDBPath)
-
-		if err := os.RemoveAll(dataDir); err != nil {
-			return fmt.Errorf("清除資料目錄失敗: %w", err)
-		}
-		if err := os.MkdirAll(dataDir, 0755); err != nil {
-			return fmt.Errorf("建立資料目錄失敗: %w", err)
-		}
-
-		installDbExe := filepath.Join(m.baseDir, "bin", "mariadb", "mariadb-"+version, "bin", "mariadb-install-db.exe")
-		initCmd := m.createCommand(installDbExe,
-			"--datadir="+dataDir,
-		)
-
-		// 擷取初始化程序的輸出
-		m.pipeOutput(initCmd, "mariadb-init", "MariaDB-Init")
-
-		if err := initCmd.Run(); err != nil {
-			m.errorLog("mariadb", "MariaDB 資料庫初始化失敗", err)
-			return fmt.Errorf("MariaDB 初始化失敗: %w", err)
-		}
-		m.log("mariadb", "✅ MariaDB 資料庫初始化完成")
-	}
-
-	cmd := m.createCommand(exePath,
-		"--defaults-file="+myIniPath,
-		"--console",
-	)
-
-	// 擷取輸出
-	m.pipeOutput(cmd, "mariadb", "MariaDB")
-
-	m.log("mariadb", "🚀 啟動 MariaDB %s...", version)
-	m.log("mariadb", "  執行檔: %s", exePath)
-	m.log("mariadb", "  設定檔: %s", myIniPath)
-
-	if err := cmd.Start(); err != nil {
-		m.errorLog("mariadb", fmt.Sprintf("MariaDB %s 啟動失敗", version), err)
-		return fmt.Errorf("MariaDB %s 啟動失敗: %w", version, err)
-	}
-
-	m.register(serviceKey, "MariaDB "+version, exePath, []*exec.Cmd{cmd})
-	m.log("mariadb", "✅ MariaDB %s 已啟動 (PID: %d)", version, cmd.Process.Pid)
-
-	// 監控程序退出
-	go m.waitForExit(cmd, serviceKey, "mariadb", "MariaDB "+version)
-
-	return nil
+	return "mariadbd.exe"
 }
 
-// StopMariaDB 停止 MariaDB 服務
-func (m *Manager) StopMariaDB(version string) error {
-	serviceKey := MariaDBServiceKey(version)
+func (m *Manager) getAdminExecutableName(dbType string) string {
+	if strings.EqualFold(dbType, "mysql") {
+		return "mysqladmin.exe"
+	}
+	return "mariadb-admin.exe"
+}
 
-	if !m.IsRunning(serviceKey) {
-		return fmt.Errorf("MariaDB %s 未在運行", version)
+func (m *Manager) StartMariaDBAsync(
+	version string,
+	external bool,
+	externalBasedir, externalDatadir, externalType string,
+	port int,
+) (done chan struct{}, errCh chan error) {
+	done = make(chan struct{})
+	errCh = make(chan error, 1)
+
+	go func() {
+		defer close(done)
+
+		serviceKey := MariaDBExternalServiceKey
+		displayName := "外部 " + externalType
+		if !external {
+			serviceKey = MariaDBServiceKey(version)
+			displayName = "MariaDB " + version
+		}
+
+		if m.IsRunning(serviceKey) {
+			errCh <- fmt.Errorf("%s 已經在運行中", displayName)
+			return
+		}
+
+		var exePath, dataDir, myIniPath string
+		var dbExeName string
+
+		if external {
+			dbExeName = m.getDBExecutableName(externalType)
+			exePath = filepath.Join(externalBasedir, "bin", dbExeName)
+			dataDir = externalDatadir
+
+			if _, err := os.Stat(exePath); os.IsNotExist(err) {
+				errCh <- fmt.Errorf("執行檔不存在: %s，請確認 Basedir 路徑正確", exePath)
+				return
+			}
+			if _, err := os.Stat(dataDir); os.IsNotExist(err) {
+				errCh <- fmt.Errorf("資料目錄不存在: %s，請先初始化資料庫", dataDir)
+				return
+			}
+		} else {
+			dbExeName = m.getDBExecutableName("mariadb")
+			myIniPath = filepath.Join(m.baseDir, "conf", "my.ini")
+			exePath = filepath.Join(m.baseDir, "bin", "mariadb", "mariadb-"+version, "bin", dbExeName)
+			dataDir = filepath.Join(m.baseDir, "data", "mariadb")
+			mysqlDBPath := filepath.Join(dataDir, "mysql")
+
+			if _, err := os.Stat(mysqlDBPath); os.IsNotExist(err) {
+				m.log("mariadb", "目錄 %s 不存在，正在初始化 MariaDB 資料庫...", mysqlDBPath)
+
+				if err := os.RemoveAll(dataDir); err != nil {
+					errCh <- fmt.Errorf("清除資料目錄失敗: %w", err)
+					return
+				}
+				if err := os.MkdirAll(dataDir, 0755); err != nil {
+					errCh <- fmt.Errorf("建立資料目錄失敗: %w", err)
+					return
+				}
+
+				installDbExe := filepath.Join(m.baseDir, "bin", "mariadb", "mariadb-"+version, "bin", "mariadb-install-db.exe")
+				initCmd := m.createCommand(installDbExe, "--datadir="+dataDir)
+				m.pipeOutput(initCmd, "mariadb-init", "MariaDB-Init")
+
+				if err := initCmd.Run(); err != nil {
+					m.errorLog("mariadb", "MariaDB 資料庫初始化失敗", err)
+					errCh <- fmt.Errorf("MariaDB 初始化失敗: %w", err)
+					return
+				}
+				m.log("mariadb", "✅ MariaDB 資料庫初始化完成")
+			}
+		}
+
+		var cmd *exec.Cmd
+		var portLabel string
+		if port > 0 {
+			portLabel = fmt.Sprintf("%d", port)
+		} else {
+			portLabel = "3306 (預設)"
+		}
+
+		if external {
+			args := []string{"--basedir=" + externalBasedir, "--datadir=" + dataDir}
+			if port > 0 {
+				args = append(args, "--port="+fmt.Sprintf("%d", port))
+			}
+			args = append(args, "--console")
+			cmd = m.createCommand(exePath, args...)
+		} else {
+			args := []string{"--defaults-file=" + myIniPath}
+			if port > 0 {
+				args = append(args, "--port="+fmt.Sprintf("%d", port))
+			}
+			args = append(args, "--console")
+			cmd = m.createCommand(exePath, args...)
+		}
+		m.pipeOutput(cmd, "mariadb", "MariaDB")
+
+		m.log("mariadb", "🚀 啟動 %s...", displayName)
+		m.log("mariadb", "  執行檔: %s", exePath)
+		m.log("mariadb", "  Port: %s", portLabel)
+		if external {
+			m.log("mariadb", "  Basedir: %s", externalBasedir)
+			m.log("mariadb", "  Datadir: %s", dataDir)
+		} else {
+			m.log("mariadb", "  設定檔: %s", myIniPath)
+		}
+
+		if err := cmd.Start(); err != nil {
+			m.errorLog("mariadb", fmt.Sprintf("%s 啟動失敗", displayName), err)
+			errCh <- fmt.Errorf("%s 啟動失敗: %w", displayName, err)
+			return
+		}
+
+		m.register(serviceKey, displayName, exePath, []*exec.Cmd{cmd})
+		m.log("mariadb", "✅ %s 已啟動 (PID: %d)", displayName, cmd.Process.Pid)
+
+		go m.waitForExit(cmd, serviceKey, "mariadb", displayName)
+		errCh <- nil
+	}()
+
+	return done, errCh
+}
+
+func (m *Manager) StopMariaDB(
+	version string,
+	external bool,
+	externalBasedir, externalType string,
+	port int,
+) error {
+	serviceKey := MariaDBExternalServiceKey
+	displayName := "外部 " + externalType
+	if !external {
+		serviceKey = MariaDBServiceKey(version)
+		displayName = "MariaDB " + version
 	}
 
-	m.log("mariadb", "🛑 停止 MariaDB %s...", version)
+	if !m.IsRunning(serviceKey) {
+		return fmt.Errorf("%s 未在運行", displayName)
+	}
 
-	// 嘗試優雅關閉：使用 mariadb-admin shutdown (取代 mysqladmin)
-	adminExe := filepath.Join(m.baseDir, "bin", "mariadb", "mariadb-"+version, "bin", "mariadb-admin.exe")
+	m.log("mariadb", "🛑 停止 %s...", displayName)
+
+	var adminExe string
+	if external {
+		adminExe = filepath.Join(externalBasedir, "bin", m.getAdminExecutableName(externalType))
+	} else {
+		adminExe = filepath.Join(m.baseDir, "bin", "mariadb", "mariadb-"+version, "bin", m.getAdminExecutableName("mariadb"))
+	}
+
 	shutdownCmd := m.createCommand(adminExe, "-u", "root", "shutdown")
 	if err := shutdownCmd.Run(); err != nil {
-		// mariadb-admin 失敗，改用強制終止
-		m.errorLog("mariadb", "mariadb-admin shutdown 失敗，改用強制終止", err)
+		m.errorLog("mariadb", "admin shutdown 失敗，改用強制終止", err)
 		if err := m.stopService(serviceKey); err != nil {
-			m.errorLog("mariadb", fmt.Sprintf("MariaDB %s 停止失敗", version), err)
+			m.errorLog("mariadb", fmt.Sprintf("%s 停止失敗", displayName), err)
 			return err
 		}
 	} else {
-		// mariadb-admin 成功，等待程序退出
 		m.unregister(serviceKey)
 	}
 
-	m.log("mariadb", "✅ MariaDB %s 已停止", version)
+	m.log("mariadb", "✅ %s 已停止", displayName)
 	return nil
 }

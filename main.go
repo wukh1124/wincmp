@@ -2,12 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,6 +53,7 @@ var (
 	caddyLog     = binding.NewString()
 	dbLog        = binding.NewString()
 	phpLog       = binding.NewString()
+	nodeLog      = binding.NewString()
 	logEntries   map[string]*container.Scroll
 	logTabs      *container.AppTabs // 用於切換分頁
 	procMgr      *process.Manager
@@ -60,6 +63,10 @@ var (
 	isZenityOpen atomic.Bool // 防止重複開啟檔案選擇器
 	myApp        fyne.App    // Fyne App 實例，用於主題切換
 
+	// 日誌寫入器 (lumberjack 全域實例)
+	nodeLogWriter *lumberjack.Logger
+	appLogWriter  *lumberjack.Logger
+
 	// 切換分頁的節流 / 防抖相關
 	tabSwitchMu sync.Mutex
 	lastSwitch  time.Time
@@ -67,7 +74,46 @@ var (
 
 	// 主分頁
 	mainTabs *container.AppTabs
+
+	// PHP Row UI 組件映射 (key: MajorMin, e.g. "8.2")
+	phpRowUI map[string]*phpRowComponents
 )
+
+func initLogWriters() {
+	logDir := filepath.Join(baseDir, "logs")
+	os.MkdirAll(logDir, 0755)
+
+	now := time.Now()
+	dateStr := now.Format("2006-01-02")
+
+	retention := 0
+	if appCfg != nil {
+		retention = appCfg.Global.MaxLogRetention
+	}
+
+	nodeLogWriter = &lumberjack.Logger{
+		Filename:   filepath.Join(logDir, fmt.Sprintf("node-%s.log", dateStr)),
+		MaxSize:    10,
+		MaxBackups: 0,
+		MaxAge:     retention,
+		Compress:   true,
+	}
+
+	appLogWriter = &lumberjack.Logger{
+		Filename:   filepath.Join(logDir, fmt.Sprintf("wincmp-%s.log", dateStr)),
+		MaxSize:    10,
+		MaxBackups: 0,
+		MaxAge:     retention,
+		Compress:   true,
+	}
+}
+
+type phpRowComponents struct {
+	StatusLabel   *widget.Label
+	ActionBtn     *widget.Button
+	ProcessSelect *widget.Select
+	UptimeData    binding.String
+}
 
 func addLog(category string, msg string) {
 	now := time.Now()
@@ -89,6 +135,9 @@ func addLog(category string, msg string) {
 	case "php":
 		logSource = phpLog
 		tabIndex = 3
+	case "node":
+		logSource = nodeLog
+		tabIndex = 4
 	default:
 		catKey = "system"
 		logSource = sysLog
@@ -139,29 +188,12 @@ func addLog(category string, msg string) {
 		}
 	}
 
-	// 確保日誌目錄存在
-	logDir := filepath.Join(baseDir, "logs")
-	os.MkdirAll(logDir, 0755)
-
-	// 按日期分檔: wincmp-YYYY-MM-DD.log
-	dateStr := now.Format("2006-01-02")
-	appLogPath := filepath.Join(logDir, fmt.Sprintf("wincmp-%s.log", dateStr))
-
-	retention := 0
-	if appCfg != nil {
-		retention = appCfg.Global.MaxLogRetention
+	// 使用全域 lumberjack 寫入日誌
+	if catKey == "node" && nodeLogWriter != nil {
+		nodeLogWriter.Write([]byte(newText))
+	} else if appLogWriter != nil {
+		appLogWriter.Write([]byte(newText))
 	}
-
-	// 使用 lumberjack 處理日誌滾動與保留
-	l := &lumberjack.Logger{
-		Filename:   appLogPath,
-		MaxSize:    10, // megabytes
-		MaxBackups: 0,  // 不限制數量，改用天數限制
-		MaxAge:     retention,
-		Compress:   true,
-	}
-	defer l.Close()
-	l.Write([]byte(newText))
 }
 
 // addErrorLog 全域錯誤日誌機制
@@ -247,7 +279,9 @@ func openZenitySelector(win fyne.Window, currentPath, fallbackPath string, isDir
 		// 呼叫 Zenity (此時因為 go routine 阻塞在這裡，Fyne 視窗仍被 blocker 覆蓋)
 		path, err := zenity.SelectFile(finalOpts...)
 		if err == nil && path != "" {
-			callback(path)
+			fyne.DoAndWait(func() {
+				callback(path)
+			})
 		}
 	}()
 }
@@ -263,6 +297,19 @@ func openLocalPath(path string) {
 	if err != nil {
 		addErrorLog("system", "開啟失敗: "+absPath, err)
 	}
+}
+
+func openLatestLog(prefix string) {
+	logDir := filepath.Join(baseDir, "logs")
+	pattern := filepath.Join(logDir, prefix+"-*.log")
+	matches, err := filepath.Glob(pattern)
+	if err != nil || len(matches) == 0 {
+		addErrorLog("system", "找不到日誌檔: "+prefix, nil)
+		return
+	}
+	sort.Strings(matches)
+	latest := matches[len(matches)-1]
+	openLocalPath(latest)
 }
 
 func toPtr(s string) *uint16 {
@@ -327,7 +374,6 @@ func saveAndQuit(myApp fyne.App) {
 	myApp.Quit()
 }
 
-
 func main() {
 	// ─── 單一執行個體防護 ──────────────────────────────
 	isFirst, err := singleinstance.TryAcquire()
@@ -361,6 +407,9 @@ func main() {
 			baseDir = cwd
 		}
 	}
+
+	// 初始化日誌寫入器 (lumberjack 全域實例)
+	initLogWriters()
 
 	myApp = app.New()
 	myApp.SetIcon(resourceIconSvg)
@@ -400,8 +449,8 @@ func main() {
 		scroll := container.NewVScroll(richText)
 		logEntries[category] = scroll
 
-		// 仍套用 logTheme 來控制邊距 (InnerPadding=0)
-		return container.NewThemeOverride(scroll, &logTheme{Theme: theme.DefaultTheme()})
+		// 套用 logTheme，內部會動態跟隨全域主題並在深色模式下確保字體亮度
+		return container.NewThemeOverride(scroll, &logTheme{})
 	}
 
 	logTabs = container.NewAppTabs(
@@ -409,6 +458,7 @@ func main() {
 		container.NewTabItem("Caddy", createLogTab(caddyLog, "caddy")),
 		container.NewTabItem("MariaDB", createLogTab(dbLog, "mariadb")),
 		container.NewTabItem("PHP", createLogTab(phpLog, "php")),
+		container.NewTabItem("Node", createLogTab(nodeLog, "node")),
 	)
 
 	addLog("system", "正在初始化 WinCMP...")
@@ -432,6 +482,24 @@ func main() {
 		} else {
 			addLog("system", "  ✗ 未找到 Caddy")
 		}
+		if len(scanRes.ComposerList) > 0 {
+			versions := make([]string, len(scanRes.ComposerList))
+			for i, c := range scanRes.ComposerList {
+				versions[i] = c.Version
+			}
+			addLog("system", fmt.Sprintf("  ✓ 找到 Composer 版本: [%s]", strings.Join(versions, ", ")))
+		} else {
+			addLog("system", "  ✗ 未找到 Composer")
+		}
+		if len(scanRes.HeidiSQLList) > 0 {
+			versions := make([]string, len(scanRes.HeidiSQLList))
+			for i, h := range scanRes.HeidiSQLList {
+				versions[i] = h.Version
+			}
+			addLog("system", fmt.Sprintf("  ✓ 找到 HeidiSQL 版本: [%s]", strings.Join(versions, ", ")))
+		} else {
+			addLog("system", "  ✗ 未找到 HeidiSQL")
+		}
 		if len(scanRes.MariaDBList) > 0 {
 			versions := make([]string, len(scanRes.MariaDBList))
 			for i, m := range scanRes.MariaDBList {
@@ -441,13 +509,21 @@ func main() {
 		} else {
 			addLog("system", "  ✗ 未找到 MariaDB")
 		}
+		if len(scanRes.NodeList) > 0 {
+			versions := make([]string, len(scanRes.NodeList))
+			for i, n := range scanRes.NodeList {
+				versions[i] = n.Version
+			}
+			addLog("system", fmt.Sprintf("  ✓ 找到 Node 版本: [%s]", strings.Join(versions, ", ")))
+		} else {
+			addLog("system", "  ✗ 未找到 Node")
+		}
 		if len(scanRes.PHPList) > 0 {
 			versions := make([]string, len(scanRes.PHPList))
 			for i, p := range scanRes.PHPList {
 				versions[i] = p.Version
 			}
 			addLog("system", fmt.Sprintf("  ✓ 找到 PHP 版本: [%s]", strings.Join(versions, ", ")))
-			// 顯示略過的版本
 			if len(scanRes.SkippedPHP) > 0 {
 				addLog("system", fmt.Sprintf("  ℹ 略過舊 Patch 版本 (僅保留最新): [%s]", strings.Join(scanRes.SkippedPHP, ", ")))
 			}
@@ -464,11 +540,11 @@ func main() {
 		// 使用預設設定
 		appCfg = &config.WincmpConfig{
 			Global: config.GlobalConfig{
-				DefaultWWW:      "www",
-				DefaultSSL:      "conf/ssl",
+				DefaultWWW:       "www",
+				DefaultSSL:       "conf/ssl",
 				RestoreLastState: bool(true), // 用於相容性
 				MinimizeToTray:   false,
-				AutoUpdateHosts: true,
+				AutoUpdateHosts:  true,
 			},
 		}
 	} else {
@@ -500,7 +576,20 @@ func main() {
 		if appCfg.Global.LastServiceState.MariaDB && len(scanRes.MariaDBList) > 0 {
 			info := scanRes.MariaDBList[0]
 			addLog("system", "自動啟動上次執行的服務: MariaDB")
-			procMgr.StartMariaDB(info.Version)
+			go func() {
+				done, errCh := procMgr.StartMariaDBAsync(
+					info.Version,
+					appCfg.Global.MariaDBExternal,
+					appCfg.Global.MariaDBBasedir,
+					appCfg.Global.MariaDBDatadir,
+					appCfg.Global.MariaDBType,
+					appCfg.Global.MariaDBPort,
+				)
+				<-done
+				if err := <-errCh; err != nil {
+					addErrorLog("mariadb", "自動啟動 MariaDB 失敗", err)
+				}
+			}()
 		}
 	}
 
@@ -531,9 +620,20 @@ func main() {
 		checkPHPForProjects(myWindow)
 	}
 
+	logTitle := widget.NewLabelWithStyle("Terminal Logs", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	caddyLogBtn := widget.NewButtonWithIcon("Caddy.log", theme.DocumentIcon(), func() {
+		openLocalPath(filepath.Join(baseDir, "logs", "caddy.log"))
+	})
+	nodeLogBtn := widget.NewButtonWithIcon("Node.log", theme.DocumentIcon(), func() {
+		openLatestLog("node")
+	})
+	wincmpLogBtn := widget.NewButtonWithIcon("Wincmp.log", theme.DocumentIcon(), func() {
+		openLatestLog("wincmp")
+	})
+	logBtnWrap := container.NewHBox(caddyLogBtn, nodeLogBtn, wincmpLogBtn)
+	logTopBar := container.NewBorder(nil, nil, nil, logBtnWrap, logTitle)
 	logPanel := container.NewBorder(
-		widget.NewLabelWithStyle("Terminal Logs", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		nil, nil, nil, logTabs,
+		logTopBar, nil, nil, nil, logTabs,
 	)
 
 	// --- 各 Tab 內容 ---
@@ -541,16 +641,25 @@ func main() {
 		// 這裡傳入一個重新整理 Projects Tab 的內容的閉包，如果需要的話
 	})
 	projectsContent := createProjectsTab(myWindow)
-	dbExplorerContent := createDatabaseExplorerTab()
+	dbExplorerContent, refreshDBExplorer := createDatabaseExplorerTab()
 	settingsContent := createSettingsTab(myWindow)
+	nodeContent, refreshNodeTab := createNodeTab(myWindow)
 
 	// --- 左側選單 (Sidebar) ---
 	mainTabs = container.NewAppTabs(
 		container.NewTabItemWithIcon("Dashboard", theme.HomeIcon(), dashboardContent),
 		container.NewTabItemWithIcon("Projects", theme.FolderIcon(), projectsContent),
 		container.NewTabItemWithIcon("DB Explorer", theme.StorageIcon(), dbExplorerContent),
+		container.NewTabItemWithIcon("Node.js", theme.ComputerIcon(), nodeContent),
 		container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), settingsContent),
 	)
+	mainTabs.OnSelected = func(tab *container.TabItem) {
+		if tab.Text == "DB Explorer" {
+			refreshDBExplorer()
+		} else if tab.Text == "Node.js" {
+			refreshNodeTab()
+		}
+	}
 	mainTabs.SetTabLocation(container.TabLocationLeading)
 
 	// 上下分割 (上方功能區 65%，下方 Log 區 35%)
@@ -570,26 +679,54 @@ func main() {
 	})
 
 	myWindow.SetContent(fynetooltip.AddWindowToolTipLayer(mainLayout, myWindow.Canvas()))
+
+	defer func() {
+		if nodeLogWriter != nil {
+			nodeLogWriter.Close()
+		}
+		if appLogWriter != nil {
+			appLogWriter.Close()
+		}
+	}()
+
 	myWindow.ShowAndRun()
 }
 
-// ===== 自定義主題解決 Log 對比度 =====
-type logTheme struct {
-	fyne.Theme
-}
+// ===== 自定義主題解決 Log 對比度 (動態跟隨主程式主題) =====
+// ===== 自定義主題解決 Log 對比度 (動態跟隨主程式主題) =====
+type logTheme struct{}
 
 func (m *logTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	if name == theme.ColorNameDisabled {
-		return theme.ForegroundColor() // 讓 Disabled 文字顏色跟一般文字一樣
+	if variant == theme.VariantDark {
+		if name == theme.ColorNameForeground {
+			return color.NRGBA{R: 225, G: 225, B: 225, A: 255} // 優化後更亮的灰白色
+		}
+		if name == theme.ColorNameDisabled {
+			return color.NRGBA{R: 190, G: 190, B: 190, A: 255} // 時間戳也稍微加亮
+		}
 	}
-	return m.Theme.Color(name, variant)
+
+	// 其他顏色透過全域主題獲取
+	t := fyne.CurrentApp().Settings().Theme()
+	if name == theme.ColorNameDisabled {
+		return t.Color(theme.ColorNameForeground, variant) // 讓 Disabled 文字顏色跟一般文字一樣
+	}
+	return t.Color(name, variant)
+}
+
+func (m *logTheme) Font(style fyne.TextStyle) fyne.Resource {
+	return fyne.CurrentApp().Settings().Theme().Font(style)
+}
+
+func (m *logTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
+	return fyne.CurrentApp().Settings().Theme().Icon(name)
 }
 
 func (m *logTheme) Size(name fyne.ThemeSizeName) float32 {
 	if name == theme.SizeNameInnerPadding || name == theme.SizeNameInputBorder {
 		return 0
 	}
-	return m.Theme.Size(name)
+	return fyne.CurrentApp().Settings().Theme().Size(name)
 }
 
 // ===== 自定義按鈕主題（保留 Start/Stop 狀態顏色）====
@@ -680,6 +817,8 @@ func createDarkTheme(variant string) fyne.Theme {
 // ===== 1. Dashboard（動態版本 + 實際程序管理）=====
 
 func createDashboard(win fyne.Window, refreshProjects func()) fyne.CanvasObject {
+	phpRowUI = make(map[string]*phpRowComponents)
+
 	header := container.NewGridWithColumns(6,
 		widget.NewLabelWithStyle("Service", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Version", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -703,7 +842,7 @@ func createDashboard(win fyne.Window, refreshProjects func()) fyne.CanvasObject 
 
 	// MariaDB 行
 	for _, mariaDBInfo := range scanRes.MariaDBList {
-		rows = append(rows, createMariaDBRow(mariaDBInfo))
+		rows = append(rows, createMariaDBRow(win, mariaDBInfo))
 	}
 
 	if len(scanRes.PHPList) > 0 {
@@ -724,6 +863,9 @@ var domainReg = regexp.MustCompile(`[^a-z0-9]+`)
 
 func GenerateValidDomain(folderName string) string {
 	domain := strings.ToLower(folderName)
+	// 移除所有路徑部分 (如果 folderName 包含路徑，只取最後一部分)
+	domain = filepath.Base(filepath.ToSlash(domain))
+
 	domain = domainReg.ReplaceAllString(domain, "-")
 	domain = strings.Trim(domain, "-")
 	if domain == "" {
@@ -772,6 +914,8 @@ func scanDefaultWWW() {
 		return
 	}
 
+	mapping, fallback := loadLaravelPHPMapping()
+
 	added := 0
 	for _, d := range entries {
 		if !d.IsDir() {
@@ -791,9 +935,18 @@ func scanDefaultWWW() {
 			res := detect.DetectLaravel(projectPath)
 			projectType := ""
 			phpVersion := ""
+			nodePort := 0
 			if res.IsLaravel {
 				projectType = "laravel"
-				phpVersion = "8.2"
+				phpVersion = getRecommendedPHPVersion(res.Version, mapping, fallback)
+			} else {
+				// 嘗試偵測 Node.js
+				nodeRes := detect.DetectNode(projectPath)
+				if nodeRes.Confidence >= 40 {
+					projectType = "node"
+					nodePort = 3000 // 預設端口
+					res = nodeRes   // 複用 res 以便後續 Log 輸出 (Confidence/Reasons)
+				}
 			}
 
 			appCfg.Projects = append(appCfg.Projects, config.ProjectConfig{
@@ -802,19 +955,128 @@ func scanDefaultWWW() {
 				PHPVersion: phpVersion,
 				Type:       projectType,
 				UseSSL:     true,
-				Enabled:    false,
+				Enabled:    true,
+				NodePort:   nodePort,
 			})
 			added++
 
-			if res.IsLaravel {
+			if projectType == "laravel" {
 				addLog("system", fmt.Sprintf("  ↳ %s: 偵測為 Laravel (Confidence: %d, Reasons: %s)", name, res.Confidence, strings.Join(res.Reasons, ", ")))
+			} else if projectType == "node" {
+				addLog("system", fmt.Sprintf("  ↳ %s: 偵測為 Node.js/React (Confidence: %d, Reasons: %s)", name, res.Confidence, strings.Join(res.Reasons, ", ")))
 			}
 		}
 	}
 	if added > 0 {
 		appCfg.Save(filepath.Join(baseDir, "conf", "wincmp.json"))
 		addLog("system", fmt.Sprintf("📌 已自動掃描並加入 %d 個新專案", added))
+		triggerHostsUpdate()
 	}
+}
+
+type laravelPHPMapping struct {
+	Mappings []struct {
+		Laravel string `json:"laravel"`
+		PHP     string `json:"php"`
+	} `json:"mappings"`
+	Fallback string `json:"fallback"`
+}
+
+func loadLaravelPHPMapping() (map[string]string, string) {
+	mappingFile := filepath.Join(baseDir, "conf", "php", "laravel-php-mapping.json")
+	data, err := os.ReadFile(mappingFile)
+	if err != nil {
+		return nil, "8.2"
+	}
+
+	var m laravelPHPMapping
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, "8.2"
+	}
+
+	result := make(map[string]string)
+	for _, item := range m.Mappings {
+		result[item.Laravel] = item.PHP
+	}
+	return result, m.Fallback
+}
+
+func getRecommendedPHPVersion(laravelVersion string, mapping map[string]string, fallback string) string {
+	if laravelVersion == "" {
+		return validatePHPMajorVersion(fallback)
+	}
+
+	if php, ok := mapping[laravelVersion]; ok {
+		validated := validatePHPMajorVersion(php)
+		if validated != "" {
+			return validated
+		}
+	}
+
+	if strings.HasPrefix(laravelVersion, "<") {
+		if php, ok := mapping["<"+laravelMajorStr(laravelVersion)]; ok {
+			validated := validatePHPMajorVersion(php)
+			if validated != "" {
+				return validated
+			}
+		}
+		return validatePHPMajorVersion(fallback)
+	}
+
+	if strings.HasPrefix(laravelVersion, ">=") || strings.HasPrefix(laravelVersion, ">") {
+		if php, ok := mapping[">="+laravelMajorStr(laravelVersion)]; ok {
+			validated := validatePHPMajorVersion(php)
+			if validated != "" {
+				return validated
+			}
+		}
+	}
+
+	laravelMajor := parseLaravelMajor(laravelVersion)
+	if laravelMajor == 0 {
+		return validatePHPMajorVersion(fallback)
+	}
+
+	for laravelMajor > 0 {
+		key := strconv.Itoa(laravelMajor) + ".x"
+		if php, ok := mapping[key]; ok {
+			validated := validatePHPMajorVersion(php)
+			if validated != "" {
+				return validated
+			}
+		}
+		laravelMajor--
+	}
+
+	return validatePHPMajorVersion(fallback)
+}
+
+func laravelMajorStr(version string) string {
+	version = strings.TrimPrefix(version, "<")
+	version = strings.TrimPrefix(version, ">=")
+	version = strings.TrimPrefix(version, ">")
+	return strings.TrimSuffix(version, ".x")
+}
+
+func parseLaravelMajor(version string) int {
+	majorStr := laravelMajorStr(version)
+	if majorStr == "" {
+		return 0
+	}
+	major, err := strconv.Atoi(majorStr)
+	if err != nil {
+		return 0
+	}
+	return major
+}
+
+func validatePHPMajorVersion(majorVersion string) string {
+	for _, info := range scanRes.PHPList {
+		if info.MajorMin == majorVersion {
+			return majorVersion
+		}
+	}
+	return ""
 }
 
 // generatePHPUpstream 產生 PHP 負載平衡設定檔
@@ -906,17 +1168,25 @@ func generateCaddyfiles() error {
 		// IP Allow rule or others
 		content += "\timport common_dev\n"
 
-		// Root
-		root := appCfg.GetProjectRoot(proj, baseDir)
-		root = strings.ReplaceAll(root, "\\", "/")
-		content += fmt.Sprintf("\troot * %s\n", root)
+		if proj.Type == "node" {
+			port := proj.NodePort
+			if port == 0 {
+				port = 3000
+			}
+			content += fmt.Sprintf("\treverse_proxy localhost:%d\n", port)
+		} else {
+			// Root
+			root := appCfg.GetProjectRoot(proj, baseDir)
+			root = strings.ReplaceAll(root, "\\", "/")
+			content += fmt.Sprintf("\troot * %s\n", root)
 
-		if proj.PHPVersion != "" {
-			phpVerStr := strings.ReplaceAll(proj.PHPVersion, ".", "")
-			content += fmt.Sprintf("\timport php%s\n", phpVerStr)
+			if proj.PHPVersion != "" {
+				phpVerStr := strings.ReplaceAll(proj.PHPVersion, ".", "")
+				content += fmt.Sprintf("\timport php%s\n", phpVerStr)
+			}
+
+			content += "\timport static_site\n"
 		}
-
-		content += "\timport static_site\n"
 		content += "}\n"
 
 		os.WriteFile(caddyPath, []byte(content), 0644)
@@ -931,6 +1201,7 @@ func checkPHPForProjects(win fyne.Window) {
 		ProjectName string
 		PHPVersion  string // MajorMin, e.g. "8.2"
 		IsRunning   bool
+		PHPInfo     *scanner.PHPVersionInfo
 	}
 
 	var statuses []projectPHPStatus
@@ -940,14 +1211,16 @@ func checkPHPForProjects(win fyne.Window) {
 			continue
 		}
 
-		// 透過 MajorMin 找到對應的完整版本號，檢查 PHP-CGI 是否已啟動
 		running := false
-		for _, phpInfo := range scanRes.PHPList {
+		var matchedPHPInfo *scanner.PHPVersionInfo
+		for i := range scanRes.PHPList {
+			phpInfo := &scanRes.PHPList[i]
 			if phpInfo.MajorMin == proj.PHPVersion {
 				serviceKey := process.PHPServiceKey(phpInfo.Version)
 				if procMgr.IsRunning(serviceKey) {
 					running = true
 				}
+				matchedPHPInfo = phpInfo
 				break
 			}
 		}
@@ -956,6 +1229,7 @@ func checkPHPForProjects(win fyne.Window) {
 			ProjectName: proj.Name,
 			PHPVersion:  proj.PHPVersion,
 			IsRunning:   running,
+			PHPInfo:     matchedPHPInfo,
 		})
 	}
 
@@ -990,10 +1264,46 @@ func checkPHPForProjects(win fyne.Window) {
 		}
 		msgBuilder.WriteString(fmt.Sprintf("  • %s → PHP %s (%s)\n", s.ProjectName, s.PHPVersion, status))
 	}
-	msgBuilder.WriteString("\n請在 Dashboard 的 PHP FastCGI 區塊啟動對應版本。")
+
+	var toStart []*scanner.PHPVersionInfo
+	started := make(map[string]bool)
+	for _, s := range statuses {
+		if !s.IsRunning && s.PHPInfo != nil && !started[s.PHPInfo.MajorMin] {
+			toStart = append(toStart, s.PHPInfo)
+			started[s.PHPInfo.MajorMin] = true
+		}
+	}
+
+	if len(toStart) > 0 {
+		msgBuilder.WriteString("\n即將啟動：")
+		for i, php := range toStart {
+			if i > 0 {
+				msgBuilder.WriteString("、")
+			}
+			msgBuilder.WriteString("PHP " + php.MajorMin)
+		}
+	}
+	msgBuilder.WriteString("。")
+
+	lbl := widget.NewLabel(msgBuilder.String())
+	lbl.Wrapping = fyne.TextWrapWord
+	dialogContent := container.NewVScroll(lbl)
+	dialogContent.SetMinSize(fyne.NewSize(350, 200))
 
 	fyne.Do(func() {
-		dialog.ShowInformation("⚠️ PHP Service Required", msgBuilder.String(), win)
+		dialog.NewCustomConfirm("⚠️ PHP Service Required", "Run PHP", "Cancel", dialogContent, func(confirm bool) {
+			if !confirm {
+				return
+			}
+			for _, phpInfo := range toStart {
+				if err := procMgr.StartPHPCGI(*phpInfo); err != nil {
+					addErrorLog("php", fmt.Sprintf("啟動 PHP %s 失敗", phpInfo.Version), err)
+				} else {
+					addLog("php", fmt.Sprintf("✅ PHP %s 已啟動", phpInfo.Version))
+				}
+			}
+			refreshAllPHPStatus()
+		}, win).Show()
 	})
 }
 
@@ -1008,15 +1318,6 @@ func createCaddyRow(win fyne.Window, info scanner.ServiceInfo, refreshProjects f
 	var reloadBtn *widget.Button
 
 	reloadBtn = widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
-		/*if err := checkSSLCerts(); err != nil {
-			dialog.ShowError(err, win)
-			addErrorLog("caddy", "SSL 檢查失敗", err)
-			return
-		}
-		if err := generateCaddyfiles(); err != nil {
-			addErrorLog("caddy", "生成配置失敗", err)
-			return
-		}*/
 		if err := procMgr.ReloadCaddy(info.ExePath); err != nil {
 			addErrorLog("caddy", "重載 Caddy 失敗", err)
 		} else {
@@ -1028,8 +1329,8 @@ func createCaddyRow(win fyne.Window, info scanner.ServiceInfo, refreshProjects f
 	actionBtn = widget.NewButton("Start", func() {
 		if !procMgr.IsRunning("caddy") {
 			blocked := port.CheckPorts([]port.PortInfo{
-				{"Caddy", 80},
-				{"Caddy", 443},
+				{Service: "Caddy", Port: 80},
+				{Service: "Caddy", Port: 443},
 			})
 			if len(blocked) > 0 {
 				for _, p := range blocked {
@@ -1057,6 +1358,7 @@ func createCaddyRow(win fyne.Window, info scanner.ServiceInfo, refreshProjects f
 				statusLabel.SetText(fmt.Sprintf("Running (PID: %d)", pids[0]))
 			}
 			actionBtn.SetText("Stop")
+			actionBtn.SetIcon(theme.CancelIcon())
 			reloadBtn.Enable()
 			monitorUptime("caddy", uptimeData)
 			checkPHPForProjects(win)
@@ -1068,6 +1370,7 @@ func createCaddyRow(win fyne.Window, info scanner.ServiceInfo, refreshProjects f
 			}
 			statusLabel.SetText("Stopped")
 			actionBtn.SetText("Start")
+			actionBtn.SetIcon(theme.MediaPlayIcon())
 			reloadBtn.Disable()
 			uptimeData.Set("")
 			saveLastServiceState()
@@ -1080,8 +1383,11 @@ func createCaddyRow(win fyne.Window, info scanner.ServiceInfo, refreshProjects f
 			statusLabel.SetText(fmt.Sprintf("Running (PID: %d)", pids[0]))
 		}
 		actionBtn.SetText("Stop")
+		actionBtn.SetIcon(theme.CancelIcon())
 		reloadBtn.Enable()
 		monitorUptime("caddy", uptimeData)
+	} else {
+		actionBtn.SetIcon(theme.MediaPlayIcon())
 	}
 
 	// 初始化主題包裝器 (使用閉包檢查按鈕文字)
@@ -1110,45 +1416,132 @@ func createCaddyRow(win fyne.Window, info scanner.ServiceInfo, refreshProjects f
 }
 
 // createMariaDBRow 建立 MariaDB 服務列
-func createMariaDBRow(info scanner.ServiceInfo) fyne.CanvasObject {
+func createMariaDBRow(win fyne.Window, info scanner.ServiceInfo) fyne.CanvasObject {
 	statusLabel := widget.NewLabel("Stopped")
 	uptimeData := binding.NewString()
 	uptimeData.Set("")
 	uptimeLabel := widget.NewLabelWithData(uptimeData)
 
 	var actionBtn *widget.Button
-	serviceKey := process.MariaDBServiceKey(info.Version)
+
+	isExternal := appCfg.Global.MariaDBExternal
+	serviceKey := process.MariaDBExternalServiceKey
+	serviceName := "MariaDB"
+	versionLabel := info.Version
+
+	if isExternal {
+		serviceName = appCfg.Global.MariaDBType
+		versionLabel = "External"
+	}
 
 	actionBtn = widget.NewButton("Start", func() {
 		if !procMgr.IsRunning(serviceKey) {
+			checkPort := 3306
+			if appCfg.Global.MariaDBPort > 0 {
+				checkPort = appCfg.Global.MariaDBPort
+			}
 			blocked := port.CheckPorts([]port.PortInfo{
-				{"MariaDB", 3306},
+				{Service: "MariaDB", Port: checkPort},
 			})
 			if len(blocked) > 0 {
 				for _, p := range blocked {
-					addErrorLog("mariadb", fmt.Sprintf("通訊埠 %d 被佔用，無法啟動 MariaDB", p.Port), nil)
+					addErrorLog("mariadb", fmt.Sprintf("通訊埠 %d 被佔用，無法啟動 %s", p.Port, serviceName), nil)
 				}
 				return
 			}
 
-			if err := procMgr.StartMariaDB(info.Version); err != nil {
-				addErrorLog("mariadb", "啟動 MariaDB 失敗", err)
-				return
+			startMariaDBWithUI := func() {
+				blocker := newModalBlocker()
+				blocker.Resize(win.Canvas().Size())
+				win.Canvas().Overlays().Add(blocker)
+
+				loadingLabel := canvas.NewText("啟動資料庫中，請稍候...", color.White)
+				loadingLabel.Alignment = fyne.TextAlignCenter
+				loadingLabel.TextSize = 14
+				loadingCard := container.NewVBox(
+					layout.NewSpacer(),
+					container.NewCenter(loadingLabel),
+					layout.NewSpacer(),
+				)
+				loadingCard.Resize(fyne.NewSize(300, 60))
+				loadingCardBG := canvas.NewRectangle(color.NRGBA{R: 30, G: 30, B: 30, A: 230})
+				loadingOverlay := container.NewStack(loadingCardBG, loadingCard)
+				loadingOverlay.Resize(fyne.NewSize(300, 60))
+				win.Canvas().Overlays().Add(loadingOverlay)
+
+				go func() {
+					done, errCh := procMgr.StartMariaDBAsync(
+						info.Version,
+						isExternal,
+						appCfg.Global.MariaDBBasedir,
+						appCfg.Global.MariaDBDatadir,
+						appCfg.Global.MariaDBType,
+						appCfg.Global.MariaDBPort,
+					)
+					<-done
+					win.Canvas().Overlays().Remove(blocker)
+					win.Canvas().Overlays().Remove(loadingOverlay)
+
+					err := <-errCh
+					if err != nil {
+						addErrorLog("mariadb", "啟動 "+serviceName+" 失敗", err)
+						return
+					}
+					pids := procMgr.GetPIDs(serviceKey)
+					if len(pids) > 0 {
+						fyne.Do(func() {
+							statusLabel.SetText(fmt.Sprintf("Running (PID: %d)", pids[0]))
+						})
+					}
+					fyne.Do(func() {
+						actionBtn.SetText("Stop")
+						actionBtn.SetIcon(theme.CancelIcon())
+					})
+					monitorUptime(serviceKey, uptimeData)
+					saveLastServiceState()
+				}()
 			}
-			pids := procMgr.GetPIDs(serviceKey)
-			if len(pids) > 0 {
-				statusLabel.SetText(fmt.Sprintf("Running (PID: %d)", pids[0]))
+
+			if !isExternal {
+				baseDir := procMgr.GetBaseDir()
+				mysqlDBPath := filepath.Join(baseDir, "data", "mariadb", "mysql")
+				needsInit := false
+				if _, err := os.Stat(mysqlDBPath); os.IsNotExist(err) {
+					needsInit = true
+				}
+
+				dataDir := filepath.Join(baseDir, "data", "mariadb")
+
+				if needsInit {
+					dialog.ShowConfirm(
+						"MariaDB 初始化確認",
+						fmt.Sprintf("MariaDB 資料庫即將進行初始化（約需 10-30 秒）。\n\n路徑: %s\n\n初始化將會清空上述路徑下的資料，確定要繼續嗎？", dataDir),
+						func(confirmed bool) {
+							if confirmed {
+								startMariaDBWithUI()
+							}
+						},
+						win,
+					)
+					return
+				}
 			}
-			actionBtn.SetText("Stop")
-			monitorUptime(serviceKey, uptimeData)
-			saveLastServiceState()
+
+			startMariaDBWithUI()
 		} else {
-			if err := procMgr.StopMariaDB(info.Version); err != nil {
-				addErrorLog("mariadb", "停止 MariaDB 失敗", err)
+			if err := procMgr.StopMariaDB(
+				info.Version,
+				isExternal,
+				appCfg.Global.MariaDBBasedir,
+				appCfg.Global.MariaDBType,
+				appCfg.Global.MariaDBPort,
+			); err != nil {
+				addErrorLog("mariadb", "停止 "+serviceName+" 失敗", err)
 				return
 			}
 			statusLabel.SetText("Stopped")
 			actionBtn.SetText("Start")
+			actionBtn.SetIcon(theme.MediaPlayIcon())
 			uptimeData.Set("")
 			saveLastServiceState()
 		}
@@ -1160,7 +1553,10 @@ func createMariaDBRow(info scanner.ServiceInfo) fyne.CanvasObject {
 			statusLabel.SetText(fmt.Sprintf("Running (PID: %d)", pids[0]))
 		}
 		actionBtn.SetText("Stop")
+		actionBtn.SetIcon(theme.CancelIcon())
 		monitorUptime(serviceKey, uptimeData)
+	} else {
+		actionBtn.SetIcon(theme.MediaPlayIcon())
 	}
 
 	actionBtnWrapper := container.NewThemeOverride(actionBtn, &coloredButtonTheme{
@@ -1173,13 +1569,24 @@ func createMariaDBRow(info scanner.ServiceInfo) fyne.CanvasObject {
 		actionBtn.Refresh()
 	}
 
+	portStr := "3306"
+	if appCfg.Global.MariaDBPort > 0 {
+		portStr = fmt.Sprintf("%d", appCfg.Global.MariaDBPort)
+	}
+
+	settingsBtn := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
+		showMariaDBSettingsDialog(win)
+	})
+
+	actionGroup := container.NewBorder(nil, nil, nil, settingsBtn, actionBtnWrapper)
+
 	return container.NewGridWithColumns(6,
-		widget.NewLabel("MariaDB"),
-		widget.NewLabel(info.Version),
+		widget.NewLabel(serviceName),
+		widget.NewLabel(versionLabel),
 		statusLabel,
 		uptimeLabel,
-		widget.NewLabel("3306"),
-		actionBtnWrapper,
+		widget.NewLabel(portStr),
+		actionGroup,
 	)
 }
 
@@ -1273,22 +1680,16 @@ func createPHPRow(info scanner.PHPVersionInfo) fyne.CanvasObject {
 				addErrorLog("php", "啟動 PHP-CGI 失敗", err)
 				return
 			}
-			pids := procMgr.GetPIDs(serviceKey)
-			statusLabel.SetText(fmt.Sprintf("Running (%d PIDs)", len(pids)))
-			actionBtn.SetText("Stop")
-			processSelect.Disable()
 			monitorUptime(serviceKey, uptimeData)
 			saveLastServiceState()
+			refreshAllPHPStatus()
 		} else {
 			if err := procMgr.StopPHPCGI(info.Version); err != nil {
 				addErrorLog("php", "停止 PHP-CGI 失敗", err)
 				return
 			}
-			statusLabel.SetText("Stopped")
-			actionBtn.SetText("Start")
-			processSelect.Enable()
-			uptimeData.Set("")
 			saveLastServiceState()
+			refreshAllPHPStatus()
 		}
 	})
 
@@ -1296,8 +1697,11 @@ func createPHPRow(info scanner.PHPVersionInfo) fyne.CanvasObject {
 		pids := procMgr.GetPIDs(serviceKey)
 		statusLabel.SetText(fmt.Sprintf("Running (%d PIDs)", len(pids)))
 		actionBtn.SetText("Stop")
+		actionBtn.SetIcon(theme.CancelIcon())
 		processSelect.Disable()
 		monitorUptime(serviceKey, uptimeData)
+	} else {
+		actionBtn.SetIcon(theme.MediaPlayIcon())
 	}
 
 	actionBtnWrapper := container.NewThemeOverride(actionBtn, &coloredButtonTheme{
@@ -1310,6 +1714,15 @@ func createPHPRow(info scanner.PHPVersionInfo) fyne.CanvasObject {
 		actionBtn.Refresh()
 	}
 
+	if phpRowUI != nil {
+		phpRowUI[info.MajorMin] = &phpRowComponents{
+			StatusLabel:   statusLabel,
+			ActionBtn:     actionBtn,
+			ProcessSelect: processSelect,
+			UptimeData:    uptimeData,
+		}
+	}
+
 	return container.NewGridWithColumns(6,
 		widget.NewLabel("PHP-CGI"),
 		widget.NewLabel(info.Version),
@@ -1320,10 +1733,51 @@ func createPHPRow(info scanner.PHPVersionInfo) fyne.CanvasObject {
 	)
 }
 
+// refreshAllPHPStatus 根據實際進程狀態刷新 Dashboard 上所有 PHP Row 的 UI
+func refreshAllPHPStatus() {
+	if phpRowUI == nil {
+		return
+	}
+
+	for majorMin, ui := range phpRowUI {
+		var info *scanner.PHPVersionInfo
+		for i := range scanRes.PHPList {
+			if scanRes.PHPList[i].MajorMin == majorMin {
+				info = &scanRes.PHPList[i]
+				break
+			}
+		}
+		if info == nil {
+			continue
+		}
+
+		serviceKey := process.PHPServiceKey(info.Version)
+		if procMgr.IsRunning(serviceKey) {
+			pids := procMgr.GetPIDs(serviceKey)
+			ui.StatusLabel.SetText(fmt.Sprintf("Running (%d PIDs)", len(pids)))
+			ui.ActionBtn.SetText("Stop")
+			ui.ActionBtn.SetIcon(theme.CancelIcon())
+			ui.ProcessSelect.Disable()
+			monitorUptime(serviceKey, ui.UptimeData)
+		} else {
+			ui.StatusLabel.SetText("Stopped")
+			ui.ActionBtn.SetText("Start")
+			ui.ActionBtn.SetIcon(theme.MediaPlayIcon())
+			ui.ProcessSelect.Enable()
+			ui.UptimeData.Set("")
+		}
+	}
+}
+
 // ===== 2. 網頁專案管理 =====
 
 // showProjectEditor 顯示專案編輯器
 func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func()) {
+	// 保存原始值，用於判斷是否需要停止 node
+	origEnabled := proj.Enabled
+	origType := proj.Type
+	origNodePort := proj.NodePort
+
 	// --- 基本設定 ---
 	nameEntry := widget.NewEntry()
 	nameEntry.SetText(proj.Name)
@@ -1373,11 +1827,33 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 	enabledCheck := widget.NewCheck("Project Enabled", nil)
 	enabledCheck.Checked = proj.Enabled
 
-	typeSelect := widget.NewSelect([]string{"None (Static)", "Laravel"}, nil)
+	nodePortEntry := widget.NewEntry()
+	nodePortEntry.SetText(fmt.Sprintf("%d", proj.NodePort))
+	if proj.NodePort == 0 {
+		nodePortEntry.SetText("3000")
+	}
+
+	typeSelect := widget.NewSelect([]string{"None (Static)", "Laravel", "Node.js"}, nil)
 	if proj.Type == "laravel" {
 		typeSelect.SetSelected("Laravel")
+	} else if proj.Type == "node" {
+		typeSelect.SetSelected("Node.js")
 	} else {
 		typeSelect.SetSelected("None (Static)")
+	}
+
+	nodePortFormItem := widget.NewFormItem("Node.js Port", nodePortEntry)
+	// 初始顯示邏輯
+	if typeSelect.Selected != "Node.js" {
+		nodePortFormItem.Widget.Hide()
+	}
+
+	typeSelect.OnChanged = func(s string) {
+		if s == "Node.js" {
+			nodePortFormItem.Widget.Show()
+		} else {
+			nodePortFormItem.Widget.Hide()
+		}
 	}
 
 	// --- 進階設定 ---
@@ -1437,6 +1913,7 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 		widget.NewLabelWithStyle("Availability & Type", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		enabledCheck,
 		container.NewHBox(widget.NewLabel("Project Type: "), typeSelect),
+		widget.NewForm(nodePortFormItem),
 		widget.NewSeparator(),
 		advTitle,
 		advForm,
@@ -1446,14 +1923,21 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 		if save {
 			proj.Name = nameEntry.Text
 			rawDomains := domainsEntry.Text
-			// 處理換行或逗號分隔
 			rawDomains = strings.ReplaceAll(rawDomains, "\n", ",")
 			doms := strings.Split(rawDomains, ",")
 			var finalDomains []string
 			for _, d := range doms {
 				trimmed := strings.TrimSpace(d)
 				if trimmed != "" {
-					finalDomains = append(finalDomains, trimmed)
+					// 移除路徑部分 (e.g. example.test/dashboard -> example.test)
+					if idx := strings.Index(trimmed, "/"); idx != -1 {
+						trimmed = trimmed[:idx]
+					}
+					// 再次清理以防萬一
+					trimmed = strings.TrimSpace(trimmed)
+					if trimmed != "" {
+						finalDomains = append(finalDomains, trimmed)
+					}
 				}
 			}
 			proj.Domains = finalDomains
@@ -1470,10 +1954,42 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 			proj.SSLKey = sslKeyEntry.Text
 			proj.Enabled = enabledCheck.Checked
 
+			var newType string
+			var newNodePort int
 			if typeSelect.Selected == "Laravel" {
 				proj.Type = "laravel"
+				newType = "laravel"
+			} else if typeSelect.Selected == "Node.js" {
+				proj.Type = "node"
+				newType = "node"
+				fmt.Sscanf(nodePortEntry.Text, "%d", &proj.NodePort)
+				newNodePort = proj.NodePort
 			} else {
 				proj.Type = ""
+				newType = ""
+			}
+
+			// 檢查是否需要停止 node（當 Enabled、Type、NodePort 有變更時）
+			needStopNode := (origEnabled && !enabledCheck.Checked) ||
+				(origType == "node" && newType != "node") ||
+				(origType == "node" && newType == "node" && origNodePort != newNodePort)
+
+			if needStopNode {
+				serviceKey := process.NodeServiceKey(proj.ID)
+				isRunning := procMgr.IsRunning(serviceKey) || process.CheckNodeRunning(origNodePort)
+				if isRunning {
+					dialog.ShowConfirm("停止 Node.js",
+						fmt.Sprintf("「%s」的設定變更會影響 Node.js 運行。\n是否要自動停止正在運行的 Node？", proj.Name),
+						func(confirm bool) {
+							if confirm {
+								go func() {
+									procMgr.StopNode(*proj)
+									fyne.Do(func() { onSave() })
+								}()
+							}
+						}, win)
+					return
+				}
 			}
 
 			onSave()
@@ -1681,9 +2197,18 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 				res := detect.DetectLaravel(path)
 				projectType := ""
 				phpVersion := ""
+				nodePort := 0
 				if res.IsLaravel {
 					projectType = "laravel"
-					phpVersion = "8.2"
+					mapping, fallback := loadLaravelPHPMapping()
+					phpVersion = getRecommendedPHPVersion(res.Version, mapping, fallback)
+				} else {
+					nodeRes := detect.DetectNode(path)
+					if nodeRes.Confidence >= 40 {
+						projectType = "node"
+						nodePort = 3000
+						res = nodeRes
+					}
 				}
 
 				newProj := config.ProjectConfig{
@@ -1693,20 +2218,52 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 					Type:       projectType,
 					RootPath:   path,
 					UseSSL:     true,
-					Enabled:    false,
+					Enabled:    true,
+					NodePort:   nodePort,
 				}
 
 				appCfg.Projects = append(appCfg.Projects, newProj)
+
 				appCfg.Save(filepath.Join(baseDir, "conf", "wincmp.json"))
 				generateCaddyfiles()
+				triggerHostsUpdate()
 
 				// 更新 UI
 				list.Refresh()
-				addLog("system", fmt.Sprintf("📌 已新增專案: %s", name))
-				if res.IsLaravel {
-					addLog("system", fmt.Sprintf("  ↳ 偵測為 Laravel (Confidence: %d, Reasons: %s)", res.Confidence, strings.Join(res.Reasons, ", ")))
+				addLog("system", fmt.Sprintf("📌 已新增專案: %s，即將自動開啟編輯器", name))
+
+				// 自動開啟編輯器 (稍微延遲以避開 Zenity Blocker 的競爭或干擾)
+				time.AfterFunc(300*time.Millisecond, func() {
+					fyne.Do(func() {
+						// 重新獲取最新的指標，確保安全
+						var latestProj *config.ProjectConfig
+						for i := range appCfg.Projects {
+							if appCfg.Projects[i].Name == name {
+								latestProj = &appCfg.Projects[i]
+								break
+							}
+						}
+
+						if latestProj != nil {
+							showProjectEditor(win, latestProj, func() {
+								appCfg.Save(filepath.Join(baseDir, "conf", "wincmp.json"))
+								generateCaddyfiles()
+								list.Refresh()
+								addLog("system", fmt.Sprintf("✅ 已更新專案: %s", latestProj.Name))
+							})
+						}
+					})
+				})
+
+				if projectType == "laravel" {
+					phpInfo := ""
+					if phpVersion != "" {
+						phpInfo = fmt.Sprintf(", 建議 PHP: %s", phpVersion)
+					}
+					addLog("system", fmt.Sprintf("  ↳ 偵測為 Laravel%s (Confidence: %d, Reasons: %s)", phpInfo, res.Confidence, strings.Join(res.Reasons, ", ")))
+				} else if projectType == "node" {
+					addLog("system", fmt.Sprintf("  ↳ 偵測為 Node.js/React (Confidence: %d, Reasons: %s)", res.Confidence, strings.Join(res.Reasons, ", ")))
 				}
-				dialog.ShowInformation("成功", fmt.Sprintf("專案 %s 已加入。\n請在 Dashboard 點擊 Reload Caddy 生效。", name), win)
 			},
 			zenity.Title("Select Project Folder"),
 		)
@@ -1770,7 +2327,7 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 
 // ===== 3. 簡易資料庫檢視器 (Database Explorer) =====
 
-func createDatabaseExplorerTab() fyne.CanvasObject {
+func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 	title := widget.NewLabelWithStyle("Database Explorer", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 
 	// 狀態提示標籤
@@ -1984,11 +2541,11 @@ func createDatabaseExplorerTab() fyne.CanvasObject {
 	})
 
 	heidiSQLBtn := widget.NewButtonWithIcon("Open in HeidiSQL", theme.ComputerIcon(), func() {
-		heidiPath := scanRes.HeidiSQLPath
-		if heidiPath == "" {
+		if len(scanRes.HeidiSQLList) == 0 {
 			addLog("system", "DB Explorer: 找不到 HeidiSQL 執行檔")
 			return
 		}
+		heidiPath := scanRes.HeidiSQLList[0].ExePath
 		cmd := exec.Command(heidiPath, "-h=127.0.0.1", "-P=3306", "-u=root")
 		if err := cmd.Start(); err != nil {
 			addErrorLog("system", "啟動 HeidiSQL 失敗", err)
@@ -2007,7 +2564,7 @@ func createDatabaseExplorerTab() fyne.CanvasObject {
 		refreshUI()
 	}()
 
-	return container.NewBorder(container.NewVBox(topBar, statusLabel), nil, nil, nil, contentStack)
+	return container.NewBorder(container.NewVBox(topBar, statusLabel), nil, nil, nil, contentStack), refreshUI
 }
 
 func applyTheme(themeName string) {
@@ -2257,6 +2814,192 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 	return container.NewPadded(container.NewVScroll(scrollContent))
 }
 
+// showMariaDBSettingsDialog 顯示 MariaDB 設定對話框
+func showMariaDBSettingsDialog(win fyne.Window) {
+	runningModeHint := canvas.NewText("選擇「內建」使用 WinCMP 內建的 MariaDB，選擇「自訂」使用您電腦中現有的資料庫。", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	runningModeHint.TextSize = 10
+
+	dbType := appCfg.Global.MariaDBType
+	if dbType == "" {
+		dbType = "MariaDB"
+	}
+	typeSelect := widget.NewSelect([]string{"MariaDB", "MySQL"}, nil)
+	typeSelect.SetSelected(dbType)
+
+	dbEngineHint := canvas.NewText("請選擇與您 Binary Path 中一致的資料庫類型 (MySQL 或 MariaDB)。", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	dbEngineHint.TextSize = 10
+
+	binaryPathHint := canvas.NewText("請選擇包含 bin 資料夾的根目錄 (例如：...\\mysql-8.4.3-winx64)", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	binaryPathHint.TextSize = 10
+	binaryPathEntry := widget.NewEntry()
+	binaryPathEntry.SetText(appCfg.Global.MariaDBBasedir)
+	binaryPathBrowse := widget.NewButtonWithIcon("Browse", theme.FolderOpenIcon(), func() {
+		openZenitySelector(win, binaryPathEntry.Text, baseDir, true,
+			func(path string) {
+				binaryPathEntry.SetText(path)
+				if path != "" {
+					if _, err := os.Stat(filepath.Join(path, "bin", "mariadbd.exe")); err == nil {
+						typeSelect.SetSelected("MariaDB")
+					} else if _, err := os.Stat(filepath.Join(path, "bin", "mysqld.exe")); err == nil {
+						typeSelect.SetSelected("MySQL")
+					}
+				}
+			},
+			zenity.Title("Select MariaDB/MySQL Binary Path"))
+	})
+	binaryPathFormItem := widget.NewFormItem("Binary Path", container.NewVBox(
+		container.NewBorder(nil, nil, nil, binaryPathBrowse, binaryPathEntry),
+		binaryPathHint,
+	))
+
+	dataPathHint := canvas.NewText("資料庫檔案存放位置 (例如：\\data\\mysql-8.4.3)，建議與程式目錄分開存放以利升級。", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	dataPathHint.TextSize = 10
+	dataPathEntry := widget.NewEntry()
+	dataPathEntry.SetText(appCfg.Global.MariaDBDatadir)
+	dataPathBrowse := widget.NewButtonWithIcon("Browse", theme.FolderOpenIcon(), func() {
+		openZenitySelector(win, dataPathEntry.Text, baseDir, true,
+			func(path string) { dataPathEntry.SetText(path) },
+			zenity.Title("Select MariaDB/MySQL Data Path"))
+	})
+	dataPathFormItem := widget.NewFormItem("Data Path", container.NewVBox(
+		container.NewBorder(nil, nil, nil, dataPathBrowse, dataPathEntry),
+		dataPathHint,
+	))
+
+	portEntry := widget.NewEntry()
+	if appCfg.Global.MariaDBPort > 0 {
+		portEntry.SetText(fmt.Sprintf("%d", appCfg.Global.MariaDBPort))
+	} else {
+		portEntry.SetText("")
+	}
+	portFormItem := widget.NewFormItem("Port", portEntry)
+
+	runningModeGroup := widget.NewRadioGroup([]string{"內建 (使用預設 MariaDB 實例)", "自訂 (手動指定 Binary Path 與 Data Path)"}, func(selected string) {
+		if selected == "自訂 (手動指定 Binary Path 與 Data Path)" {
+			typeSelect.Enable()
+			dbEngineHint.Show()
+			binaryPathFormItem.Widget.Show()
+			dataPathFormItem.Widget.Show()
+		} else {
+			typeSelect.Disable()
+			dbEngineHint.Hide()
+			binaryPathFormItem.Widget.Hide()
+			dataPathFormItem.Widget.Hide()
+		}
+	})
+	if appCfg.Global.MariaDBExternal {
+		runningModeGroup.Selected = "自訂 (手動指定 Binary Path 與 Data Path)"
+	} else {
+		runningModeGroup.Selected = "內建 (使用預設 MariaDB 實例)"
+	}
+
+	form := widget.NewForm(
+		widget.NewFormItem("Running Mode", container.NewVBox(container.NewHBox(runningModeGroup), runningModeHint)),
+		widget.NewFormItem("DB Engine", container.NewVBox(typeSelect, dbEngineHint)),
+		binaryPathFormItem,
+		dataPathFormItem,
+		portFormItem,
+	)
+
+	if !appCfg.Global.MariaDBExternal {
+		typeSelect.Disable()
+		dbEngineHint.Hide()
+		binaryPathFormItem.Widget.Hide()
+		dataPathFormItem.Widget.Hide()
+	}
+
+	d := dialog.NewCustomConfirm("Database Settings", "Save", "Cancel", container.NewVScroll(form), func(save bool) {
+		if !save {
+			return
+		}
+
+		isExt := runningModeGroup.Selected == "自訂 (手動指定 Binary Path 與 Data Path)"
+		basedir := binaryPathEntry.Text
+		datadir := dataPathEntry.Text
+		dbTypeSel := typeSelect.Selected
+
+		portStr := portEntry.Text
+		portVal := 0
+		if portStr != "" {
+			fmt.Sscanf(portStr, "%d", &portVal)
+			if portVal < 1 || portVal > 65535 {
+				dialog.ShowError(fmt.Errorf("Port 必須是 1-65535 的數字"), win)
+				return
+			}
+		}
+
+		if portVal > 0 {
+			blocked := port.CheckPorts([]port.PortInfo{
+				{Service: "MariaDB", Port: portVal},
+			})
+			if len(blocked) > 0 {
+				for _, p := range blocked {
+					dialog.ShowError(fmt.Errorf("Port %d 已被佔用，無法使用", p.Port), win)
+					return
+				}
+			}
+		}
+
+		if isExt {
+			if basedir == "" {
+				dialog.ShowError(fmt.Errorf("外部模式必須指定 Binary Path"), win)
+				return
+			}
+			if datadir == "" {
+				dialog.ShowError(fmt.Errorf("外部模式必須指定 Data Path"), win)
+				return
+			}
+			if _, err := os.Stat(datadir); os.IsNotExist(err) {
+				dialog.ShowError(fmt.Errorf("資料目錄不存在: %s\n\n請先初始化資料庫", datadir), win)
+				return
+			}
+		}
+
+		appCfg.Global.MariaDBExternal = isExt
+		appCfg.Global.MariaDBType = dbTypeSel
+		appCfg.Global.MariaDBBasedir = basedir
+		appCfg.Global.MariaDBDatadir = datadir
+		appCfg.Global.MariaDBPort = portVal
+
+		cfgPath := filepath.Join(baseDir, "conf", "wincmp.json")
+		if err := appCfg.Save(cfgPath); err != nil {
+			dialog.ShowError(fmt.Errorf("儲存設定失敗: %v", err), win)
+			return
+		}
+
+		if portVal > 0 {
+			myIniPath := filepath.Join(baseDir, "conf", "my.ini")
+			if content, err := os.ReadFile(myIniPath); err == nil {
+				lines := strings.Split(string(content), "\n")
+				for i, line := range lines {
+					if strings.HasPrefix(strings.TrimSpace(line), "port=") {
+						lines[i] = fmt.Sprintf("port=%d", portVal)
+						break
+					}
+				}
+				os.WriteFile(myIniPath, []byte(strings.Join(lines, "\n")), 0644)
+			}
+		}
+
+		mode := "內建"
+		if isExt {
+			mode = "外部 " + dbTypeSel
+		}
+		portLabel := "3306 (預設)"
+		if portVal > 0 {
+			portLabel = fmt.Sprintf("%d", portVal)
+		}
+		addLog("system", fmt.Sprintf("MariaDB 設定已儲存: 模式=%s, Port=%s", mode, portLabel))
+
+		newDashboard := createDashboard(win, func() {})
+		mainTabs.Items[0].Content = newDashboard
+		mainTabs.Refresh()
+	}, win)
+
+	d.Resize(fyne.NewSize(540, 440))
+	d.Show()
+}
+
 // refreshSystemTray 根據設定更新系統匣選單 (目前維持選單始終存在以確保穩定性)
 func refreshSystemTray(myApp fyne.App, myWindow fyne.Window) {
 	if desk, ok := myApp.(desktop.App); ok {
@@ -2279,12 +3022,10 @@ func triggerHostsUpdate() {
 		return
 	}
 
-	// 收集所有啟用專案的網域
+	// 收集所有專案的網域 (不論是否 Enabled，只要加入專案就應更新 Hosts 以便開發)
 	var allDomains []string
 	for _, proj := range appCfg.Projects {
-		if proj.Enabled {
-			allDomains = append(allDomains, proj.Domains...)
-		}
+		allDomains = append(allDomains, proj.Domains...)
 	}
 
 	if len(allDomains) == 0 {

@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
 type DetectResult struct {
 	IsLaravel  bool
 	Confidence int
 	Reasons    []string
+	Version    string
 }
 
 func exists(path string) bool {
@@ -17,11 +21,11 @@ func exists(path string) bool {
 	return err == nil
 }
 
-func hasLaravelComposer(root string) bool {
+func hasLaravelComposer(root string) (bool, string) {
 	f := filepath.Join(root, "composer.json")
 	b, err := os.ReadFile(f)
 	if err != nil {
-		return false
+		return false, ""
 	}
 
 	var obj struct {
@@ -29,20 +33,44 @@ func hasLaravelComposer(root string) bool {
 		RequireDev map[string]string `json:"require-dev"`
 	}
 	if err := json.Unmarshal(b, &obj); err != nil {
-		return false
+		return false, ""
 	}
 
-	if _, ok := obj.Require["laravel/framework"]; ok {
-		return true
+	if ver, ok := obj.Require["laravel/framework"]; ok {
+		return true, parseLaravelVersion(ver)
 	}
-	if _, ok := obj.Require["laravel/laravel"]; ok {
-		return true
+	if ver, ok := obj.Require["laravel/laravel"]; ok {
+		return true, parseLaravelVersion(ver)
 	}
 	if _, ok := obj.RequireDev["laravel/pint"]; ok {
-		return true
+		return true, ""
 	}
 
-	return false
+	return false, ""
+}
+
+func parseLaravelVersion(constraint string) string {
+	constraint = strings.TrimSpace(constraint)
+
+	patterns := []struct {
+		regex   *regexp.Regexp
+		extract func([]string) string
+	}{
+		{regexp.MustCompile(`^\^(\d+)`), func(m []string) string { return m[1] + ".x" }},
+		{regexp.MustCompile(`^(\d+)\.\d+\.\d+`), func(m []string) string { return m[1] + ".x" }},
+		{regexp.MustCompile(`^v?(\d+)`), func(m []string) string { return m[1] + ".x" }},
+	}
+
+	for _, p := range patterns {
+		if m := p.regex.FindStringSubmatch(constraint); m != nil {
+			major, _ := strconv.Atoi(m[1])
+			if major > 0 {
+				return p.extract(m)
+			}
+		}
+	}
+
+	return ""
 }
 
 func DetectLaravel(root string) DetectResult {
@@ -72,14 +100,17 @@ func DetectLaravel(root string) DetectResult {
 		}
 	}
 
-	if hasLaravelComposer(root) {
+	var laravelVersion string
+	if hasLaravel, ver := hasLaravelComposer(root); hasLaravel {
 		score += 35
 		reasons = append(reasons, "composer.json requires laravel")
+		laravelVersion = ver
 	}
 
 	return DetectResult{
 		IsLaravel:  score >= 50,
 		Confidence: score,
 		Reasons:    reasons,
+		Version:    laravelVersion,
 	}
 }
