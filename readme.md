@@ -109,6 +109,9 @@ go build -ldflags "-H windowsgui -s -w" -o wincmp.exe .
 
 # 使用 Fyne 打包 (包含圖示與資源)
 fyne package -release
+
+# 如打包失敗, 先嘗試清Cache
+go clean -cache
 ```
 
 ---

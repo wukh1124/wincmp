@@ -27,6 +27,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"fyne.io/systray"
 
 	"wincmp/internal/config"
 	"wincmp/internal/detect"
@@ -42,6 +43,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/BurntSushi/toml"
 	fynetooltip "github.com/dweymouth/fyne-tooltip"
 	ttwidget "github.com/dweymouth/fyne-tooltip/widget"
 	_ "github.com/go-sql-driver/mysql"
@@ -112,11 +114,11 @@ func newDynamicTooltipLabel(text string, w fyne.Window) *dynamicTooltipLabel {
 
 func (l *dynamicTooltipLabel) MouseIn(e *desktop.MouseEvent) {
 	l.hovered = true
-	
+
 	// 加入 500ms 延遲顯示，避免滑鼠快速經過時狂閃
 	ctx, cancel := context.WithCancel(context.Background())
 	l.cancel = cancel
-	
+
 	go func() {
 		time.Sleep(500 * time.Millisecond)
 		select {
@@ -132,7 +134,7 @@ func (l *dynamicTooltipLabel) MouseIn(e *desktop.MouseEvent) {
 					l.content.TextStyle = fyne.TextStyle{Monospace: true}
 					l.popup = widget.NewPopUp(container.NewPadded(l.content), l.window.Canvas())
 				}
-				
+
 				// 取得全域座標來定位
 				pos := e.AbsolutePosition
 				pos.Y -= l.popup.MinSize().Height + 5 // 顯示在滑鼠上方
@@ -2813,14 +2815,35 @@ func applyTheme(themeName string) {
 
 // ===== 4. 全域設定 (Settings) =====
 
+func getAppVersion() string {
+	type config struct {
+		Details struct {
+			Version string
+		}
+	}
+	var cfg config
+	if data, err := os.ReadFile("FyneApp.toml"); err == nil {
+		toml.Decode(string(data), &cfg)
+	}
+	if cfg.Details.Version == "" {
+		return "v0.0.0"
+	}
+	return "v" + cfg.Details.Version
+}
+
 func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 	title := widget.NewLabelWithStyle("WinCMP Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	hint := canvas.NewText(" (Changes will be automatically saved immediately with debouncing)", color.NRGBA{R: 128, G: 128, B: 128, A: 255})
 	hint.TextSize = 11
+	version := canvas.NewText(getAppVersion(), color.NRGBA{R: 128, G: 128, B: 128, A: 255})
+	version.TextSize = 11
 
 	header := container.NewHBox(
 		title,
 		hint,
+		layout.NewSpacer(),
+		version,
+		canvas.NewText("  ", color.NRGBA{R: 0, G: 0, B: 0, A: 0}),
 	)
 
 	// --- 1. Basic Settings 組件聲明 ---
@@ -3220,7 +3243,6 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 // refreshSystemTray 根據設定更新系統匣選單 (目前維持選單始終存在以確保穩定性)
 func refreshSystemTray(myApp fyne.App, myWindow fyne.Window) {
 	if desk, ok := myApp.(desktop.App); ok {
-		// 始終保留系統匣選單，避免在切換設定時造成程式不穩定
 		m := fyne.NewMenu("WinCMP",
 			fyne.NewMenuItem("顯示 WinCMP", func() {
 				myWindow.Show()
@@ -3230,6 +3252,11 @@ func refreshSystemTray(myApp fyne.App, myWindow fyne.Window) {
 			}),
 		)
 		desk.SetSystemTrayMenu(m)
+
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			systray.SetTooltip("WinCMP")
+		}()
 	}
 }
 

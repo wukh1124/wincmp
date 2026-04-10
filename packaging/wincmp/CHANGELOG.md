@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.2.0] - 2026-04-10
+
+### Added
+- 新增Runtime開發環境運行 (從只支援Node.js加上更多)
+
+### Changed
+- Node.js 改為 Runtime, Node.js Port 改為 Runtime Port, Node.js Projects 改為 Projects Runtime
+- Node Version 改為 Runtime, 同時選項改為 Node.js, Bun, Python, Go+Air, Custom
+
+### Dependencies
+- Bun 1.3.11
+
+---
+
+## [1.1.3] - 2026-04-09
+
+### Fixed
+- System Tray 系統匣新增懸停文字
+
+---
+
 ## [1.1.2] - 2026-04-02
 
 ### Changed

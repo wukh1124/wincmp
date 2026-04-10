@@ -31,6 +31,8 @@ vendor/
 !/bin/composer/.gitkeep
 /bin/node/*
 !/bin/node/.gitkeep
+/bin/bun/*
+!/bin/bun/.gitkeep
 
 # --- Data & Logs (忽略內容，保留目錄) ---
 # 使用 !.gitkeep 確保空目錄結構能被追蹤，但忽略實際產生的資料
