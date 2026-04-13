@@ -5,7 +5,18 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
+	"time"
+)
+
+// scanCache 快取掃描結果與 TTL
+var (
+	scanCacheMu   sync.RWMutex
+	scanCache     *ScanResult
+	scanCacheTime time.Time
+	scanCacheTTL  = 2 * time.Second // 快取有效期限
 )
 
 // ServiceInfo 描述一個被掃描到的服務
@@ -31,12 +42,37 @@ type ScanResult struct {
 	HeidiSQLList []ServiceInfo
 	MariaDBList  []ServiceInfo
 	NodeList     []ServiceInfo
+	BunList      []ServiceInfo
 	PHPList      []PHPVersionInfo
 	SkippedPHP   []string // 記錄被略過的舊 Patch 版本 (如 "8.2.28")
 }
 
 // ScanBinDir 掃描 bin/ 目錄，偵測已安裝的服務與版本
+// 快取機制：2 秒內重複呼叫直接回傳快取結果
 func ScanBinDir(baseDir string) (*ScanResult, error) {
+	scanCacheMu.RLock()
+	if scanCache != nil && time.Since(scanCacheTime) < scanCacheTTL {
+		result := *scanCache
+		scanCacheMu.RUnlock()
+		return &result, nil
+	}
+	scanCacheMu.RUnlock()
+
+	result, err := scanBinDirInternal(baseDir)
+	if err != nil {
+		return nil, err
+	}
+
+	scanCacheMu.Lock()
+	scanCache = result
+	scanCacheTime = time.Now()
+	scanCacheMu.Unlock()
+
+	return result, nil
+}
+
+// scanBinDirInternal 實際掃描邏輯
+func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 	result := &ScanResult{}
 
 	binDir := filepath.Join(baseDir, "bin")
@@ -207,6 +243,25 @@ func ScanBinDir(baseDir string) (*ScanResult, error) {
 		}
 	}
 
+	// 7. 掃描 Bun 版本
+	bunDir := filepath.Join(binDir, "bun")
+	if entries, err := os.ReadDir(bunDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "bun-") {
+				continue
+			}
+			bunExe := filepath.Join(bunDir, entry.Name(), "bun.exe")
+			if _, err := os.Stat(bunExe); err == nil {
+				version := strings.TrimPrefix(entry.Name(), "bun-")
+				result.BunList = append(result.BunList, ServiceInfo{
+					Name:    "bun",
+					Version: version,
+					ExePath: bunExe,
+				})
+			}
+		}
+	}
+
 	return result, nil
 }
 
@@ -226,11 +281,11 @@ func calcPHPPortBase(majorMinor string) int {
 	if len(parts) != 2 {
 		return 38000 // fallback
 	}
-	major := 0
-	minor := 0
-	fmt.Sscanf(parts[0], "%d", &major)
-	fmt.Sscanf(parts[1], "%d", &minor)
-	// 規格：3<主版本><次版本>00，例如 PHP 8.2 → 38200，PHP 7.3 → 37300
+	major, err1 := strconv.Atoi(parts[0])
+	minor, err2 := strconv.Atoi(parts[1])
+	if err1 != nil || err2 != nil {
+		return 38000
+	}
 	return 30000 + major*1000 + minor*100
 }
 

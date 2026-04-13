@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"wincmp/internal/crypto"
 )
 
 // WincmpConfig 是 conf/wincmp.json 的頂層結構
@@ -30,6 +32,7 @@ type GlobalConfig struct {
 	LogLevel        string `json:"log_level"`
 	LogToConsole    bool   `json:"log_to_console"`
 	MaxLogRetention int    `json:"max_log_retention"` // 天數
+	MaxLogLines     int    `json:"max_log_lines"`     // UI 顯示行數限制
 
 	AutoUpdateHosts bool `json:"auto_update_hosts"` // 自動更新 Hosts
 
@@ -59,22 +62,98 @@ type PHPSettings struct {
 
 // ProjectConfig 單一專案設定
 type ProjectConfig struct {
-	ID          string   `json:"id,omitempty"`
-	Name        string   `json:"name"`
-	Domains     []string `json:"domains"`
-	Type        string   `json:"type,omitempty"`
-	PHPVersion  string   `json:"php_version"`
-	RootPath    string   `json:"root_path"`
-	SSLCrt      string   `json:"ssl_crt"`
-	SSLKey      string   `json:"ssl_key"`
-	UseSSL      bool     `json:"use_ssl"`
-	Enabled     bool     `json:"enabled"`
-	NodePort    int      `json:"node_port,omitempty"`
-	NodeMode    string   `json:"node_mode,omitempty"`    // "Background" 或 "Terminal"
-	NodeVersion string   `json:"node_version,omitempty"` // "24.14.1" 等
+	ID             string   `json:"id,omitempty"`
+	Name           string   `json:"name"`
+	Domains        []string `json:"domains"`
+	Type           string   `json:"type,omitempty"`         // 專案類型: "static", "laravel", "next", "nuxt", "astro", "vite", "python", "python_django", "python_fastapi", "python_flask", "go_api", "pocketbase", "custom"
+	RuntimeType    string   `json:"runtime_type,omitempty"` // 執行器: "auto", "none", "node", "bun", "python", "go_air", "go_run", "custom"
+	PHPVersion     string   `json:"php_version"`
+	RootPath       string   `json:"root_path"`
+	SSLCrt         string   `json:"ssl_crt"`
+	SSLKey         string   `json:"ssl_key"`
+	UseSSL         bool     `json:"use_ssl"`
+	Enabled        bool     `json:"enabled"`
+	RuntimePort    int      `json:"runtime_port,omitempty"`
+	RuntimeMode    string   `json:"runtime_mode,omitempty"`    // "Background" 或 "Terminal"
+	RuntimeVersion string   `json:"runtime_version,omitempty"` // "24.14.1" 等
+	Command        string   `json:"command,omitempty"`         // 自定義啟動指令 (Custom 類型或手動覆寫)
+	CommandDirty   bool     `json:"command_dirty,omitempty"`   // 使用者是否手動修改過 Command
+	UseWinCMPBin   bool     `json:"use_wincmp_bin,omitempty"`  // 是否使用 WinCMP 內建執行檔 (bundled runtime)
 
 	// ConfigExists 快取：Caddy 設定檔是否存在（避免每次渲染都 os.Stat）
 	ConfigExists bool `json:"-"`
+
+	// Deprecated: 向後相容
+	UseEnvBin   bool   `json:"use_env_bin,omitempty"`
+	NodePort    int    `json:"node_port,omitempty"`
+	NodeMode    string `json:"node_mode,omitempty"`
+	NodeVersion string `json:"node_version,omitempty"`
+}
+
+// migrateLegacyNodeFields 將舊版欄位遷移至新模型
+func migrateLegacyNodeFields(cfg *WincmpConfig) {
+	for i := range cfg.Projects {
+		p := &cfg.Projects[i]
+		// 1. 舊版 Port/Mode/Version 欄位遷移
+		if p.RuntimePort == 0 && p.NodePort > 0 {
+			p.RuntimePort = p.NodePort
+		}
+		if p.RuntimeMode == "" && p.NodeMode != "" {
+			p.RuntimeMode = p.NodeMode
+		}
+		if p.RuntimeVersion == "" && p.NodeVersion != "" {
+			p.RuntimeVersion = p.NodeVersion
+		}
+		if !p.UseWinCMPBin && p.UseEnvBin {
+			p.UseWinCMPBin = p.UseEnvBin
+		}
+
+		// 2. 舊版 Type 語義遷移
+		if p.RuntimeType == "" {
+			switch p.Type {
+			case "node", "bun":
+				p.RuntimeType = p.Type
+			case "python":
+				p.RuntimeType = "python"
+			case "go":
+				p.RuntimeType = "go_air"
+			case "custom":
+				p.RuntimeType = "custom"
+			case "laravel":
+				p.RuntimeType = "none"
+			}
+		}
+
+		// 3. 新版 Type 遷移 (舊版 "go" → "go_api")
+		switch p.Type {
+		case "go":
+			p.Type = "go_api"
+		case "node", "bun":
+			// 舊版 node/bun 類型：如果有框架偵測結果會在 main.go 處理
+			// 否則 fallback 為 vite
+			if p.RuntimeType == p.Type {
+				p.Type = "vite"
+			}
+		}
+
+		// 4. 新版 RuntimeType 遷移
+		switch p.RuntimeType {
+		case "go":
+			p.RuntimeType = "go_air"
+		}
+
+		// 5. 靜態類型 / Laravel 不需要 Runtime
+		if p.Type == "" || p.Type == "static" || p.Type == "laravel" {
+			p.RuntimeType = "none"
+			p.RuntimePort = 0
+		}
+
+		// 清理舊欄位
+		p.NodePort = 0
+		p.NodeMode = ""
+		p.NodeVersion = ""
+		p.UseEnvBin = false
+	}
 }
 
 // Load 從指定路徑載入 wincmp.json 設定檔
@@ -89,6 +168,20 @@ func Load(path string) (*WincmpConfig, error) {
 		return nil, fmt.Errorf("無法解析設定檔 %s: %w", path, err)
 	}
 
+	// 向後相容：舊版 node_port/node_mode/node_version → 新版 runtime_*
+	migrateLegacyNodeFields(&cfg)
+
+	// 載入後解密 MariaDB 密碼（向後相容：明文密碼直接回傳）
+	if crypto.IsEncrypted(cfg.Global.MariaDBPassword) {
+		dec, err := crypto.Decrypt(cfg.Global.MariaDBPassword)
+		if err != nil {
+			// 解密失敗時保留原文，避免阻斷正常使用
+			_ = err
+		} else {
+			cfg.Global.MariaDBPassword = dec
+		}
+	}
+
 	return &cfg, nil
 }
 
@@ -99,28 +192,50 @@ func (c *WincmpConfig) Save(path string) error {
 		// 推導 data/backup 路徑 (假設 path 是 .../conf/wincmp.json)
 		base := filepath.Dir(filepath.Dir(path))
 		backupDir := filepath.Join(base, "data", "backup")
-		os.MkdirAll(backupDir, 0755)
+		os.MkdirAll(backupDir, 0700)
 
 		bakPath := filepath.Join(backupDir, filepath.Base(path)+".bak")
 		content, readErr := os.ReadFile(path)
 		if readErr == nil {
-			os.WriteFile(bakPath, content, 0644)
+			os.WriteFile(bakPath, content, 0600)
 		}
 	}
 
-	// 2. 序列化新設定
+	// 2. 序列化新設定 (清理已遷移的舊欄位)
+	for i := range c.Projects {
+		c.Projects[i].NodePort = 0
+		c.Projects[i].NodeMode = ""
+		c.Projects[i].NodeVersion = ""
+		c.Projects[i].UseEnvBin = false
+	}
+
+	// 儲存前加密 MariaDB 密碼
+	originalPassword := c.Global.MariaDBPassword
+	if originalPassword != "" && !crypto.IsEncrypted(originalPassword) {
+		enc, err := crypto.Encrypt(originalPassword)
+		if err != nil {
+			// 加密失敗時仍以明文儲存，記錄錯誤但不中斷
+			_ = err
+		} else {
+			c.Global.MariaDBPassword = enc
+		}
+	}
+
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return fmt.Errorf("無法序列化設定: %w", err)
 	}
 
+	// 儲存後還原明文密碼（避免記憶體中的 cfg 被改為密文）
+	c.Global.MariaDBPassword = originalPassword
+
 	// 確保目錄存在
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("無法建立目錄 %s: %w", dir, err)
 	}
 
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0600); err != nil {
 		return fmt.Errorf("無法寫入設定檔 %s: %w", path, err)
 	}
 
@@ -173,7 +288,7 @@ func (c *WincmpConfig) GetSSLKeyPath(project ProjectConfig, baseDir string) stri
 	}
 	sslDir := c.Global.DefaultSSL
 	if !filepath.IsAbs(sslDir) {
-		sslDir = filepath.Join(sslDir, baseDir)
+		sslDir = filepath.Join(baseDir, sslDir)
 	}
 	return filepath.Join(sslDir, project.Domains[0]+".key")
 }

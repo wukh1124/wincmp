@@ -3,6 +3,7 @@ package process
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -185,6 +186,22 @@ func (m *Manager) UpdatePIDs(serviceKey string, pids []int) {
 	}
 }
 
+// RemovePID 從指定服務的 PID 列表中移除單一 PID（用於子程序異常退出時更新狀態）
+func (m *Manager) RemovePID(serviceKey string, pid int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if state, exists := m.services[serviceKey]; exists {
+		filtered := make([]int, 0, len(state.PIDs))
+		for _, p := range state.PIDs {
+			if p != pid {
+				filtered = append(filtered, p)
+			}
+		}
+		state.PIDs = filtered
+	}
+}
+
 // GetContext 取得服務的 context (用於監聽服務結束)
 func (m *Manager) GetContext(serviceKey string) context.Context {
 	m.mu.Lock()
@@ -288,8 +305,14 @@ func (m *Manager) createCommand(exePath string, args ...string) *exec.Cmd {
 
 // pipeOutput 將子程序的 stdout/stderr 透過管線傳送到 Terminal Logs
 func (m *Manager) pipeOutput(cmd *exec.Cmd, category string, serviceName string) {
-	stdout, _ := cmd.StdoutPipe()
-	stderr, _ := cmd.StderrPipe()
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		m.errorLog(category, fmt.Sprintf("%s: 建立 stdout pipe 失敗", serviceName), err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		m.errorLog(category, fmt.Sprintf("%s: 建立 stderr pipe 失敗", serviceName), err)
+	}
 
 	// 讀取 stdout
 	go func() {
@@ -333,6 +356,17 @@ func isProcessFinished(err error) bool {
 	if err == nil {
 		return false
 	}
-	return err.Error() == "os: process already finished" ||
-		err.Error() == "os: process already released"
+	// Go 1.20+ 提供 os.ErrProcessDone
+	if errors.Is(err, os.ErrProcessDone) {
+		return true
+	}
+	// 回相容：檢查是否為 "syscall: Wait..." 或各種已完成程序錯誤
+	var sysErr syscall.Errno
+	if errors.As(err, &sysErr) {
+		return false // syscall 錯誤通常不是「程序已完成」
+	}
+	// 最終回退：字串比對（只對未型別化的錯誤）
+	msg := err.Error()
+	return msg == "os: process already finished" ||
+		msg == "os: process already released"
 }

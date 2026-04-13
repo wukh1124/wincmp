@@ -14,6 +14,7 @@ type DetectResult struct {
 	Confidence int
 	Reasons    []string
 	Version    string
+	Type       string // "laravel", "node", "bun", "python", "go"
 }
 
 func exists(path string) bool {
