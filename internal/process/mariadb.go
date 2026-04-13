@@ -10,6 +10,42 @@ import (
 
 const MariaDBExternalServiceKey = "mariadb-external"
 
+// safeCleanDataDir 安全清除 data 目錄中的已知暫存檔
+// 只刪除 mariadb 初始化已知的暫存檔，避免 RemoveAll 清空整個目錄
+func safeCleanDataDir(dataDir string) error {
+	// MariaDB 初始化已知的子目錄和暫存檔
+	knownEntries := []string{
+		"mysql",
+		"performance_schema",
+		"test",
+		"ibdata1",
+		"ib_logfile0",
+		"ib_logfile1",
+		"ib_buffer_pool",
+		"auto.cnf",
+		"multi-master.info",
+		"aria_log_control",
+		"aria_log.%",
+	}
+	entries, err := os.ReadDir(dataDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	for _, entry := range entries {
+		for _, known := range knownEntries {
+			if entry.Name() == known || strings.HasPrefix(entry.Name(), strings.TrimSuffix(known, "%")) {
+				path := filepath.Join(dataDir, entry.Name())
+				os.RemoveAll(path)
+				break
+			}
+		}
+	}
+	return nil
+}
+
 func MariaDBServiceKey(version string) string {
 	return "mariadb-" + version
 }
@@ -78,11 +114,11 @@ func (m *Manager) StartMariaDBAsync(
 			if _, err := os.Stat(mysqlDBPath); os.IsNotExist(err) {
 				m.log("mariadb", "目錄 %s 不存在，正在初始化 MariaDB 資料庫...", mysqlDBPath)
 
-				if err := os.RemoveAll(dataDir); err != nil {
-					errCh <- fmt.Errorf("清除資料目錄失敗: %w", err)
-					return
+				// 安全清除：只刪除已知暫存檔，避免 RemoveAll 清空整個目錄
+				if err := safeCleanDataDir(dataDir); err != nil {
+					m.errorLog("mariadb", "清除資料目錄暫存檔失敗", err)
 				}
-				if err := os.MkdirAll(dataDir, 0755); err != nil {
+				if err := os.MkdirAll(dataDir, 0700); err != nil {
 					errCh <- fmt.Errorf("建立資料目錄失敗: %w", err)
 					return
 				}

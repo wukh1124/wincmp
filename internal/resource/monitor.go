@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -22,13 +23,12 @@ const (
 	updateInterval = time.Second
 )
 
-
 type Monitor struct {
 	pid      int
 	proc     *process.Process
 	cpuCount int
 	ticker   *time.Ticker
-	done     chan struct{}
+	cancel   context.CancelFunc
 	mu       sync.RWMutex
 
 	procMgr interface{}
@@ -37,6 +37,11 @@ type Monitor struct {
 	breakdownMu   sync.Mutex
 	lastBreakdown string
 	lastBreakTime time.Time
+
+	// PID 快取：僅在 PID 列表變化時重新建立 process 物件
+	cachedPIDs    []int
+	cachedProcs   []*process.Process
+	lastPIDUpdate time.Time
 }
 
 func NewAppResourceMonitor(procMgr interface{}) *Monitor {
@@ -51,7 +56,6 @@ func NewAppResourceMonitor(procMgr interface{}) *Monitor {
 		proc:     proc,
 		cpuCount: runtime.NumCPU(),
 		ticker:   time.NewTicker(updateInterval),
-		done:     make(chan struct{}),
 		procMgr:  procMgr,
 	}
 }
@@ -72,9 +76,12 @@ func (m *Monitor) Start(label fyne.CanvasObject) {
 	// 懸停偵測介面
 	detector, hasDetector := label.(hoverDetector)
 
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel = cancel
+
 	for {
 		select {
-		case <-m.done:
+		case <-ctx.Done():
 			return
 		case <-m.ticker.C:
 			m.mu.RLock()
@@ -134,15 +141,38 @@ func (m *Monitor) fetchResourceData() (ramStr, cpuStr, stackStr string) {
 			GetAllPIDs() []int
 		})
 		if ok {
-			var totalRAM uint64
-			for _, pid := range pm.GetAllPIDs() {
-				if pid <= 0 {
-					continue
-				}
-				if p, err := process.NewProcess(int32(pid)); err == nil {
-					if memInfo, err := p.MemoryInfo(); err == nil {
-						totalRAM += memInfo.RSS
+			currentPIDs := pm.GetAllPIDs()
+
+			// 快取 PID 列表：僅在列表變化時重新建立 process 物件
+			pidsChanged := len(currentPIDs) != len(m.cachedPIDs)
+			if !pidsChanged {
+				for i, pid := range currentPIDs {
+					if i >= len(m.cachedPIDs) || pid != m.cachedPIDs[i] {
+						pidsChanged = true
+						break
 					}
+				}
+			}
+
+			if pidsChanged || time.Since(m.lastPIDUpdate) > 5*time.Second {
+				m.cachedPIDs = make([]int, len(currentPIDs))
+				copy(m.cachedPIDs, currentPIDs)
+				m.cachedProcs = make([]*process.Process, 0, len(currentPIDs))
+				for _, pid := range currentPIDs {
+					if pid <= 0 {
+						continue
+					}
+					if p, err := process.NewProcess(int32(pid)); err == nil {
+						m.cachedProcs = append(m.cachedProcs, p)
+					}
+				}
+				m.lastPIDUpdate = time.Now()
+			}
+
+			var totalRAM uint64
+			for _, p := range m.cachedProcs {
+				if memInfo, err := p.MemoryInfo(); err == nil {
+					totalRAM += memInfo.RSS
 				}
 			}
 			if totalRAM > 0 {
@@ -237,9 +267,7 @@ func (m *Monitor) FetchStackBreakdown(ramStr, cpuStr string) string {
 
 func (m *Monitor) Stop() {
 	m.ticker.Stop()
-	select {
-	case m.done <- struct{}{}:
-	default:
+	if m.cancel != nil {
+		m.cancel()
 	}
 }
-

@@ -1,13 +1,32 @@
 # Changelog
 
-## [1.2.0] - 2026-04-10
+## [1.2.0] - 2026-04-13
 
 ### Added
-- 新增Runtime開發環境運行 (從只支援Node.js加上更多)
+- 新增 Runtime 開發環境運行 (從只支援 Node.js 加上 Bun, Python, Go, Custom)
+- Runtime 分頁新增專案 Log 篩選按鈕，可快速切換到對應專案的 Terminal Logs
+- Domain 欄位新增一鍵複製連結按鈕
+- 專案類型自動偵測 (Preset 系統)，支援 Laravel, Next.js, Nuxt, Astro, Vite, Python (Django/FastAPI/Flask), PocketBase, Go API 等
+- 舊版 Node.js 專案自動遷移至新 Runtime 架構
+- System Tray 系統匣新增懸停文字
 
 ### Changed
 - Node.js 改為 Runtime, Node.js Port 改為 Runtime Port, Node.js Projects 改為 Projects Runtime
-- Node Version 改為 Runtime, 同時選項改為 Node.js, Bun, Python, Go+Air, Custom
+- Node Version 改為 Runtime, 同時選項改為 Auto, Node.js, Bun, Python, Go Air, Go Run, Custom
+- 改用 RSS (WorkingSetSize) 顯示 WinCMP 佔用的 RAM
+- 底部資訊欄的 Monitor 區域懸停顯示 Tooltip 的 Stack Total 和服務明細資訊
+- MariaDB 設定可使用外部 MariaDB/MySQL, 自訂路徑和端口
+- Runtime 啟動模式改為 Background / Terminal 雙模式選擇
+- Terminal Logs 日誌限制最佳化 (500 行或 200KB 字符)
+- 頁面切換和連續點擊 Tab 效能優化 (防抖機制)
+
+### Fixed
+- 修復頁面卡頓和效能缺陷 (Projects 減少 OS Stat 調用, DB Explorer 和 Node.js 異步載入)
+- 修復 Settings 的 MaxLogRetention 能自動刪除過期的記錄檔
+- 修復 Terminal Logs 暗色模式下日誌文字對比度不足
+
+### Security
+- 檢視報告詳見 `doc/audit_report_v1.2.0.md`
 
 ### Dependencies
 - Bun 1.3.11

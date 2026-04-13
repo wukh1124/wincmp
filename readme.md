@@ -14,11 +14,12 @@
 
 ## ✨ 核心特色
 
-- 🪶 **極致輕量**：採用 Go 靜態編譯，無須 Node.js 或 Electron 依賴。
+- 🪶 **極致輕量**：採用 Go 靜態編譯，無須 Electron 依賴。
 - 🛡️ **免管理員權限**：完全支援在受限環境下運作，不修改系統環境變數，不寫入登錄檔。
 - 🎨 **現代化 UI/UX**：內建深色/淺色模式，提供流暢的側邊導覽與即時狀態監控。
 - 🔄 **PHP 多進程負載均衡**：利用 Caddy 的 Upstream 機制，每個 PHP 版本啟動多個 FastCGI 進程進行分流。
-- 📂 **自動化專案管理**：可視化管理 Laravel、Vue 等專案，自動生成 Caddy 配置並支援熱重載 (Live Reload)。
+- 📂 **自動化專案管理**：可視化管理 Laravel、Next.js、Nuxt、Astro、Vite、Python、Go 等專案，自動偵測框架並生成配置。
+- 🚀 **Runtime 多環境運行**：支援 Node.js、Bun、Python、Go (Air/Run)、Custom 等多種開發環境，可選 Background 或 Terminal 模式啟動。
 - 📜 **隔離環境 (Isolation)**：啟動子進程時動態注入 `PATH`，確保 PHP 及其擴展運行在正確的 binaries 環境中。
 
 ---
@@ -40,7 +41,11 @@ wincmp/
 ├── bin/                     # 二進制執行檔目錄 (自備或自動掃描)
 │   ├── caddy/               # caddy-x.xx.x/caddy.exe
 │   ├── mariadb/             # mariadb-x.x.x/bin/mariadbd.exe
-│   └── php/                 # php-x.x.x/php-cgi.exe
+│   ├── php/                 # php-x.x.x/php-cgi.exe
+│   ├── node/                # node-x.x.x/npm.cmd
+│   ├── bun/                 # bun-x.x.x/bun.exe
+│   ├── composer/            # composer-x.x.x/composer.bat
+│   └── heidisql/            # heidisql-x.xx/heidisql.exe
 ├── data/                    # 資料存儲區
 │   └── mariadb/             # MariaDB 預設 Data 目錄
 ├── logs/                    # 服務執行日誌 (依日期分類)
@@ -49,12 +54,14 @@ wincmp/
 │   ├── config/              # JSON 設定讀寫
 │   ├── scanner/             # Bin 目錄動態版本掃描
 │   ├── process/             # 子進程生命週期管理 (Manager)
-│   ├── detect/             # Laravel 專案偵測 (信心分數制)
-│   ├── hosts/              # Windows Hosts 檔管理
-│   ├── port/               # Port 佔用檢測
-│   ├── resource/           # 資源監控 (CPU/RAM/Stack)
-│   └── singleinstance/     # 單實例鎖 + 視窗帶到前景
-├── ui_node.go              # UI 節點定義
+│   ├── detect/              # Laravel 專案偵測 (信心分數制)
+│   ├── preset/              # 專案類型 Preset 系統 (框架偵測/指令模板)
+│   ├── hosts/               # Windows Hosts 檔管理
+│   ├── port/                # Port 佔用檢測
+│   ├── resource/            # 資源監控 (CPU/RAM/Stack)
+│   ├── crypto/              # MariaDB 密碼加密
+│   └── singleinstance/      # 單實例鎖 + 視窗帶到前景
+├── ui_runtime.go            # Runtime Tab UI 定義
 ├── bundled_icon.go         # 應用圖示資源
 └── bat/                     # 備份用的啟動腳本 (測試參考)
 ```
@@ -130,6 +137,10 @@ go clean -cache
 - [x] **Port 佔用檢查** (啟動前自動檢測，減少競爭狀態)。
 - [x] **Hosts 本地網域自動管理** (UAC 權限提升後自動同步)。
 - [x] **深色/淺色模式切換** (整合 Fyne 主題系統)。
+- [x] **Runtime 多環境運行** (Node.js, Bun, Python, Go Air/Run, Custom)。
+- [x] **Preset 自動偵測** (Next.js, Nuxt, Astro, Vite, Django, FastAPI, Flask, PocketBase, Go API)。
+- [x] **Runtime 雙模式啟動** (Background / Terminal)。
+- [x] **舊版 Node.js 專案自動遷移** (node_port → runtime_port 等)。
 
 ### ⏳ 計畫中 (Planned)
 > **💡 關於詳細的開發規劃、技術分析與實作順序，請參閱完整的 [開發任務清單 (Develop Task List)](doc/develop_task_list.md)。**

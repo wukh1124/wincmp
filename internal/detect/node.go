@@ -76,13 +76,12 @@ func DetectNode(root string) DetectResult {
 	}
 
 	return DetectResult{
-		IsLaravel:  false, // 這裡複用 DetectResult 結構，雖然名字叫 IsLaravel 但實際上我們可以在外面判斷
+		IsLaravel:  false,
 		Confidence: score,
 		Reasons:    reasons,
+		Type:       "node",
 	}
 }
 
 // 為了讓 DetectNode 也能在 detect package 內使用 DetectResult
-// 其實 DetectResult 已經在 laravel.go 定義過了，這裡直接用即可。
-// 如果有需要可以重構 DetectResult 的欄位名稱，但保持相容性較好。
-// 我們可以在 DetectResult 增加一個 Type 欄位，或者由調用方決定。
+// DetectResult 已在 laravel.go 定義，含 Type 欄位可標記偵測類型

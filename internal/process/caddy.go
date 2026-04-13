@@ -2,8 +2,10 @@ package process
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 const caddyServiceKey = "caddy"
@@ -56,6 +58,10 @@ func (m *Manager) StopCaddy() error {
 		return err
 	}
 	m.log("caddy", "✅ Caddy 已停止")
+
+	// Caddy 停止後清理 timberjack 在 Windows 上無法刪除的殘留 log 檔
+	m.cleanupStaleRotatedLogs()
+
 	return nil
 }
 
@@ -84,3 +90,53 @@ func (m *Manager) ReloadCaddy(exePath string) error {
 	return nil
 }
 
+// cleanupStaleRotatedLogs 清理 timberjack 在 Windows 上因檔案鎖定無法刪除的殘留 log 檔。
+// 當 timberjack 進行 log rotation 時，會先壓縮舊 log 為 .gz，再刪除原始檔；
+// 但在 Windows 上，若 Caddy 仍持有 file handle，刪除會失敗。
+// 此函數在 Caddy 停止後呼叫，掃描 logs/ 目錄中同時存在 .log 和 .log.gz 的配對，
+// 刪除已成功壓縮的原始 .log 檔。
+func (m *Manager) cleanupStaleRotatedLogs() {
+	logsDir := filepath.Join(m.baseDir, "logs")
+
+	entries, err := os.ReadDir(logsDir)
+	if err != nil {
+		// 目錄不存在或無法讀取，靜默忽略
+		return
+	}
+
+	// 建立已存在 .gz 檔的集合（不含 .gz 後綴），用於快速查詢配對
+	gzBaseSet := make(map[string]bool)
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".log.gz") {
+			// "access-2026-04-09T23-46-26.714-size.log.gz" → "access-2026-04-09T23-46-26.714-size.log"
+			baseName := strings.TrimSuffix(entry.Name(), ".gz")
+			gzBaseSet[baseName] = true
+		}
+	}
+
+	// 刪除有對應 .gz 的殘留 .log 檔
+	cleaned := 0
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		// 只處理 .log 結尾（排除 .log.gz，那個是壓縮檔要保留）
+		if !strings.HasSuffix(name, ".log") || strings.HasSuffix(name, ".log.gz") {
+			continue
+		}
+		if gzBaseSet[name] {
+			fullPath := filepath.Join(logsDir, name)
+			if err := os.Remove(fullPath); err != nil {
+				m.errorLog("caddy", fmt.Sprintf("清理殘留 log 檔失敗: %s", name), err)
+			} else {
+				cleaned++
+				m.log("caddy", "🧹 清理殘留 log: %s", name)
+			}
+		}
+	}
+
+	if cleaned > 0 {
+		m.log("caddy", "🧹 已清理 %d 個 timberjack 殘留 log 檔", cleaned)
+	}
+}
