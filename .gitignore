@@ -33,11 +33,16 @@ vendor/
 !/bin/node/.gitkeep
 /bin/bun/*
 !/bin/bun/.gitkeep
+/bin/mailpit/*
+!/bin/mailpit/.gitkeep
 
 # --- Data & Logs (忽略內容，保留目錄) ---
 # 使用 !.gitkeep 確保空目錄結構能被追蹤，但忽略實際產生的資料
 /data/mariadb/*
 !/data/mariadb/.gitkeep
+
+/data/mailpit/*
+!/data/mailpit/.gitkeep
 
 /logs/*
 !/logs/.gitkeep
@@ -66,5 +71,5 @@ vendor/
 /conf/wincmp.json
 /conf/my.ini
 /conf/Caddyfile
-
+.sisyphus/
 .memory-bank/

@@ -64,6 +64,7 @@ var (
 	sysLog          = binding.NewString()
 	caddyLog        = binding.NewString()
 	dbLog           = binding.NewString()
+	mailpitLog      = binding.NewString()
 	phpLog          = binding.NewString()
 	runtimeLog      = binding.NewString()
 	logEntries      map[string]*container.Scroll
@@ -120,6 +121,19 @@ var validDomainPattern = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0
 
 // validDbUserPattern 用於驗證資料庫使用者名稱（僅允許文數字、底線、減號）
 var validDbUserPattern = regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`)
+
+// newScrollPassthroughEntry 建立不攔截滾輪事件的單行輸入框
+// Fyne 預設 Entry 的 Wrapping 為 TextTruncateClip，會創建內部 scroll widget 並攔截滾輪事件，
+// 導致外層 VScroll 無法滾動。設為 TextWrapOff + ScrollNone 可避免此問題。
+// 注意：MultiLineEntry 不可使用 ScrollNone，否則 SetMinRowsVisible() 會失效
+// （因為 entryRenderer.MinSize 在 ScrollNone 模式下不使用 multiLineRows 計算高度）。
+// Ref: https://github.com/fyne-io/fyne/issues/1939
+func newScrollPassthroughEntry() *widget.Entry {
+	e := widget.NewEntry()
+	e.Wrapping = fyne.TextWrapOff
+	e.Scroll = fyne.ScrollNone
+	return e
+}
 
 func getTruncatedMsg() string {
 	lines := 500
@@ -463,6 +477,9 @@ func addLog(category string, msg string) {
 		catKey = "mariadb"
 		logSource = dbLog
 		tabIndex = 2
+	case "mailpit":
+		logSource = mailpitLog
+		tabIndex = 5
 	case "php":
 		logSource = phpLog
 		tabIndex = 3
@@ -778,6 +795,8 @@ func saveLastServiceState() {
 	}
 	appCfg.Global.LastServiceState.MariaDB = mariadbRunning
 
+	appCfg.Global.LastServiceState.Mailpit = procMgr.IsRunning(process.MailpitServiceKey())
+
 	if appCfg.Global.LastServiceState.PHP == nil {
 		appCfg.Global.LastServiceState.PHP = make(map[string]bool)
 	}
@@ -900,6 +919,7 @@ func main() {
 		container.NewTabItem("System", createLogTab(sysLog, "system")),
 		container.NewTabItem("Caddy", createLogTab(caddyLog, "caddy")),
 		container.NewTabItem("MariaDB", createLogTab(dbLog, "mariadb")),
+		container.NewTabItem("Mailpit", createLogTab(mailpitLog, "mailpit")),
 		container.NewTabItem("PHP", createLogTab(phpLog, "php")),
 	)
 	runtimeTabItem = container.NewTabItem("Runtime", createLogTab(runtimeLog, "runtime"))
@@ -946,6 +966,15 @@ func main() {
 			addLog("system", fmt.Sprintf("  ✓ 找到 HeidiSQL 版本: [%s]", strings.Join(versions, ", ")))
 		} else {
 			addLog("system", "  ✗ 未找到 HeidiSQL")
+		}
+		if len(scanRes.MailpitList) > 0 {
+			versions := make([]string, len(scanRes.MailpitList))
+			for i, mp := range scanRes.MailpitList {
+				versions[i] = mp.Version
+			}
+			addLog("system", fmt.Sprintf("  ✓ 找到 Mailpit 版本: [%s]", strings.Join(versions, ", ")))
+		} else {
+			addLog("system", "  ✗ 未找到 Mailpit")
 		}
 		if len(scanRes.MariaDBList) > 0 {
 			versions := make([]string, len(scanRes.MariaDBList))
@@ -1092,6 +1121,22 @@ func main() {
 					addErrorLog("mariadb", "自動啟動 MariaDB 失敗", err)
 				}
 			}()
+		}
+
+		if appCfg.Global.LastServiceState.Mailpit && len(scanRes.MailpitList) > 0 {
+			mpInfo := scanRes.MailpitList[0]
+			mpSmtp := 1025
+			mpHttp := 8025
+			if appCfg.Global.MailpitSMTPPort > 0 {
+				mpSmtp = appCfg.Global.MailpitSMTPPort
+			}
+			if appCfg.Global.MailpitHTTPPort > 0 {
+				mpHttp = appCfg.Global.MailpitHTTPPort
+			}
+			addLog("system", "自動啟動上次執行的服務: Mailpit")
+			if err := procMgr.StartMailpit(mpInfo.Version, mpInfo.ExePath, mpSmtp, mpHttp, appCfg.Global.MailpitUseDB); err != nil {
+				addErrorLog("mailpit", "自動啟動 Mailpit 失敗", err)
+			}
 		}
 	}
 
@@ -1380,6 +1425,11 @@ func createDashboard(win fyne.Window, refreshProjects func()) fyne.CanvasObject 
 		rows = append(rows, createMariaDBRow(win, mariaDBInfo))
 	}
 
+	// Mailpit 行
+	for _, mailpitInfo := range scanRes.MailpitList {
+		rows = append(rows, createMailpitRow(win, mailpitInfo))
+	}
+
 	if len(scanRes.PHPList) > 0 {
 		rows = append(rows,
 			widget.NewSeparator(),
@@ -1483,7 +1533,7 @@ func scanDefaultWWW() {
 			}
 
 			newProj := config.ProjectConfig{
-				Name:        name,
+				Name:        config.SanitizeProjectName(name),
 				Domains:     []string{GenerateValidDomain(name)},
 				RootPath:    projectPath,
 				PHPVersion:  phpVersion,
@@ -2173,6 +2223,226 @@ func createMariaDBRow(win fyne.Window, info scanner.ServiceInfo) fyne.CanvasObje
 	)
 }
 
+// createMailpitRow 建立 Mailpit 服務列
+func createMailpitRow(win fyne.Window, info scanner.ServiceInfo) fyne.CanvasObject {
+	statusLabel := widget.NewLabel("Stopped")
+	uptimeData := binding.NewString()
+	uptimeData.Set("")
+	uptimeLabel := widget.NewLabelWithData(uptimeData)
+
+	var actionBtn *widget.Button
+
+	smtpPort := 1025
+	if appCfg.Global.MailpitSMTPPort > 0 {
+		smtpPort = appCfg.Global.MailpitSMTPPort
+	}
+	httpPort := 8025
+	if appCfg.Global.MailpitHTTPPort > 0 {
+		httpPort = appCfg.Global.MailpitHTTPPort
+	}
+
+	portStr := fmt.Sprintf("%d, %d", smtpPort, httpPort)
+
+	actionBtn = widget.NewButton("Start", func() {
+		if !procMgr.IsRunning(process.MailpitServiceKey()) {
+			blocked := port.CheckPorts([]port.PortInfo{
+				{Service: "Mailpit SMTP", Port: smtpPort},
+				{Service: "Mailpit HTTP", Port: httpPort},
+			})
+			if len(blocked) > 0 {
+				for _, p := range blocked {
+					addErrorLog("mailpit", fmt.Sprintf("通訊埠 %d 被佔用，無法啟動 Mailpit", p.Port), nil)
+				}
+				return
+			}
+
+			if err := procMgr.StartMailpit(info.Version, info.ExePath, smtpPort, httpPort, appCfg.Global.MailpitUseDB); err != nil {
+				addErrorLog("mailpit", "啟動 Mailpit 失敗", err)
+				return
+			}
+			pids := procMgr.GetPIDs(process.MailpitServiceKey())
+			if len(pids) > 0 {
+				statusLabel.SetText(fmt.Sprintf("Running (PID: %d)", pids[0]))
+			}
+			actionBtn.SetText("Stop")
+			actionBtn.SetIcon(theme.CancelIcon())
+			monitorUptime(process.MailpitServiceKey(), uptimeData)
+			saveLastServiceState()
+		} else {
+			if err := procMgr.StopMailpit(); err != nil {
+				addErrorLog("mailpit", "停止 Mailpit 失敗", err)
+				return
+			}
+			statusLabel.SetText("Stopped")
+			actionBtn.SetText("Start")
+			actionBtn.SetIcon(theme.MediaPlayIcon())
+			uptimeData.Set("")
+			saveLastServiceState()
+		}
+	})
+
+	if procMgr.IsRunning(process.MailpitServiceKey()) {
+		pids := procMgr.GetPIDs(process.MailpitServiceKey())
+		if len(pids) > 0 {
+			statusLabel.SetText(fmt.Sprintf("Running (PID: %d)", pids[0]))
+		}
+		actionBtn.SetText("Stop")
+		actionBtn.SetIcon(theme.CancelIcon())
+		monitorUptime(process.MailpitServiceKey(), uptimeData)
+	} else {
+		actionBtn.SetIcon(theme.MediaPlayIcon())
+	}
+
+	actionBtnWrapper := container.NewThemeOverride(actionBtn, &coloredButtonTheme{
+		isStop: func() bool { return actionBtn.Text == "Stop" },
+	})
+	originalCallback := actionBtn.OnTapped
+	actionBtn.OnTapped = func() {
+		originalCallback()
+		actionBtn.Refresh()
+	}
+
+	settingsBtn := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
+		showMailpitSettingsDialog(win)
+	})
+
+	actionGroup := container.NewBorder(nil, nil, nil, settingsBtn, actionBtnWrapper)
+
+	return container.NewGridWithColumns(6,
+		widget.NewLabel("Mailpit"),
+		widget.NewLabel(info.Version),
+		statusLabel,
+		uptimeLabel,
+		widget.NewLabel(portStr),
+		actionGroup,
+	)
+}
+
+// showMailpitSettingsDialog 顯示 Mailpit 設定對話框
+func showMailpitSettingsDialog(win fyne.Window) {
+	smtpPortEntry := newScrollPassthroughEntry()
+	smtpPortEntry.SetPlaceHolder("1025")
+	if appCfg.Global.MailpitSMTPPort > 0 {
+		smtpPortEntry.SetText(fmt.Sprintf("%d", appCfg.Global.MailpitSMTPPort))
+	} else {
+		smtpPortEntry.SetText("1025")
+	}
+
+	httpPortEntry := newScrollPassthroughEntry()
+	httpPortEntry.SetPlaceHolder("8025")
+	if appCfg.Global.MailpitHTTPPort > 0 {
+		httpPortEntry.SetText(fmt.Sprintf("%d", appCfg.Global.MailpitHTTPPort))
+	} else {
+		httpPortEntry.SetText("8025")
+	}
+
+	useDBCheck := widget.NewCheck("持久化存儲 (Database)", nil)
+	useDBCheck.SetChecked(appCfg.Global.MailpitUseDB)
+
+	httpPort := 8025
+	if appCfg.Global.MailpitHTTPPort > 0 {
+		httpPort = appCfg.Global.MailpitHTTPPort
+	}
+
+	copyURLBtn := widget.NewButtonWithIcon("複製網址", theme.ContentCopyIcon(), func() {
+		url := fmt.Sprintf("http://localhost:%d", httpPort)
+		win.Clipboard().SetContent(url)
+		addLog("mailpit", fmt.Sprintf("已複製 Mailpit 網址: %s", url))
+	})
+
+	smtpHint := canvas.NewText("SMTP 端口，用於接收郵件（預設 1025）", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	smtpHint.TextSize = 10
+	httpHint := canvas.NewText("網頁管理介面端口（預設 8025）", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	httpHint.TextSize = 10
+	dbHint := canvas.NewText("啟用後郵件將保存至 data/mailpit 目錄，重啟後不遺失", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	dbHint.TextSize = 10
+
+	form := widget.NewForm(
+		widget.NewFormItem("SMTP Port", container.NewVBox(smtpPortEntry, smtpHint)),
+		widget.NewFormItem("HTTP Port", container.NewVBox(httpPortEntry, httpHint)),
+		widget.NewFormItem("Web UI", copyURLBtn),
+		widget.NewFormItem("Data Storage", container.NewVBox(useDBCheck, dbHint)),
+	)
+
+	d := dialog.NewCustomConfirm("Mailpit Settings", "Save", "Cancel", container.NewVScroll(form), func(save bool) {
+		if !save {
+			return
+		}
+
+		smtpPortVal, err := strconv.Atoi(smtpPortEntry.Text)
+		if err != nil || smtpPortVal < 1 || smtpPortVal > 65535 {
+			dialog.ShowError(fmt.Errorf("SMTP Port 必須是 1-65535 的數字"), win)
+			return
+		}
+
+		httpPortVal, err := strconv.Atoi(httpPortEntry.Text)
+		if err != nil || httpPortVal < 1 || httpPortVal > 65535 {
+			dialog.ShowError(fmt.Errorf("HTTP Port 必須是 1-65535 的數字"), win)
+			return
+		}
+
+		if smtpPortVal == httpPortVal {
+			dialog.ShowError(fmt.Errorf("SMTP Port 和 HTTP Port 不能相同"), win)
+			return
+		}
+
+		blocked := port.CheckPorts([]port.PortInfo{
+			{Service: "Mailpit SMTP", Port: smtpPortVal},
+			{Service: "Mailpit HTTP", Port: httpPortVal},
+		})
+
+		// 如果 Mailpit 正在運行，過濾掉自己佔用的端口
+		if procMgr.IsRunning(process.MailpitServiceKey()) {
+			currentSmtp := 1025
+			currentHttp := 8025
+			if appCfg.Global.MailpitSMTPPort > 0 {
+				currentSmtp = appCfg.Global.MailpitSMTPPort
+			}
+			if appCfg.Global.MailpitHTTPPort > 0 {
+				currentHttp = appCfg.Global.MailpitHTTPPort
+			}
+			filtered := make([]port.PortInfo, 0)
+			for _, p := range blocked {
+				if p.Port == currentSmtp || p.Port == currentHttp {
+					continue
+				}
+				filtered = append(filtered, p)
+			}
+			blocked = filtered
+		}
+		if len(blocked) > 0 {
+			for _, p := range blocked {
+				dialog.ShowError(fmt.Errorf("Port %d 已被佔用", p.Port), win)
+				return
+			}
+		}
+
+		appCfg.Global.MailpitSMTPPort = smtpPortVal
+		appCfg.Global.MailpitHTTPPort = httpPortVal
+		appCfg.Global.MailpitUseDB = useDBCheck.Checked
+
+		cfgPath := filepath.Join(baseDir, "conf", "wincmp.json")
+		if err := appCfg.Save(cfgPath); err != nil {
+			dialog.ShowError(fmt.Errorf("儲存設定失敗: %v", err), win)
+			return
+		}
+
+		dbMode := "記憶體"
+		if useDBCheck.Checked {
+			dbMode = "持久化"
+		}
+		addLog("mailpit", fmt.Sprintf("Mailpit 設定已儲存: SMTP=%d, HTTP=%d, 存儲=%s", smtpPortVal, httpPortVal, dbMode))
+
+		// 重新整理 Dashboard
+		newDashboard := createDashboard(win, func() {})
+		mainTabs.Items[0].Content = newDashboard
+		mainTabs.Refresh()
+	}, win)
+
+	d.Resize(fyne.NewSize(440, 380))
+	d.Show()
+}
+
 // createPHPRow 建立 PHP-CGI 服務列
 func createPHPRow(info scanner.PHPVersionInfo) fyne.CanvasObject {
 	statusLabel := widget.NewLabel("Stopped")
@@ -2362,17 +2632,21 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 	origRuntimePort := proj.RuntimePort
 
 	// --- 基本設定 ---
-	nameEntry := widget.NewEntry()
+	nameEntry := newScrollPassthroughEntry()
 	nameEntry.SetText(proj.Name)
 
 	// 使用多行輸入框解決捲軸擋住文字的問題
+	// 減少內部滾動攔截：Wrapping=TextWrapOff 讓文字不自動換行（但仍可手動換行），
+	// Scroll=ScrollVerticalOnly 保留 multiLineRows 高度計算（Ref: entryRenderer.MinSize），
+	// 因為 ScrollNone 模式下 MinSize 不使用 multiLineRows，會導致只顯示一行。
 	domainsEntry := widget.NewMultiLineEntry()
 	domainsEntry.SetMinRowsVisible(3)
-	domainsEntry.Wrapping = fyne.TextWrapWord
+	domainsEntry.Wrapping = fyne.TextWrapOff
+	domainsEntry.Scroll = fyne.ScrollVerticalOnly
 	domainsEntry.SetText(strings.Join(proj.Domains, ", "))
 	domainsEntry.PlaceHolder = "e.g. local-project.test, www.project.test"
 
-	rootPathEntry := widget.NewEntry()
+	rootPathEntry := newScrollPassthroughEntry()
 	rootPathEntry.SetText(proj.RootPath)
 	rootBrowse := widget.NewButtonWithIcon("Browse", theme.FolderOpenIcon(), func() {
 		openZenitySelector(
@@ -2420,7 +2694,7 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 	minW := canvas.NewRectangle(color.Transparent)
 	minW.SetMinSize(fyne.NewSize(160, 0))
 
-	runtimePortEntry := widget.NewEntry()
+	runtimePortEntry := newScrollPassthroughEntry()
 	p := preset.GetPreset(proj.Type)
 	portVal := proj.RuntimePort
 	if portVal == 0 {
@@ -2454,7 +2728,7 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 	useBundledCheck.Checked = proj.UseWinCMPBin
 	useBundledNote := widget.NewLabelWithStyle("(使用 WinCMP 內建 bin/ 執行檔，未勾選則使用系統環境變數)", fyne.TextAlignLeading, fyne.TextStyle{Italic: true})
 
-	commandEntry := widget.NewEntry()
+	commandEntry := newScrollPassthroughEntry()
 	commandEntry.SetText(proj.Command)
 	commandEntry.PlaceHolder = "e.g. deno task dev --port %PORT% --host %HOST%"
 	commandNote := widget.NewLabelWithStyle("支援佔位符: %PORT% %HOST% %PROJECT_DIR% %BIN_DIR%", fyne.TextAlignLeading, fyne.TextStyle{Italic: true})
@@ -2574,8 +2848,7 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 	useSSLCheck := widget.NewCheck("Enable SSL", nil)
 	useSSLCheck.Checked = proj.UseSSL
 
-	sslCrtEntry := widget.NewEntry()
-	sslCrtEntry.SetText(proj.SSLCrt)
+	sslCrtEntry := newScrollPassthroughEntry()
 	crtBrowse := widget.NewButtonWithIcon("Browse", theme.FileIcon(), func() {
 		openZenitySelector(
 			win,
@@ -2588,7 +2861,7 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 		)
 	})
 
-	sslKeyEntry := widget.NewEntry()
+	sslKeyEntry := newScrollPassthroughEntry()
 	sslKeyEntry.SetText(proj.SSLKey)
 	keyBrowse := widget.NewButtonWithIcon("Browse", theme.FileIcon(), func() {
 		openZenitySelector(
@@ -2635,7 +2908,7 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 
 	d := dialog.NewCustomConfirm("Edit Project", "Save", "Cancel", container.NewVScroll(content), func(save bool) {
 		if save {
-			proj.Name = nameEntry.Text
+			proj.Name = config.SanitizeProjectName(nameEntry.Text)
 			rawDomains := domainsEntry.Text
 			rawDomains = strings.ReplaceAll(rawDomains, "\n", ",")
 			doms := strings.Split(rawDomains, ",")
@@ -3463,7 +3736,7 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 	)
 
 	// --- 1. Basic Settings 組件聲明 ---
-	wwwDirEntry := widget.NewEntry()
+	wwwDirEntry := newScrollPassthroughEntry()
 	wwwDirEntry.SetText(appCfg.Global.DefaultWWW)
 	wwwDirBox := container.NewBorder(nil, nil, nil, widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
 		openZenitySelector(
@@ -3476,7 +3749,7 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 		)
 	}), wwwDirEntry)
 
-	sslDirEntry := widget.NewEntry()
+	sslDirEntry := newScrollPassthroughEntry()
 	sslDirEntry.SetText(appCfg.Global.DefaultSSL)
 	sslDirBox := container.NewBorder(nil, nil, nil, widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
 		openZenitySelector(
@@ -3500,13 +3773,13 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 	autoUpdateHostsCheck.Checked = appCfg.Global.AutoUpdateHosts
 
 	// --- 3. Log Settings 組件聲明 ---
-	maxLogEntry := widget.NewEntry()
+	maxLogEntry := newScrollPassthroughEntry()
 	maxLogEntry.SetText(fmt.Sprintf("%d", appCfg.Global.MaxLogRetention))
 	if appCfg.Global.MaxLogRetention == 0 {
 		maxLogEntry.SetText("30") // 預設 30 天
 	}
 
-	maxLogLinesEntry := widget.NewEntry()
+	maxLogLinesEntry := newScrollPassthroughEntry()
 	maxLogLinesEntry.SetText(fmt.Sprintf("%d", appCfg.Global.MaxLogLines))
 	if appCfg.Global.MaxLogLines == 0 {
 		maxLogLinesEntry.SetText("500") // 預設 500 行
@@ -3730,7 +4003,7 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 
 	binaryPathHint := canvas.NewText("請選擇包含 bin 資料夾的根目錄 (例如：...\\mysql-8.4.3-winx64)", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
 	binaryPathHint.TextSize = 10
-	binaryPathEntry := widget.NewEntry()
+	binaryPathEntry := newScrollPassthroughEntry()
 	binaryPathEntry.SetText(appCfg.Global.MariaDBBasedir)
 	binaryPathBrowse := widget.NewButtonWithIcon("Browse", theme.FolderOpenIcon(), func() {
 		openZenitySelector(win, binaryPathEntry.Text, baseDir, true,
@@ -3753,7 +4026,7 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 
 	dataPathHint := canvas.NewText("資料庫檔案存放位置 (例如：\\data\\mysql-8.4.3)，建議與程式目錄分開存放以利升級。", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
 	dataPathHint.TextSize = 10
-	dataPathEntry := widget.NewEntry()
+	dataPathEntry := newScrollPassthroughEntry()
 	dataPathEntry.SetText(appCfg.Global.MariaDBDatadir)
 	dataPathBrowse := widget.NewButtonWithIcon("Browse", theme.FolderOpenIcon(), func() {
 		openZenitySelector(win, dataPathEntry.Text, baseDir, true,
@@ -3765,7 +4038,7 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 		dataPathHint,
 	))
 
-	portEntry := widget.NewEntry()
+	portEntry := newScrollPassthroughEntry()
 	if appCfg.Global.MariaDBPort > 0 {
 		portEntry.SetText(fmt.Sprintf("%d", appCfg.Global.MariaDBPort))
 	} else {

@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.2.1] - 2026-04-16
+
+### Added
+- 新增 Mailpit 郵件測試服務整合 (Dashboard 新增 Mailpit 服務啟停與設定對話框)
+- Terminal Logs 新增 Mailpit 分頁
+- Runtime 支援系統 PATH 回退 (當 `bin/` 中沒有對應執行檔時，自動偵測系統 PATH 中的 Node.js/Bun)
+
+### Changed
+- Go 版本升級至 1.26.2
+- Terminal Logs 分頁重新排序為 System / Caddy / MariaDB / Mailpit / PHP / Runtime
+
+### Fixed
+- 修復 Entry 元件阻擋上層 VScroll 滾輪事件的問題
+- 修復專案名稱包含特殊字元時檔名異常 (特殊字元自動替換為連字號)
+- 修復 Caddy Timberjack 在 Windows 上停止後殘留的過期日誌未清理
+- 修復非 Custom Runtime 未清除啟動指令與 MariaDB 狀態標籤殘留
+- 修復 UseWinCMPBin=false 時 Windows 反斜線路徑被誤判為 Shell 注入字元
+
+### Dependencies
+- Mailpit 1.29.6
+
 ## [1.2.0] - 2026-04-13
 
 ### Added

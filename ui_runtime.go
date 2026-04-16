@@ -388,10 +388,31 @@ func createRuntimeTab(win fyne.Window) (fyne.CanvasObject, func()) {
 					startStopBtn.Disable()
 					modeSelect.Disable()
 				} else if len(versions) == 0 && (resolvedRT == "node" || resolvedRT == "bun") {
-					startStopBtn.SetText("Start")
-					startStopBtn.SetIcon(theme.MediaPlayIcon())
-					startStopBtn.Disable()
-					modeSelect.Disable()
+					// 檢查是否可以使用系統 PATH
+					canUseSystemPath := !proj.UseWinCMPBin
+					if canUseSystemPath {
+						// 檢查系統 PATH 是否有對應執行檔
+						_, hasSystemRuntime := process.CheckSystemRuntimeAvailable(resolvedRT)
+						if hasSystemRuntime {
+							// 可以使用系統 PATH，允許啟動
+							startStopBtn.SetText("Start")
+							startStopBtn.SetIcon(theme.MediaPlayIcon())
+							startStopBtn.Enable()
+							modeSelect.Enable()
+						} else {
+							// 系統 PATH 也沒有，顯示錯誤提示
+							startStopBtn.SetText("No " + GetRuntimeTypeLabel(resolvedRT) + " (Check PATH)")
+							startStopBtn.SetIcon(theme.MediaPlayIcon())
+							startStopBtn.Disable()
+							modeSelect.Disable()
+						}
+					} else {
+						// 使用 bundled 但沒有版本，顯示提示
+						startStopBtn.SetText("No " + GetRuntimeTypeLabel(resolvedRT) + " (Add to bin/)")
+						startStopBtn.SetIcon(theme.MediaPlayIcon())
+						startStopBtn.Disable()
+						modeSelect.Disable()
+					}
 				} else {
 					startStopBtn.SetText("Start")
 					startStopBtn.SetIcon(theme.MediaPlayIcon())

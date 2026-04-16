@@ -1,6 +1,6 @@
 # WinCMP 🚀
 
-![Go Version](https://img.shields.io/badge/Go-1.25.7+-00ADD8?style=for-the-badge&logo=go)
+![Go Version](https://img.shields.io/badge/Go-1.26.2+-00ADD8?style=for-the-badge&logo=go)
 ![Fyne Version](https://img.shields.io/badge/Fyne-v2.7.3-blue?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/Platform-Windows_11-0078D6?style=for-the-badge&logo=windows)
 ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
@@ -45,7 +45,8 @@ wincmp/
 │   ├── node/                # node-x.x.x/npm.cmd
 │   ├── bun/                 # bun-x.x.x/bun.exe
 │   ├── composer/            # composer-x.x.x/composer.bat
-│   └── heidisql/            # heidisql-x.xx/heidisql.exe
+│   ├── heidisql/            # heidisql-x.xx/heidisql.exe
+│   └── mailpit/             # mailpit-x.xx.x/mailpit.exe
 ├── data/                    # 資料存儲區
 │   └── mariadb/             # MariaDB 預設 Data 目錄
 ├── logs/                    # 服務執行日誌 (依日期分類)
@@ -91,7 +92,7 @@ WinCMP 採用 **3-版本-序號** 的規則來分配服務端口，確保不同�
 ## 🚀 開發與編譯環境
 
 ### 1. 系統需求
-- [Go 1.25.7+](https://go.dev/dl/)
+- [Go 1.26.2+](https://go.dev/dl/)
 - C 語言編譯器 (用於 Fyne Cgo 依賴)
 
 ### 2. 免管理員權限編譯 (使用 WinLibs)
@@ -141,6 +142,7 @@ go clean -cache
 - [x] **Preset 自動偵測** (Next.js, Nuxt, Astro, Vite, Django, FastAPI, Flask, PocketBase, Go API)。
 - [x] **Runtime 雙模式啟動** (Background / Terminal)。
 - [x] **舊版 Node.js 專案自動遷移** (node_port → runtime_port 等)。
+- [x] **Mailpit 郵件測試服務整合** (Dashboard 啟停管理與設定對話框)。
 
 ### ⏳ 計畫中 (Planned)
 > **💡 關於詳細的開發規劃、技術分析與實作順序，請參閱完整的 [開發任務清單 (Develop Task List)](doc/develop_task_list.md)。**

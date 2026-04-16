@@ -41,6 +41,7 @@ type ScanResult struct {
 	ComposerList []ServiceInfo
 	HeidiSQLList []ServiceInfo
 	MariaDBList  []ServiceInfo
+	MailpitList  []ServiceInfo
 	NodeList     []ServiceInfo
 	BunList      []ServiceInfo
 	PHPList      []PHPVersionInfo
@@ -257,6 +258,25 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 					Name:    "bun",
 					Version: version,
 					ExePath: bunExe,
+				})
+			}
+		}
+	}
+
+	// 8. 掃描 Mailpit 版本
+	mailpitDir := filepath.Join(binDir, "mailpit")
+	if entries, err := os.ReadDir(mailpitDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "mailpit-") {
+				continue
+			}
+			mailpitExe := filepath.Join(mailpitDir, entry.Name(), "mailpit.exe")
+			if _, err := os.Stat(mailpitExe); err == nil {
+				version := strings.TrimPrefix(entry.Name(), "mailpit-")
+				result.MailpitList = append(result.MailpitList, ServiceInfo{
+					Name:    "mailpit",
+					Version: version,
+					ExePath: mailpitExe,
 				})
 			}
 		}

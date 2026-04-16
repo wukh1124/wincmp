@@ -93,6 +93,44 @@ func IsRuntimeTypeNeedEnvCheck(runtimeType string) bool {
 	}
 }
 
+// CheckSystemRuntimeAvailable 檢查系統 PATH 中是否有可用的 Node.js 或 Bun
+// 回傳執行檔路徑和是否找到的布林值
+func CheckSystemRuntimeAvailable(runtimeType string) (string, bool) {
+	switch runtimeType {
+	case "node":
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		// 嘗試尋找 npm
+		cmd := exec.CommandContext(ctx, "where", "npm")
+		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
+		out, err := cmd.Output()
+		if err == nil && len(out) > 0 {
+			// 取第一個路徑（where 會回傳所有匹配項，每行一個）
+			paths := strings.Split(strings.TrimSpace(string(out)), "\n")
+			if len(paths) > 0 && paths[0] != "" {
+				return strings.TrimSpace(paths[0]), true
+			}
+		}
+		return "", false
+	case "bun":
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		// 嘗試尋找 bun
+		cmd := exec.CommandContext(ctx, "where", "bun")
+		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
+		out, err := cmd.Output()
+		if err == nil && len(out) > 0 {
+			paths := strings.Split(strings.TrimSpace(string(out)), "\n")
+			if len(paths) > 0 && paths[0] != "" {
+				return strings.TrimSpace(paths[0]), true
+			}
+		}
+		return "", false
+	default:
+		return "", false
+	}
+}
+
 // buildRuntimeCommand 根據 Preset 與 Runtime 類型建構執行指令
 func buildRuntimeCommand(project config.ProjectConfig, exePath string) string {
 	port := project.RuntimePort

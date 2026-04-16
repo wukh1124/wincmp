@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"wincmp/internal/crypto"
 )
@@ -45,12 +46,17 @@ type GlobalConfig struct {
 	MariaDBPort     int    `json:"mariadb_port"`
 	MariaDBUser     string `json:"mariadb_user"`
 	MariaDBPassword string `json:"mariadb_password"`
+
+	MailpitSMTPPort int  `json:"mailpit_smtp_port,omitempty"` // SMTP 端口 (預設 1025)
+	MailpitHTTPPort int  `json:"mailpit_http_port,omitempty"` // 網頁端口 (預設 8025)
+	MailpitUseDB    bool `json:"mailpit_use_db,omitempty"`    // 是否使用 database 持久化存儲
 }
 
 // LastServiceState 記錄各個服務上次關閉時的狀態
 type LastServiceState struct {
 	Caddy   bool            `json:"caddy"`
 	MariaDB bool            `json:"mariadb"`
+	Mailpit bool            `json:"mailpit"`
 	PHP     map[string]bool `json:"php"` // key 為 PHP 版本號 (例: "8.2.30"), value 為啟動狀態
 }
 
@@ -305,4 +311,44 @@ func (c *WincmpConfig) RefreshConfigExists(baseDir string) {
 			c.Projects[i].ConfigExists = false
 		}
 	}
+}
+
+// SanitizeProjectName 清理專案名稱，移除 Windows 檔名禁用字元和 Shell 危險字元
+// 將特殊字元替換為連字號，確保名稱可用於檔案路徑
+func SanitizeProjectName(name string) string {
+	if name == "" {
+		return "project"
+	}
+
+	// Windows 檔名禁用字元: < > : " / \ | ? *
+	// Shell 危險字元: & | ; < > $ " ! ( ) { } [ ] ' `
+	// 額外清理: 空白字元
+	specialChars := []string{
+		"<", ">", ":", "\"", "/", "\\", "|", "?", "*",
+		"&", "|", ";", "$", "!", "(", ")", "{", "}", "[", "]", "'", "`",
+	}
+
+	result := name
+	for _, char := range specialChars {
+		result = strings.ReplaceAll(result, char, "-")
+	}
+
+	// 空白字元也替換為連字號
+	result = strings.ReplaceAll(result, " ", "-")
+	result = strings.ReplaceAll(result, "\t", "-")
+
+	// 連續連字號合併為單個
+	for strings.Contains(result, "--") {
+		result = strings.ReplaceAll(result, "--", "-")
+	}
+
+	// 去除首尾連字號
+	result = strings.Trim(result, "-")
+
+	// 如果清理後為空，回傳預設值
+	if result == "" {
+		return "project"
+	}
+
+	return result
 }

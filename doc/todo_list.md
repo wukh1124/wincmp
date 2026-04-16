@@ -8,3 +8,5 @@
 具體原因不明, 但對laravel + react vite項目來說
 project type選vite app, runtime 選 node.js會出問題
 但runtime選custom, start command輸入npm run dev就可以了
+可能原因: 主機沒安裝Node.js或Bun導致掃瞄卡死
+參考: doc/runtime_start_btn_stuck_at_disabled_problem.md
