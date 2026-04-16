@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.3] - 2026-04-16
+
+### Fixed
+- 修復帶底線 Domains 導致 Caddy 設定檔 fallback 到錯誤網域的問題（Caddyfile 現在直接使用用戶輸入的網域，不做安全過濾 fallback）
+- 增強 Hosts 更新失敗時的錯誤訊息，明確列出含非法字元的網域，通知用戶需手動新增至 hosts
+
 ## [1.2.2] - 2026-04-16
 
 ### Fixed

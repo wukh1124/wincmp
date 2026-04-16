@@ -1795,19 +1795,9 @@ func generateCaddyfiles() error {
 
 		var domainsStr string
 		if len(proj.Domains) > 0 {
-			var safeDomains []string
-			for _, d := range proj.Domains {
-				if validDomainPattern.MatchString(d) {
-					safeDomains = append(safeDomains, d)
-				} else {
-					addErrorLog("caddy", fmt.Sprintf("專案 %s: 域名 '%s' 含不安全字元，已跳過", proj.Name, d), nil)
-				}
-			}
-			if len(safeDomains) == 0 {
-				domainsStr = "local-" + proj.Name + ".test"
-			} else {
-				domainsStr = strings.Join(safeDomains, ", ")
-			}
+			// 直接使用者的 domains，不做安全過濾
+			// 無效的 domains (如含底線) 可能導致 hosts 更新失敗，但 Caddyfile 本身可正常運作
+			domainsStr = strings.Join(proj.Domains, ", ")
 		} else {
 			domainsStr = "local-" + proj.Name + ".test"
 		}
@@ -4278,6 +4268,28 @@ func triggerHostsUpdate() {
 
 	addLog("system", fmt.Sprintf("🔍 偵測到 %d 個網域不在系統 Hosts 中: %s", len(missing), strings.Join(missing, ", ")))
 
+	// 檢查是否有無效域名（含底線等非法字元）
+	var invalidDomains []string
+	var validMissing []string
+	for _, d := range missing {
+		if hosts.IsValidDomain(d) {
+			validMissing = append(validMissing, d)
+		} else {
+			invalidDomains = append(invalidDomains, d)
+		}
+	}
+
+	// 如果有無效域名，顯示警告
+	if len(invalidDomains) > 0 {
+		addLog("system", fmt.Sprintf("⚠️ 以下網域含非法字元(含底線)，已跳過: %v", invalidDomains))
+	}
+
+	if len(validMissing) == 0 {
+		// 沒有有效域名需要更新，直接返回
+		addErrorLog("system", "更新系統 Hosts 失敗", fmt.Errorf("所有域名均含非法字元，請手動新增至 hosts: %v", invalidDomains))
+		return
+	}
+
 	// 2. 備份 Hosts
 	backupPath, err := hosts.BackupHosts(baseDir)
 	if err != nil {
@@ -4286,14 +4298,14 @@ func triggerHostsUpdate() {
 	}
 	addLog("system", fmt.Sprintf("✅ 已備份現有 Hosts 到: %s", backupPath))
 
-	// 3. 更新 Hosts
-	err = hosts.UpdateHosts(missing)
+	// 3. 更新 Hosts（只寫入有效域名）
+	err = hosts.UpdateHosts(validMissing)
 	if err != nil {
 		addErrorLog("system", "更新系統 Hosts 失敗", err)
 		return
 	}
 
-	addLog("system", fmt.Sprintf("🚀 已成功將 %d 個網域寫入系統 Hosts 檔", len(missing)))
+	addLog("system", fmt.Sprintf("🚀 已成功將 %d 個網域寫入系統 Hosts 檔", len(validMissing)))
 }
 
 // ==== 自定義：模態互動阻擋器 (Modal Blocker) ====

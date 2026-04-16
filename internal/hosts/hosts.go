@@ -18,6 +18,11 @@ const (
 // validDomainPattern 用於驗證域名是否只含合法字元（防止 hosts 注入攻擊）
 var validDomainPattern = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$`)
 
+// IsValidDomain 檢查域名是否只含合法字元（用於外部呼叫）
+func IsValidDomain(domain string) bool {
+	return validDomainPattern.MatchString(domain)
+}
+
 // BackupHosts 將目前的 hosts 備份至指定的備份目錄
 func BackupHosts(baseDir string) (string, error) {
 	backupDir := filepath.Join(baseDir, "data", "backup", "hosts")
@@ -83,7 +88,14 @@ func UpdateHosts(domains []string) error {
 
 	safeDomains := sanitizeDomains(domains)
 	if len(safeDomains) == 0 {
-		return fmt.Errorf("所有域名均未通過安全性驗證，已拒絕寫入 hosts")
+		// 收集所有無效的域名，用於提供更具體的錯誤訊息
+		var invalidDomains []string
+		for _, d := range domains {
+			if !validDomainPattern.MatchString(d) {
+				invalidDomains = append(invalidDomains, d)
+			}
+		}
+		return fmt.Errorf("以下域名含非法字元(含底線或主機名): %v，請手動新增至 hosts", invalidDomains)
 	}
 
 	// 直接以追加模式開啟 hosts 檔案
