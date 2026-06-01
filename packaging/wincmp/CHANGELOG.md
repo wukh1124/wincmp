@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.5] 2026-06-02
+
+### Added
+- 新增核心依賴自動下載與解壓縮功能（支援 Caddy, MariaDB, PHP 7.3/8.2/8.3, Composer, HeidiSQL, Node.js 等）並提供進度 UI
+- 新增啟動時核心依賴完整性檢測與警告對話框
+- 新增 `conf/dependencies.json` 設定檔，將依賴版本與下載網址移出代碼統一管理
+- 新增「取得最新建議版本 (Fetch)」功能，支援從遠端 GitHub 動態更新依賴配置
+- 新增系統 Hosts 更新失敗時的引導對話框，提供一鍵複製 Hosts 規則與管理員權限（UAC）啟動記事本編輯之功能
+
+### Changed
+- 優化依賴管理器 UI 佈局，區分「下載」與「重新安裝」按鈕顏色並調整垂直間距
+
+### Fixed
+- 修正自動下載 MariaDB 與 Node.js 後的目錄命名格式，並自動生成 `composer.bat`
+
+
+
 ## [1.2.4] - 2026-04-20
 
 ### Fixed

@@ -282,6 +282,33 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 		}
 	}
 
+	// 進行版本排序，確保最新版本排在 Slice 的最前面 (index 0)
+	sortServiceList := func(list []ServiceInfo) {
+		sort.Slice(list, func(i, j int) bool {
+			return compareVersions(list[i].Version, list[j].Version) > 0
+		})
+	}
+
+	sortServiceList(result.CaddyList)
+	// 只保留最新的 Caddy 版本，避免多個 Caddy 版本同時顯示與啟動造成衝突
+	if len(result.CaddyList) > 1 {
+		result.CaddyList = result.CaddyList[:1]
+	}
+	sortServiceList(result.MariaDBList)
+	// 只保留最新的 MariaDB 版本，避免多個 MariaDB 版本同時顯示與啟動造成衝突
+	if len(result.MariaDBList) > 1 {
+		result.MariaDBList = result.MariaDBList[:1]
+	}
+	sortServiceList(result.ComposerList)
+	sortServiceList(result.HeidiSQLList)
+	sortServiceList(result.NodeList)
+	sortServiceList(result.BunList)
+	sortServiceList(result.MailpitList)
+	// 只保留最新的 Mailpit 版本，避免多個 Mailpit 版本同時顯示與啟動造成衝突
+	if len(result.MailpitList) > 1 {
+		result.MailpitList = result.MailpitList[:1]
+	}
+
 	return result, nil
 }
 
@@ -328,4 +355,41 @@ func (p *PHPVersionInfo) GetPortRangeStr() string {
 		return fmt.Sprintf("%d", ports[0])
 	}
 	return fmt.Sprintf("%d-%d", ports[0], ports[len(ports)-1])
+}
+
+// compareVersions 比較兩個版本號字串大小 (v1 < v2 回傳 -1，v1 > v2 回傳 1，相等回傳 0)
+func compareVersions(v1, v2 string) int {
+	clean := func(v string) string {
+		v = strings.TrimPrefix(v, "v")
+		v = strings.Split(v, "-")[0]
+		return v
+	}
+	v1 = clean(v1)
+	v2 = clean(v2)
+
+	p1 := strings.Split(v1, ".")
+	p2 := strings.Split(v2, ".")
+
+	for i := 0; i < len(p1) || i < len(p2); i++ {
+		var n1, n2 int
+		var err error
+		if i < len(p1) {
+			n1, err = strconv.Atoi(p1[i])
+			if err != nil {
+				n1 = 0
+			}
+		}
+		if i < len(p2) {
+			n2, err = strconv.Atoi(p2[i])
+			if err != nil {
+				n2 = 0
+			}
+		}
+		if n1 < n2 {
+			return -1
+		} else if n1 > n2 {
+			return 1
+		}
+	}
+	return 0
 }
