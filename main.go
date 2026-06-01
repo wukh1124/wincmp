@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,6 +39,7 @@ import (
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
 	"wincmp/internal/singleinstance"
+	"wincmp/internal/downloader"
 
 	"fyne.io/fyne/v2/data/binding"
 
@@ -74,6 +76,7 @@ var (
 	resourceMonitor *resource.Monitor
 	scanRes         *scanner.ScanResult
 	appCfg          *config.WincmpConfig
+	depCfg          config.DependencyConfig
 	baseDir         string
 	isZenityOpen    atomic.Bool
 	myApp           fyne.App
@@ -1081,6 +1084,17 @@ func main() {
 		addLog("system", fmt.Sprintf("  ✓ 設定檔已載入 (%d 個專案)", len(appCfg.Projects)))
 	}
 
+	// --- 載入依賴設定檔 ---
+	depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
+	var depLoadErr error
+	depCfg, depLoadErr = config.LoadDependencies(depCfgPath)
+	if depLoadErr != nil {
+		addErrorLog("system", "無法載入依賴設定檔，將使用預設設定", depLoadErr)
+		depCfg = config.DefaultDependencies
+	} else {
+		addLog("system", "  ✓ 依賴設定檔已載入")
+	}
+
 	cleanupOldLogs(appCfg.Global.MaxLogRetention)
 
 	// --- 預計算 Projects 的 ConfigExists 狀態（提升 UI 渲染效能）---
@@ -1220,6 +1234,9 @@ func main() {
 	if procMgr.IsRunning("caddy") {
 		checkPHPForProjects(myWindow)
 	}
+
+	// 檢查核心依賴偵測提示
+	checkCoreDependencies(myWindow)
 
 	// 初始化完成，允許 Log Tab 自動切換
 	isLogTabSwitchAllowed.Store(true)
@@ -1466,7 +1483,13 @@ func createDashboard(win fyne.Window, refreshProjects func()) fyne.CanvasObject 
 	)
 
 	rows := []fyne.CanvasObject{
-		widget.NewLabelWithStyle("Service Modules Manager", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		container.NewBorder(
+			nil, nil, nil,
+			widget.NewButtonWithIcon("Manage Dependencies", theme.DownloadIcon(), func() {
+				showDependencyManager(win)
+			}),
+			widget.NewLabelWithStyle("Service Modules Manager", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		),
 		widget.NewSeparator(),
 		header,
 		widget.NewSeparator(),
@@ -2002,6 +2025,738 @@ func checkPHPForProjects(win fyne.Window) {
 			refreshAllPHPStatus()
 		}, win).Show()
 	})
+}
+
+// checkCoreDependencies 檢查 Caddy、PHP 與 MariaDB 等核心元件是否缺失並進行提示
+func checkCoreDependencies(win fyne.Window) {
+	missingCaddy := len(scanRes.CaddyList) == 0
+	missingPHP := len(scanRes.PHPList) == 0
+	missingMariaDB := len(scanRes.MariaDBList) == 0
+
+	// 若無缺失任何核心元件則直接返回
+	if !missingCaddy && !missingPHP && !missingMariaDB {
+		return
+	}
+
+	var msgBuilder strings.Builder
+	msgBuilder.WriteString("WinCMP detected that you have not configured the required core dependencies:\n\n")
+
+	if missingCaddy {
+		msgBuilder.WriteString("  [Missing] Caddy   (Executable not found)\n")
+	} else {
+		msgBuilder.WriteString("  [Detected] Caddy   (Detected)\n")
+	}
+
+	if missingPHP {
+		msgBuilder.WriteString("  [Missing] PHP     (Executable not found)\n")
+	} else {
+		msgBuilder.WriteString("  [Detected] PHP     (Detected)\n")
+	}
+
+	if missingMariaDB {
+		msgBuilder.WriteString("  [Missing] MariaDB (Executable not found)\n")
+	} else {
+		msgBuilder.WriteString("  [Detected] MariaDB (Detected)\n")
+	}
+
+	msgBuilder.WriteString("\nWould you like to start the automatic download and configuration now?")
+
+	lbl := widget.NewLabel(msgBuilder.String())
+	lbl.Wrapping = fyne.TextWrapWord
+
+	dialogContent := container.NewVScroll(lbl)
+	dialogContent.SetMinSize(fyne.NewSize(450, 200))
+
+	fyne.Do(func() {
+		dialog.NewCustomConfirm("Dependency Missing", "Auto Download (Recommended)", "Configure Later", dialogContent, func(confirm bool) {
+			if confirm {
+				startAutoDownload(win, missingCaddy, missingPHP, missingMariaDB)
+			}
+		}, win).Show()
+	})
+}
+
+// startAutoDownload 執行非同步下載與安裝核心元件
+func startAutoDownload(win fyne.Window, missingCaddy, missingPHP, missingMariaDB bool) {
+	type depSpec struct {
+		name    string
+		url     string
+		destZip string
+		destDir string
+	}
+
+	var specs []depSpec
+	binDir := filepath.Join(baseDir, "bin")
+
+	if missingCaddy {
+		caddyVer := depCfg["caddy"].Version
+		specs = append(specs, depSpec{
+			name:    "Caddy v" + caddyVer,
+			url:     depCfg["caddy"].URL,
+			destZip: filepath.Join(binDir, "caddy_"+caddyVer+".zip"),
+			destDir: filepath.Join(binDir, "caddy", "caddy-"+caddyVer),
+		})
+	}
+
+	if missingPHP {
+		php83Ver := depCfg["php83"].Version
+		specs = append(specs, depSpec{
+			name:    "PHP v" + php83Ver + " NTS",
+			url:     depCfg["php83"].URL,
+			destZip: filepath.Join(binDir, "php_"+php83Ver+".zip"),
+			destDir: filepath.Join(binDir, "php", "php-"+php83Ver),
+		})
+	}
+
+	if missingMariaDB {
+		mariaDBVer := depCfg["mariadb"].Version
+		specs = append(specs, depSpec{
+			name:    "MariaDB v" + mariaDBVer,
+			url:     depCfg["mariadb"].URL,
+			destZip: filepath.Join(binDir, "mariadb_"+mariaDBVer+".zip"),
+			destDir: filepath.Join(binDir, "mariadb"),
+		})
+	}
+
+	if len(specs) == 0 {
+		return
+	}
+
+	// 建立下載進度 UI
+	titleLabel := widget.NewLabel("Dependency Downloader")
+	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
+	titleLabel.Alignment = fyne.TextAlignCenter
+
+	statusLabel := widget.NewLabel("Preparing download environment...")
+	statusLabel.Alignment = fyne.TextAlignCenter
+	progressBar := widget.NewProgressBar()
+	progressBar.SetValue(0)
+
+	var d *widget.PopUp
+
+	// 自訂按鈕元件
+	bgBtn := widget.NewButton("Background", func() {
+		d.Hide()
+	})
+
+	closeBtn := widget.NewButton("Close", func() {
+		d.Hide()
+	})
+	closeBtn.Hide() // 初始隱藏
+
+	buttonBox := container.NewHBox(layout.NewSpacer(), bgBtn, closeBtn, layout.NewSpacer())
+
+	contentBox := container.NewVBox(
+		titleLabel,
+		widget.NewSeparator(),
+		statusLabel,
+		progressBar,
+		buttonBox,
+	)
+
+	// 用透明矩形撐開最小尺寸，避免對話框縮成一小團
+	bgRect := canvas.NewRectangle(color.Transparent)
+	bgRect.SetMinSize(fyne.NewSize(380, 140))
+
+	dialogContent := container.NewPadded(container.NewStack(bgRect, contentBox))
+
+	d = widget.NewModalPopUp(dialogContent, win.Canvas())
+	d.Show()
+
+	go func() {
+		hasError := false
+		for i, spec := range specs {
+			prefix := fmt.Sprintf("[%d/%d] Downloading %s...", i+1, len(specs), spec.name)
+			addLog("system", fmt.Sprintf("Downloading core dependency: %s...", spec.name))
+
+			// 執行檔案下載
+			err := downloader.DownloadFile(spec.url, spec.destZip, func(current, total int64) {
+				var percent float64
+				if total > 0 {
+					percent = float64(current) / float64(total)
+				}
+				currentMB := float64(current) / 1024 / 1024
+				totalMB := float64(total) / 1024 / 1024
+
+				fyne.Do(func() {
+					statusLabel.SetText(fmt.Sprintf("%s\n%.2fMB / %.2fMB", prefix, currentMB, totalMB))
+					progressBar.SetValue(percent)
+				})
+			})
+
+			if err != nil {
+				hasError = true
+				fyne.Do(func() {
+					statusLabel.SetText(fmt.Sprintf("Download failed for %s:\n%v", spec.name, err))
+					bgBtn.Hide()
+					closeBtn.Show()
+					buttonBox.Refresh()
+				})
+				addErrorLog("system", fmt.Sprintf("Download failed for %s", spec.name), err)
+				break
+			}
+
+			// 執行解壓縮
+			fyne.Do(func() {
+				statusLabel.SetText(fmt.Sprintf("[%d/%d] Extracting %s...", i+1, len(specs), spec.name))
+				progressBar.SetValue(0.5)
+			})
+			addLog("system", fmt.Sprintf("Extracting core dependency: %s...", spec.name))
+
+			err = downloader.Unzip(spec.destZip, spec.destDir)
+			if err != nil {
+				hasError = true
+				fyne.Do(func() {
+					statusLabel.SetText(fmt.Sprintf("Extraction failed for %s:\n%v", spec.name, err))
+					bgBtn.Hide()
+					closeBtn.Show()
+					buttonBox.Refresh()
+				})
+				addErrorLog("system", fmt.Sprintf("Extraction failed for %s", spec.name), err)
+				break
+			}
+
+			// 清理下載的 zip
+			os.Remove(spec.destZip)
+
+			// MariaDB 的目錄重命名處理
+			if strings.HasPrefix(spec.name, "MariaDB v") {
+				version := strings.TrimPrefix(spec.name, "MariaDB v")
+				oldDir := filepath.Join(binDir, "mariadb", "mariadb-"+version+"-winx64")
+				newDir := filepath.Join(binDir, "mariadb", "mariadb-"+version)
+				if _, err := os.Stat(oldDir); err == nil {
+					if _, err := os.Stat(newDir); os.IsNotExist(err) {
+						if renameErr := os.Rename(oldDir, newDir); renameErr != nil {
+							addErrorLog("system", "MariaDB directory rename failed", renameErr)
+						}
+					}
+				}
+			}
+			addLog("system", fmt.Sprintf("Installed core dependency: %s", spec.name))
+		}
+
+		if !hasError {
+			fyne.Do(func() {
+				statusLabel.SetText("All missing dependencies have been downloaded and configured!")
+				progressBar.SetValue(1.0)
+				bgBtn.Hide()
+				closeBtn.Show()
+				buttonBox.Refresh()
+
+				// 自動重新掃描並更新介面
+				var scanErr error
+				scanRes, scanErr = scanner.ScanBinDir(baseDir)
+				if scanErr != nil {
+					addErrorLog("system", "Rescan failed", scanErr)
+				} else {
+					addLog("system", "Rescan completed, reloading dashboard...")
+					newDashboard := createDashboard(win, func() {})
+					mainTabs.Items[0].Content = newDashboard
+					mainTabs.Refresh()
+				}
+			})
+		}
+	}()
+}
+
+// compareVersions 比較兩個版本號字串大小 (如 v1 < v2 回傳 -1，v1 > v2 回傳 1，相等回傳 0)
+func compareVersions(v1, v2 string) int {
+	clean := func(v string) string {
+		v = strings.TrimPrefix(v, "v")
+		v = strings.Split(v, "-")[0]
+		return v
+	}
+	v1 = clean(v1)
+	v2 = clean(v2)
+
+	p1 := strings.Split(v1, ".")
+	p2 := strings.Split(v2, ".")
+
+	for i := 0; i < len(p1) || i < len(p2); i++ {
+		var n1, n2 int
+		if i < len(p1) {
+			n1, _ = strconv.Atoi(p1[i])
+		}
+		if i < len(p2) {
+			n2, _ = strconv.Atoi(p2[i])
+		}
+		if n1 < n2 {
+			return -1
+		} else if n1 > n2 {
+			return 1
+		}
+	}
+	return 0
+}
+
+func getLocalCaddyVersion() string {
+	if len(scanRes.CaddyList) > 0 {
+		return scanRes.CaddyList[0].Version
+	}
+	return ""
+}
+
+func getLocalMariaDBVersion() string {
+	if len(scanRes.MariaDBList) > 0 {
+		return scanRes.MariaDBList[0].Version
+	}
+	return ""
+}
+
+func getLocalPHPVersion(majorMin string) string {
+	for _, php := range scanRes.PHPList {
+		if php.MajorMin == majorMin {
+			return php.Version
+		}
+	}
+	return ""
+}
+
+func getLocalComposerVersion() string {
+	if len(scanRes.ComposerList) > 0 {
+		return scanRes.ComposerList[0].Version
+	}
+	return ""
+}
+
+func getLocalHeidiSQLVersion() string {
+	if len(scanRes.HeidiSQLList) > 0 {
+		return scanRes.HeidiSQLList[0].Version
+	}
+	return ""
+}
+
+func getLocalNodeVersion() string {
+	if len(scanRes.NodeList) > 0 {
+		return scanRes.NodeList[0].Version
+	}
+	return ""
+}
+
+// depSpec 定義依賴元件的下載規格
+type depSpec struct {
+	name    string
+	url     string
+	destZip string
+	destDir string
+}
+
+// depButtonTheme 自定義依賴管理按鈕主題，以不同顏色區分下載、更新與重裝
+type depButtonTheme struct {
+	action string // "Download", "Update", "Reinstall"
+}
+
+func (m *depButtonTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	switch name {
+	case theme.ColorNameForeground:
+		return color.RGBA{R: 255, G: 255, B: 255, A: 255}
+	case theme.ColorNameButton:
+		switch m.action {
+		case "Download":
+			// 藍色 (吸引點擊)
+			return color.RGBA{R: 13, G: 110, B: 253, A: 255}
+		case "Update":
+			// 橘色 (警示有新版本)
+			return color.RGBA{R: 253, G: 126, B: 20, A: 255}
+		case "Reinstall":
+			// 深灰色 (次要操作)
+			return color.RGBA{R: 108, G: 117, B: 125, A: 255}
+		}
+	}
+	return fyne.CurrentApp().Settings().Theme().Color(name, variant)
+}
+
+func (m *depButtonTheme) Font(style fyne.TextStyle) fyne.Resource {
+	return fyne.CurrentApp().Settings().Theme().Font(style)
+}
+
+func (m *depButtonTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
+	return fyne.CurrentApp().Settings().Theme().Icon(name)
+}
+
+func (m *depButtonTheme) Size(name fyne.ThemeSizeName) float32 {
+	return fyne.CurrentApp().Settings().Theme().Size(name)
+}
+
+func createDependencyRow(win fyne.Window, d *dialog.Dialog, name string, localVer, recVer string, spec depSpec) fyne.CanvasObject {
+	nameLabel := widget.NewLabel(name)
+	nameLabel.TextStyle = fyne.TextStyle{Bold: true}
+
+	infoLabel := widget.NewLabel("")
+	var btn *widget.Button
+	var btnWrapper fyne.CanvasObject
+
+	actionFn := func() {
+		if d != nil && *d != nil {
+			(*d).Hide()
+		}
+		startSingleDependencyDownload(win, spec)
+	}
+
+	if localVer == "" {
+		infoLabel.SetText(fmt.Sprintf("Not Installed (Recommended: %s)", recVer))
+		btn = widget.NewButton("Download", actionFn)
+		btnWrapper = container.NewThemeOverride(btn, &depButtonTheme{action: "Download"})
+	} else {
+		cmp := compareVersions(localVer, recVer)
+		if cmp < 0 {
+			infoLabel.SetText(fmt.Sprintf("Installed: %s (Update available to %s)", localVer, recVer))
+			btn = widget.NewButton("Update", actionFn)
+			btnWrapper = container.NewThemeOverride(btn, &depButtonTheme{action: "Update"})
+		} else {
+			infoLabel.SetText(fmt.Sprintf("Installed: %s (Up to date)", localVer))
+			btn = widget.NewButton("Reinstall", actionFn)
+			btnWrapper = container.NewThemeOverride(btn, &depButtonTheme{action: "Reinstall"})
+		}
+	}
+
+	return container.NewGridWithColumns(3, nameLabel, infoLabel, btnWrapper)
+}
+
+func showDependencyManager(win fyne.Window) {
+	// 每次點開 Dependency Manager 時，重新從磁碟讀取 dependencies.json
+	depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
+	if loaded, err := config.LoadDependencies(depCfgPath); err == nil {
+		depCfg = loaded
+		addLog("system", fmt.Sprintf("✓ 重新載入依賴設定檔成功，Caddy: %s, HeidiSQL: %s, Node: %s", depCfg["caddy"].Version, depCfg["heidisql"].Version, depCfg["node"].Version))
+	} else {
+		addErrorLog("system", "重新載入依賴設定檔失敗，將使用記憶體中現有配置", err)
+	}
+
+	binDir := filepath.Join(baseDir, "bin")
+
+	caddyVer := depCfg["caddy"].Version
+	caddyUrl := depCfg["caddy"].URL
+	caddySpec := depSpec{
+		name:    "Caddy v" + caddyVer,
+		url:     caddyUrl,
+		destZip: filepath.Join(binDir, "caddy_"+caddyVer+".zip"),
+		destDir: filepath.Join(binDir, "caddy", "caddy-"+caddyVer),
+	}
+
+	mariaDBVer := depCfg["mariadb"].Version
+	mariaDBUrl := depCfg["mariadb"].URL
+	mariaDBSpec := depSpec{
+		name:    "MariaDB v" + mariaDBVer,
+		url:     mariaDBUrl,
+		destZip: filepath.Join(binDir, "mariadb_"+mariaDBVer+".zip"),
+		destDir: filepath.Join(binDir, "mariadb"),
+	}
+
+	php73Ver := depCfg["php73"].Version
+	php73Url := depCfg["php73"].URL
+	php73Spec := depSpec{
+		name:    "PHP v" + php73Ver,
+		url:     php73Url,
+		destZip: filepath.Join(binDir, "php_"+php73Ver+".zip"),
+		destDir: filepath.Join(binDir, "php", "php-"+php73Ver),
+	}
+
+	php82Ver := depCfg["php82"].Version
+	php82Url := depCfg["php82"].URL
+	php82Spec := depSpec{
+		name:    "PHP v" + php82Ver,
+		url:     php82Url,
+		destZip: filepath.Join(binDir, "php_"+php82Ver+".zip"),
+		destDir: filepath.Join(binDir, "php", "php-"+php82Ver),
+	}
+
+	php83Ver := depCfg["php83"].Version
+	php83Url := depCfg["php83"].URL
+	php83Spec := depSpec{
+		name:    "PHP v" + php83Ver,
+		url:     php83Url,
+		destZip: filepath.Join(binDir, "php_"+php83Ver+".zip"),
+		destDir: filepath.Join(binDir, "php", "php-"+php83Ver),
+	}
+
+	composerVer := depCfg["composer"].Version
+	composerUrl := depCfg["composer"].URL
+	composerSpec := depSpec{
+		name:    "Composer v" + composerVer,
+		url:     composerUrl,
+		destZip: filepath.Join(binDir, "composer", "composer-"+composerVer, "composer.phar"),
+		destDir: filepath.Join(binDir, "composer", "composer-"+composerVer),
+	}
+
+	heidiSQLVer := depCfg["heidisql"].Version
+	heidiSQLUrl := depCfg["heidisql"].URL
+	heidiSQLSpec := depSpec{
+		name:    "HeidiSQL v" + heidiSQLVer,
+		url:     heidiSQLUrl,
+		destZip: filepath.Join(binDir, "heidisql_"+heidiSQLVer+".zip"),
+		destDir: filepath.Join(binDir, "heidisql", "heidisql-"+heidiSQLVer),
+	}
+
+	nodeVer := depCfg["node"].Version
+	nodeUrl := depCfg["node"].URL
+	nodeSpec := depSpec{
+		name:    "Node.js v" + nodeVer,
+		url:     nodeUrl,
+		destZip: filepath.Join(binDir, "node_"+nodeVer+".zip"),
+		destDir: filepath.Join(binDir, "node"),
+	}
+
+	var d dialog.Dialog
+
+	coreRows := container.NewVBox(
+		createDependencyRow(win, &d, "Caddy Server", getLocalCaddyVersion(), caddyVer, caddySpec),
+		widget.NewSeparator(),
+		createDependencyRow(win, &d, "MariaDB Database", getLocalMariaDBVersion(), mariaDBVer, mariaDBSpec),
+		widget.NewSeparator(),
+		createDependencyRow(win, &d, "PHP 7.3 NTS", getLocalPHPVersion("7.3"), php73Ver, php73Spec),
+		widget.NewSeparator(),
+		createDependencyRow(win, &d, "PHP 8.2 NTS", getLocalPHPVersion("8.2"), php82Ver, php82Spec),
+		widget.NewSeparator(),
+		createDependencyRow(win, &d, "PHP 8.3 NTS", getLocalPHPVersion("8.3"), php83Ver, php83Spec),
+	)
+	coreCard := widget.NewCard("Core Dependencies", "Web server, database and PHP versions", coreRows)
+
+	otherRows := container.NewVBox(
+		createDependencyRow(win, &d, "Composer", getLocalComposerVersion(), composerVer, composerSpec),
+		widget.NewSeparator(),
+		createDependencyRow(win, &d, "HeidiSQL", getLocalHeidiSQLVersion(), heidiSQLVer, heidiSQLSpec),
+		widget.NewSeparator(),
+		createDependencyRow(win, &d, "Node.js LTS", getLocalNodeVersion(), nodeVer, nodeSpec),
+	)
+	otherCard := widget.NewCard("Other Dependencies", "Package managers, GUI tools and runtime systems", otherRows)
+
+	fetchBtn := widget.NewButtonWithIcon("取得最新建議版本", theme.DownloadIcon(), func() {
+		fetchLatestDependencies(win, d)
+	})
+
+	scrollContent := container.NewVScroll(container.NewVBox(fetchBtn, coreCard, otherCard))
+	scrollContent.SetMinSize(fyne.NewSize(650, 420))
+
+	d = dialog.NewCustom("Dependency Manager", "Close", scrollContent, win)
+	d.Show()
+}
+
+func fetchLatestDependencies(win fyne.Window, d dialog.Dialog) {
+	progress := dialog.NewProgressInfinite("取得最新版本", "正在從遠端獲取最新依賴資訊...", win)
+	progress.Show()
+
+	go func() {
+		defer progress.Hide()
+
+		url := "https://raw.githubusercontent.com/wukh1124/wincmp/main/conf/dependencies.json"
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Get(url)
+		if err != nil {
+			fyne.Do(func() {
+				dialog.ShowError(fmt.Errorf("無法連線至伺服器: %w", err), win)
+			})
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			fyne.Do(func() {
+				dialog.ShowError(fmt.Errorf("伺服器回應錯誤: %s", resp.Status), win)
+			})
+			return
+		}
+
+		var newCfg config.DependencyConfig
+		if err := json.NewDecoder(resp.Body).Decode(&newCfg); err != nil {
+			fyne.Do(func() {
+				dialog.ShowError(fmt.Errorf("解析資料失敗: %w", err), win)
+			})
+			return
+		}
+
+		// 簡單驗證資料完整性
+		requiredKeys := []string{"caddy", "mariadb", "php73", "php82", "php83", "composer", "heidisql", "node"}
+		for _, key := range requiredKeys {
+			if _, ok := newCfg[key]; !ok {
+				fyne.Do(func() {
+					dialog.ShowError(fmt.Errorf("取得的設定檔格式不正確，缺少欄位: %s", key), win)
+				})
+				return
+			}
+		}
+
+		// 儲存至本地
+		depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
+		if err := config.SaveDependencies(depCfgPath, newCfg); err != nil {
+			fyne.Do(func() {
+				dialog.ShowError(fmt.Errorf("儲存設定檔失敗: %w", err), win)
+			})
+			return
+		}
+
+		// 更新記憶體中的依賴配置
+		depCfg = newCfg
+
+		fyne.Do(func() {
+			dialog.ShowInformation("成功", "已成功更新最新建議依賴版本！", win)
+			if d != nil {
+				d.Hide()
+			}
+			showDependencyManager(win)
+		})
+	}()
+}
+
+func startSingleDependencyDownload(win fyne.Window, spec depSpec) {
+	titleLabel := widget.NewLabel("Dependency Downloader")
+	titleLabel.TextStyle = fyne.TextStyle{Bold: true}
+	titleLabel.Alignment = fyne.TextAlignCenter
+
+	statusLabel := widget.NewLabel("Preparing to download...")
+	statusLabel.Alignment = fyne.TextAlignCenter
+	progressBar := widget.NewProgressBar()
+	progressBar.SetValue(0)
+
+	var d *widget.PopUp
+
+	// 自訂按鈕元件
+	bgBtn := widget.NewButton("Background", func() {
+		d.Hide()
+	})
+
+	backBtn := widget.NewButton("Back", func() {
+		d.Hide()
+		showDependencyManager(win)
+	})
+	backBtn.Hide() // 初始隱藏
+
+	closeBtn := widget.NewButton("Close", func() {
+		d.Hide()
+	})
+	closeBtn.Hide() // 初始隱藏
+
+	buttonBox := container.NewHBox(layout.NewSpacer(), bgBtn, backBtn, closeBtn, layout.NewSpacer())
+
+	contentBox := container.NewVBox(
+		titleLabel,
+		widget.NewSeparator(),
+		statusLabel,
+		progressBar,
+		buttonBox,
+	)
+
+	// 用透明矩形撐開最小尺寸，避免對話框縮成一小團
+	bgRect := canvas.NewRectangle(color.Transparent)
+	bgRect.SetMinSize(fyne.NewSize(380, 140))
+
+	dialogContent := container.NewPadded(container.NewStack(bgRect, contentBox))
+
+	d = widget.NewModalPopUp(dialogContent, win.Canvas())
+	d.Show()
+
+	go func() {
+		hasError := false
+		addLog("system", fmt.Sprintf("Starting download for: %s...", spec.name))
+
+		err := downloader.DownloadFile(spec.url, spec.destZip, func(current, total int64) {
+			var percent float64
+			if total > 0 {
+				percent = float64(current) / float64(total)
+			}
+			currentMB := float64(current) / 1024 / 1024
+			totalMB := float64(total) / 1024 / 1024
+
+			fyne.Do(func() {
+				statusLabel.SetText(fmt.Sprintf("Downloading %s...\n%.2fMB / %.2fMB", spec.name, currentMB, totalMB))
+				progressBar.SetValue(percent)
+			})
+		})
+
+		if err != nil {
+			hasError = true
+			fyne.Do(func() {
+				statusLabel.SetText(fmt.Sprintf("Download failed for %s:\n%v", spec.name, err))
+				bgBtn.Hide()
+				backBtn.Show()
+				closeBtn.Show()
+				buttonBox.Refresh()
+			})
+			addErrorLog("system", fmt.Sprintf("Download failed for %s", spec.name), err)
+			return
+		}
+
+		binDir := filepath.Join(baseDir, "bin")
+		if strings.HasSuffix(spec.destZip, ".zip") {
+			fyne.Do(func() {
+				statusLabel.SetText(fmt.Sprintf("Extracting %s...", spec.name))
+				progressBar.SetValue(0.5)
+			})
+			addLog("system", fmt.Sprintf("Extracting: %s...", spec.name))
+
+			err = downloader.Unzip(spec.destZip, spec.destDir)
+			if err != nil {
+				hasError = true
+				fyne.Do(func() {
+					statusLabel.SetText(fmt.Sprintf("Extraction failed for %s:\n%v", spec.name, err))
+					bgBtn.Hide()
+					backBtn.Show()
+					closeBtn.Show()
+					buttonBox.Refresh()
+				})
+				addErrorLog("system", fmt.Sprintf("Extraction failed for %s", spec.name), err)
+				return
+			}
+
+			os.Remove(spec.destZip)
+
+			if strings.HasPrefix(spec.name, "MariaDB v") {
+				version := strings.TrimPrefix(spec.name, "MariaDB v")
+				oldDir := filepath.Join(binDir, "mariadb", "mariadb-"+version+"-winx64")
+				newDir := filepath.Join(binDir, "mariadb", "mariadb-"+version)
+				if _, err := os.Stat(oldDir); err == nil {
+					if _, err := os.Stat(newDir); os.IsNotExist(err) {
+						if renameErr := os.Rename(oldDir, newDir); renameErr != nil {
+							addErrorLog("system", "MariaDB directory rename failed", renameErr)
+						}
+					}
+				}
+			}
+
+			if strings.HasPrefix(spec.name, "Node.js v") {
+				version := strings.TrimPrefix(spec.name, "Node.js v")
+				oldDir := filepath.Join(binDir, "node", "node-v"+version+"-win-x64")
+				newDir := filepath.Join(binDir, "node", "node-"+version)
+				if _, err := os.Stat(oldDir); err == nil {
+					if _, err := os.Stat(newDir); os.IsNotExist(err) {
+						if renameErr := os.Rename(oldDir, newDir); renameErr != nil {
+							addErrorLog("system", "Node.js directory rename failed", renameErr)
+						}
+					}
+				}
+			}
+		} else {
+			if strings.Contains(spec.name, "Composer") {
+				batPath := filepath.Join(spec.destDir, "composer.bat")
+				batContent := `@php "%~dp0composer.phar" %*`
+				if err := os.WriteFile(batPath, []byte(batContent), 0755); err != nil {
+					addErrorLog("system", "Failed to create composer.bat", err)
+				}
+			}
+		}
+
+		if !hasError {
+			fyne.Do(func() {
+				statusLabel.SetText(fmt.Sprintf("%s has been installed and configured!", spec.name))
+				progressBar.SetValue(1.0)
+				bgBtn.Hide()
+				backBtn.Show()
+				closeBtn.Show()
+				buttonBox.Refresh()
+
+				var scanErr error
+				scanRes, scanErr = scanner.ScanBinDir(baseDir)
+				if scanErr != nil {
+					addErrorLog("system", "Rescan failed", scanErr)
+				} else {
+					addLog("system", fmt.Sprintf("Installation of %s completed, reloading dashboard...", spec.name))
+					newDashboard := createDashboard(win, func() {})
+					mainTabs.Items[0].Content = newDashboard
+					mainTabs.Refresh()
+				}
+			})
+		}
+	}()
 }
 
 // createCaddyRow 建立 Caddy 服務列
@@ -4304,10 +5059,66 @@ func triggerHostsUpdate() {
 	err = hosts.UpdateHosts(validMissing)
 	if err != nil {
 		addErrorLog("system", "更新系統 Hosts 失敗", err)
+		showHostsWriteFailedDialog(validMissing)
 		return
 	}
 
 	addLog("system", fmt.Sprintf("🚀 已成功將 %d 個網域寫入系統 Hosts 檔", len(validMissing)))
+}
+
+// getMainWindow 獲取當前應用程式的主視窗
+func getMainWindow() fyne.Window {
+	wins := fyne.CurrentApp().Driver().AllWindows()
+	if len(wins) > 0 {
+		return wins[0]
+	}
+	return nil
+}
+
+// showHostsWriteFailedDialog 當更新 hosts 失敗時，彈出視窗提示用戶手動加入並提供開啟工具
+func showHostsWriteFailedDialog(missingDomains []string) {
+	fyne.Do(func() {
+		win := getMainWindow()
+		if win == nil {
+			return
+		}
+
+		var sb strings.Builder
+		for _, d := range missingDomains {
+			sb.WriteString(fmt.Sprintf("127.0.0.1  %s\n", d))
+		}
+		hostsContent := sb.String()
+
+		desc := widget.NewLabel("由於沒有管理員權限，無法自動更新系統 Hosts 檔案。\n請手動將以下內容新增到您的系統 Hosts 中：")
+		
+		richText := widget.NewRichText(
+			&widget.TextSegment{
+				Style: widget.RichTextStyleCodeBlock,
+				Text:  hostsContent,
+			},
+		)
+
+		copyBtn := widget.NewButtonWithIcon("複製內容", theme.ContentCopyIcon(), func() {
+			win.Clipboard().SetContent(hostsContent)
+			dialog.ShowInformation("成功", "已複製到剪貼簿", win)
+		})
+
+		openBtn := widget.NewButtonWithIcon("以管理員權限開啟 Hosts 檔案", theme.DocumentCreateIcon(), func() {
+			cmd := exec.Command("powershell", "-Command", `Start-Process notepad.exe -ArgumentList "C:\Windows\System32\drivers\etc\hosts" -Verb runAs`)
+			if err := cmd.Run(); err != nil {
+				dialog.ShowError(fmt.Errorf("無法開啟 Hosts 檔案: %w", err), win)
+			}
+		})
+
+		content := container.NewVBox(
+			desc,
+			container.NewGridWrap(fyne.NewSize(500, 150), container.NewScroll(richText)),
+			container.NewHBox(copyBtn, openBtn),
+		)
+
+		d := dialog.NewCustom("Hosts 更新失敗", "關閉", content, win)
+		d.Show()
+	})
 }
 
 // ==== 自定義：模態互動阻擋器 (Modal Blocker) ====
