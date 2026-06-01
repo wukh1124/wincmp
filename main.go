@@ -38,6 +38,7 @@ import (
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
 	"wincmp/internal/singleinstance"
+	"wincmp/internal/downloader"
 
 	"fyne.io/fyne/v2/data/binding"
 
@@ -2039,8 +2040,8 @@ func checkCoreDependencies(win fyne.Window) {
 		msgBuilder.WriteString("  ✅ MariaDB (已偵測)\n")
 	}
 
-	msgBuilder.WriteString("\n如果您使用的是 Light 版，您需要下載並配置這些元件，否則相關服務將無法啟動。\n")
-	msgBuilder.WriteString("是否現在開啟「配置指南與安裝步驟」(README) 進行查看？")
+	msgBuilder.WriteString("\n如果您使用的是 Light 版，您可以選擇一鍵「自動下載」推薦元件，程式會自動幫您配置好目錄結構，且無須重啟即可直接使用！\n")
+	msgBuilder.WriteString("是否現在開始自動下載與配置？")
 
 	lbl := widget.NewLabel(msgBuilder.String())
 	lbl.Wrapping = fyne.TextWrapWord
@@ -2049,12 +2050,168 @@ func checkCoreDependencies(win fyne.Window) {
 	dialogContent.SetMinSize(fyne.NewSize(450, 220))
 
 	fyne.Do(func() {
-		dialog.NewCustomConfirm("⚠️ 依賴元件缺失提示", "開啟配置指南", "稍後配置", dialogContent, func(confirm bool) {
+		dialog.NewCustomConfirm("⚠️ 依賴元件缺失提示", "自動下載 (推薦)", "稍後配置", dialogContent, func(confirm bool) {
 			if confirm {
-				openLocalPath(filepath.Join(baseDir, "readme.md"), false)
+				startAutoDownload(win, missingCaddy, missingPHP, missingMariaDB)
 			}
 		}, win).Show()
 	})
+}
+
+// startAutoDownload 執行非同步下載與安裝核心元件
+func startAutoDownload(win fyne.Window, missingCaddy, missingPHP, missingMariaDB bool) {
+	type depSpec struct {
+		name    string
+		url     string
+		destZip string
+		destDir string
+	}
+
+	var specs []depSpec
+	binDir := filepath.Join(baseDir, "bin")
+
+	if missingCaddy {
+		specs = append(specs, depSpec{
+			name:    "Caddy v2.7.6",
+			url:     "https://github.com/caddyserver/caddy/releases/download/v2.7.6/caddy_2.7.6_windows_amd64.zip",
+			destZip: filepath.Join(binDir, "caddy_2.7.6.zip"),
+			destDir: filepath.Join(binDir, "caddy", "caddy-2.7.6"),
+		})
+	}
+
+	if missingPHP {
+		specs = append(specs, depSpec{
+			name:    "PHP v8.3.28 NTS",
+			url:     "https://windows.php.net/downloads/releases/archives/php-8.3.28-nts-Win32-vs16-x64.zip",
+			destZip: filepath.Join(binDir, "php_8.3.28.zip"),
+			destDir: filepath.Join(binDir, "php", "php-8.3.28"),
+		})
+	}
+
+	if missingMariaDB {
+		specs = append(specs, depSpec{
+			name:    "MariaDB v11.4.2",
+			url:     "https://archive.mariadb.org/mariadb-11.4.2/winx64-packages/mariadb-11.4.2-winx64.zip",
+			destZip: filepath.Join(binDir, "mariadb_11.4.2.zip"),
+			destDir: filepath.Join(binDir, "mariadb"),
+		})
+	}
+
+	if len(specs) == 0 {
+		return
+	}
+
+	// 建立下載進度 UI
+	statusLabel := widget.NewLabel("正在準備下載環境...")
+	statusLabel.Alignment = fyne.TextAlignCenter
+	progressBar := widget.NewProgressBar()
+	progressBar.SetValue(0)
+
+	var closeBtn *widget.Button
+	var d dialog.Dialog
+
+	closeBtn = widget.NewButton("關閉", func() {
+		d.Hide()
+	})
+	closeBtn.Disable() // 下載過程中不可關閉
+
+	dialogContent := container.NewVBox(
+		statusLabel,
+		progressBar,
+		container.NewHBox(layout.NewSpacer(), closeBtn, layout.NewSpacer()),
+	)
+
+	// dismiss 按鈕設為「背景執行」，允許使用者隱藏下載視窗
+	d = dialog.NewCustom("核心元件下載與配置", "背景執行", dialogContent, win)
+	d.Show()
+
+	go func() {
+		hasError := false
+		for i, spec := range specs {
+			prefix := fmt.Sprintf("[%d/%d] 正在下載 %s...", i+1, len(specs), spec.name)
+			addLog("system", fmt.Sprintf("正在下載核心元件: %s...", spec.name))
+
+			// 執行檔案下載
+			err := downloader.DownloadFile(spec.url, spec.destZip, func(current, total int64) {
+				var percent float64
+				if total > 0 {
+					percent = float64(current) / float64(total)
+				}
+				currentMB := float64(current) / 1024 / 1024
+				totalMB := float64(total) / 1024 / 1024
+
+				fyne.Do(func() {
+					statusLabel.SetText(fmt.Sprintf("%s\n%.2fMB / %.2fMB", prefix, currentMB, totalMB))
+					progressBar.SetValue(percent)
+				})
+			})
+
+			if err != nil {
+				hasError = true
+				fyne.Do(func() {
+					statusLabel.SetText(fmt.Sprintf("❌ 下載 %s 失敗:\n%v", spec.name, err))
+					closeBtn.Enable()
+				})
+				addErrorLog("system", fmt.Sprintf("下載 %s 失敗", spec.name), err)
+				break
+			}
+
+			// 執行解壓縮
+			fyne.Do(func() {
+				statusLabel.SetText(fmt.Sprintf("[%d/%d] 正在解壓縮 %s...", i+1, len(specs), spec.name))
+				progressBar.SetValue(0.5)
+			})
+			addLog("system", fmt.Sprintf("正在解壓縮核心元件: %s...", spec.name))
+
+			err = downloader.Unzip(spec.destZip, spec.destDir)
+			if err != nil {
+				hasError = true
+				fyne.Do(func() {
+					statusLabel.SetText(fmt.Sprintf("❌ 解壓縮 %s 失敗:\n%v", spec.name, err))
+					closeBtn.Enable()
+				})
+				addErrorLog("system", fmt.Sprintf("解壓縮 %s 失敗", spec.name), err)
+				break
+			}
+
+			// 清理下載的 zip
+			os.Remove(spec.destZip)
+
+			// MariaDB 的目錄重命名處理
+			if spec.name == "MariaDB v11.4.2" {
+				oldDir := filepath.Join(binDir, "mariadb", "mariadb-11.4.2-winx64")
+				newDir := filepath.Join(binDir, "mariadb", "mariadb-11.4.2")
+				if _, err := os.Stat(oldDir); err == nil {
+					if _, err := os.Stat(newDir); os.IsNotExist(err) {
+						if renameErr := os.Rename(oldDir, newDir); renameErr != nil {
+							addErrorLog("system", "MariaDB 目錄改名失敗", renameErr)
+						}
+					}
+				}
+			}
+			addLog("system", fmt.Sprintf("✅ 核心元件安裝完成: %s", spec.name))
+		}
+
+		if !hasError {
+			fyne.Do(func() {
+				statusLabel.SetText("🎉 所有缺失依賴元件已下載並配置完成！")
+				progressBar.SetValue(1.0)
+				closeBtn.Enable()
+
+				// 自動重新掃描並更新介面
+				var scanErr error
+				scanRes, scanErr = scanner.ScanBinDir(baseDir)
+				if scanErr != nil {
+					addErrorLog("system", "重新掃描元件目錄失敗", scanErr)
+				} else {
+					addLog("system", "🎉 元件目錄重新掃描完成，更新服務列表...")
+					newDashboard := createDashboard(win, func() {})
+					mainTabs.Items[0].Content = newDashboard
+					mainTabs.Refresh()
+				}
+			})
+		}
+	}()
 }
 
 // createCaddyRow 建立 Caddy 服務列
