@@ -75,3 +75,29 @@ func TestSaveAndLoadDependencies(t *testing.T) {
 		t.Errorf("載入的資料與儲存的不符: %+v", caddy)
 	}
 }
+
+func TestLoadDependencies_Corrupted(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "wincmp_test")
+	if err != nil {
+		t.Fatalf("無法建立暫存目錄: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	testPath := filepath.Join(tempDir, "dependencies.json")
+	if err := os.WriteFile(testPath, []byte("{invalid json"), 0644); err != nil {
+		t.Fatalf("無法寫入測試檔案: %v", err)
+	}
+
+	_, err = LoadDependencies(testPath)
+	if err == nil {
+		t.Error("預期解析損壞的 JSON 會回傳錯誤，但卻沒有")
+	}
+}
+
+func TestSaveDependencies_InvalidPath(t *testing.T) {
+	err := SaveDependencies("", DefaultDependencies)
+	if err == nil {
+		t.Error("預期在非法路徑下儲存會回傳錯誤，但卻沒有")
+	}
+}
+
