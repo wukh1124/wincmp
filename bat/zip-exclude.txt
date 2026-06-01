@@ -1,4 +1,6 @@
 */data/mariadb/*
+*/data/backup/*
+*/data/mailpit/*
 */bat/*.7z
 */bat/*.zip
 */logs/*.log
