@@ -1221,6 +1221,9 @@ func main() {
 		checkPHPForProjects(myWindow)
 	}
 
+	// 檢查核心依賴偵測提示
+	checkCoreDependencies(myWindow)
+
 	// 初始化完成，允許 Log Tab 自動切換
 	isLogTabSwitchAllowed.Store(true)
 
@@ -2000,6 +2003,56 @@ func checkPHPForProjects(win fyne.Window) {
 				}
 			}
 			refreshAllPHPStatus()
+		}, win).Show()
+	})
+}
+
+// checkCoreDependencies 檢查 Caddy、PHP 與 MariaDB 等核心元件是否缺失並進行提示
+func checkCoreDependencies(win fyne.Window) {
+	missingCaddy := len(scanRes.CaddyList) == 0
+	missingPHP := len(scanRes.PHPList) == 0
+	missingMariaDB := len(scanRes.MariaDBList) == 0
+
+	// 若無缺失任何核心元件則直接返回
+	if !missingCaddy && !missingPHP && !missingMariaDB {
+		return
+	}
+
+	var msgBuilder strings.Builder
+	msgBuilder.WriteString("WinCMP 偵測到您尚未配置運作所需的核心元件：\n\n")
+
+	if missingCaddy {
+		msgBuilder.WriteString("  ❌ Caddy   (未偵測到執行檔)\n")
+	} else {
+		msgBuilder.WriteString("  ✅ Caddy   (已偵測)\n")
+	}
+
+	if missingPHP {
+		msgBuilder.WriteString("  ❌ PHP     (未偵測到執行檔)\n")
+	} else {
+		msgBuilder.WriteString("  ✅ PHP     (已偵測)\n")
+	}
+
+	if missingMariaDB {
+		msgBuilder.WriteString("  ❌ MariaDB (未偵測到執行檔)\n")
+	} else {
+		msgBuilder.WriteString("  ✅ MariaDB (已偵測)\n")
+	}
+
+	msgBuilder.WriteString("\n如果您使用的是 Light 版，您需要下載並配置這些元件，否則相關服務將無法啟動。\n")
+	msgBuilder.WriteString("是否現在開啟「配置指南與安裝步驟」(README) 進行查看？")
+
+	lbl := widget.NewLabel(msgBuilder.String())
+	lbl.Wrapping = fyne.TextWrapWord
+
+	dialogContent := container.NewVScroll(lbl)
+	dialogContent.SetMinSize(fyne.NewSize(450, 220))
+
+	fyne.Do(func() {
+		dialog.NewCustomConfirm("⚠️ 依賴元件缺失提示", "開啟配置指南", "稍後配置", dialogContent, func(confirm bool) {
+			if confirm {
+				openLocalPath(filepath.Join(baseDir, "readme.md"), false)
+			}
 		}, win).Show()
 	})
 }

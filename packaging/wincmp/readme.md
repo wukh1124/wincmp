@@ -35,26 +35,22 @@
 ### 安裝步驟
 
 1. **下載 WinCMP**
-   - 從 Releases 頁面下載最新版本的 `wincmp.zip`
-   - 解壓縮至您想要的位置（例如：`D:\wincmp`）
+   - 從 Releases 頁面下載最新版本的 `wincmp.zip`（Light 版，僅包含本體程式）。
+   - 解壓縮至您想要的位置（例如：`D:\wincmp`）。
 
-2. **準備運行環境**
-   WinCMP 需要以下元件才能運作：
-   - **Caddy**：Web 伺服器
-   - **MariaDB**：資料庫伺服器
-   - **PHP**：PHP 運行環境（可選多版本）
-   - **Node.js** 或 **Bun**：前端開發 Runtime（可選）
-   - **Python** / **Go**：其他開發環境（需安裝至系統 PATH，可選）
-   - **Mailpit**：郵件測試服務（可選）
+2. **啟動 WinCMP 與依賴偵測**
+   - 雙擊 `wincmp.exe` 啟動程式。
+   - **依賴偵測提示**：啟動時，WinCMP 會自動掃描 `bin/` 目錄。如果缺少運行所需的核心元件（Caddy、PHP、MariaDB 等），程式會彈出**「依賴元件缺失提示」**。
+   - 您可以直接在提示視窗中點擊**「自動下載與安裝」**，WinCMP 會自動從官方託管地址下載推薦的版本並配置好目錄；您也可以選擇手動準備元件。
 
-3. **放置二進制檔案**
-   將下載好的 Caddy、MariaDB、PHP 解壓縮並放置於對應目錄：
+3. **手動放置二進制檔案（備用 / 自訂版本）**
+   如果您想使用自訂的版本，可以手動下載對應元件並解壓縮放置於以下目錄結構：
    ```
    wincmp/
    ├── bin/
-   │   ├── caddy/          # Caddy 執行檔
-   │   ├── mariadb/        # MariaDB 執行檔
-   │   ├── php/            # PHP 執行檔（可放多個版本）
+   │   ├── caddy/          # Caddy 執行檔 (放置 caddy.exe)
+   │   ├── mariadb/        # MariaDB 執行檔 (放置 mariadbd.exe 所在目錄)
+   │   ├── php/            # PHP 執行檔（可放多個版本，如 php-8.3.28-nts-Win32...）
    │   │   ├── php-8.2/
    │   │   └── php-8.3/
    │   ├── node/           # Node.js 執行檔（可選）
@@ -64,9 +60,6 @@
    │   └── mailpit/        # Mailpit 執行檔（可選）
    ```
 
-4. **啟動 WinCMP**
-   - 雙擊 `wincmp.exe` 啟動程式
-   - 程式會自動掃描可用的服務版本
 
 ---
 
