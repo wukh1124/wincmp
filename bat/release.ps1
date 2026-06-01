@@ -18,7 +18,7 @@ if (-not (Test-Path $FyneAppPath)) {
     Write-Error "FyneApp.toml not found! Make sure you run this script within the WinCMP project."
 }
 
-$FyneAppContent = Get-Content $FyneAppPath -Raw
+$FyneAppContent = Get-Content $FyneAppPath -Raw -Encoding utf8
 if ($FyneAppContent -match 'Version\s*=\s*"([^"]+)"') {
     $Version = $Matches[1]
     Write-Host "    -> Version detected: v$Version" -ForegroundColor Green
@@ -29,7 +29,7 @@ if ($FyneAppContent -match 'Version\s*=\s*"([^"]+)"') {
 # 1.1 Backup FyneApp.toml to prevent Git dirty changes from 'fyne package -release'
 $FyneAppBackup = $null
 if (Test-Path $FyneAppPath) {
-    $FyneAppBackup = Get-Content $FyneAppPath -Raw
+    $FyneAppBackup = Get-Content $FyneAppPath -Raw -Encoding utf8
     Write-Host "    -> Cached FyneApp.toml contents to restore Build number later" -ForegroundColor DarkGray
 }
 
@@ -221,7 +221,7 @@ $ChangelogPath = Join-Path $ProjectRoot "packaging\wincmp\CHANGELOG.md"
 $ReleaseNotesContent = ""
 
 if (Test-Path $ChangelogPath) {
-    $ChangelogLines = Get-Content $ChangelogPath
+    $ChangelogLines = Get-Content $ChangelogPath -Encoding utf8
     $StartIndex = -1
     $EndIndex = -1
     
