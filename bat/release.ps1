@@ -189,24 +189,22 @@ if (-not $7zExe) {
     }
 }
 
+$Arch = "x64"
+$ZipFile = Join-Path $ReleaseParentDir "wincmp-v$Version-win-$Arch.zip"
+if (Test-Path $ZipFile) {
+    Remove-Item -Path $ZipFile -Force
+}
+
 if ($7zExe) {
-    $ZipFile = Join-Path $ReleaseParentDir "wincmp_v$Version.7z"
-    if (Test-Path $ZipFile) {
-        Remove-Item -Path $ZipFile -Force
-    }
-    Write-Host "    -> 7-Zip found. Compressing to .7z..." -ForegroundColor DarkGray
+    Write-Host "    -> 7-Zip found. Compressing to .zip..." -ForegroundColor DarkGray
     
     # Change location to keep relative path structure in archive
     Set-Location -Path $ReleaseParentDir
-    & $7zExe a -t7z $ZipFile $ReleaseDirName -mx5 | Out-Null
+    & $7zExe a -tzip $ZipFile $ReleaseDirName -mx5 | Out-Null
     
     Write-Host "    -> Successfully generated: $ZipFile" -ForegroundColor Green
 } else {
     # Fallback to Compress-Archive
-    $ZipFile = Join-Path $ReleaseParentDir "wincmp_v$Version.zip"
-    if (Test-Path $ZipFile) {
-        Remove-Item -Path $ZipFile -Force
-    }
     Write-Host "    -> 7-Zip not found. Using PowerShell Compress-Archive for .zip fallback..." -ForegroundColor Yellow
     
     Set-Location -Path $ReleaseParentDir
@@ -276,7 +274,7 @@ This release introduces new features, updates, and fixes to WinCMP.
 {1}
 
 ### Getting Started
-1. Download `wincmp_v{0}.7z` (or `wincmp_v{0}.zip`).
+1. Download `wincmp-v{0}-win-x64.zip`.
 2. Extract the archive to any folder on your system.
 3. Double-click `WinCMP_v{0}.exe` to launch the control panel.
 ---
