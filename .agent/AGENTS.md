@@ -53,6 +53,7 @@ go build -o test.exe ./internal/config
 ### 語言與註解
 - **主體語言**：繁體中文（zh-TW），所有註解與說明文件使用正體中文
 - **程式碼本身**：英文識別符（遵循 Go 慣例）
+- **多國語言（i18n）支援**：所有傳送到 UI 顯示的日誌（`m.log`）及錯誤訊息（`m.errorLog`、`fmt.Errorf` 等），**必須**使用 `i18n.T` 或 `i18n.Tfmt` 進行包裝，並在 `internal/i18n/i18n.go` 補上對應的 `en-US` 英文翻譯對照，以利語系切換。
 
 ### 套件結構
 ```
@@ -71,6 +72,7 @@ internal/
 │   └── job.go        # Windows Job Object 初始化
 ├── detect/            # 專案類型偵測器（Laravel）
 ├── hosts/            # Windows Hosts 檔管理
+├── i18n/              # 顯示語言的本地化字典與語系切換支援
 ├── port/             # Port 佔用檢測
 ├── resource/         # 資源監控（CPU/RAM/子行程 Stack）
 └── singleinstance/    # 單實例鎖 + 視窗帶到前景
@@ -168,17 +170,12 @@ defer cancel()
 
 ### 日誌記錄模式
 ```go
-// 依分類記錄日誌，含時間戳
-func (m *Manager) log(category string, format string, args ...interface{}) {
-    if m.logFn != nil {
-        m.logFn(category, fmt.Sprintf(format, args...))
-    }
-}
-
-// 使用 Emoji 前綴表示狀態
-m.log("php", "🚀 啟動 PHP-CGI %s...", version)
-m.log("php", "✅ PHP-CGI %s 已啟動", version)
-m.log("php", "🛑 停止 PHP-CGI %s...", version)
+// 依分類記錄日誌（需配合 i18n）
+// 註：因為 m.log 底層使用 fmt.Sprintf，為避免動態訊息中的特殊字元（如 %）被誤判，
+// 必須統一使用 "%s" 格式化，將翻譯後的 i18n.Tfmt 結果傳入。
+m.log("php", "%s", i18n.Tfmt("🚀 啟動 PHP-CGI %s...", version))
+m.log("php", "%s", i18n.Tfmt("✅ PHP-CGI %s 已啟動", version))
+m.log("php", "%s", i18n.Tfmt("🛑 停止 PHP-CGI %s...", version))
 ```
 
 ---
@@ -260,6 +257,13 @@ uptimeData.Set("12:34:56")
 ### 修改 Caddy 配置生成
 - 編輯 `main.go` 中的 `generateCaddyfiles()` 或 `generatePHPUpstream()`
 - 輸出至 `conf/sites/` 與 `conf/snippets/`
+
+### 新增翻譯（i18n）條目
+1. 在程式碼中，使用 `i18n.T("中文訊息")` 或 `i18n.Tfmt("格式化中文: %s", variable)`。
+2. 編輯 `internal/i18n/i18n.go`，在 `enTranslations` 字典中新增對應的繁中至英文翻譯對照，例如：
+   ```go
+   "格式化中文: %s": "Formatted English: %s",
+   ```
 
 ---
 

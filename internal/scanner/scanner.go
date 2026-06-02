@@ -117,10 +117,27 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 			if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "mariadb-") {
 				continue
 			}
+			dirName := entry.Name()
+			if strings.HasSuffix(dirName, "-winx64") {
+				cleanName := strings.TrimSuffix(dirName, "-winx64")
+				oldPath := filepath.Join(mariadbDir, dirName)
+				newPath := filepath.Join(mariadbDir, cleanName)
+
+				if _, err := os.Stat(newPath); os.IsNotExist(err) {
+					if err := os.Rename(oldPath, newPath); err == nil {
+						dirName = cleanName
+					}
+				} else {
+					// 乾淨版本的資料夾已存在，直接刪除帶有 -winx64 的殘留資料夾
+					os.RemoveAll(oldPath)
+					continue
+				}
+			}
+
 			// 驗證 mariadbd.exe 存在
-			mariadbdExe := filepath.Join(mariadbDir, entry.Name(), "bin", "mariadbd.exe")
+			mariadbdExe := filepath.Join(mariadbDir, dirName, "bin", "mariadbd.exe")
 			if _, err := os.Stat(mariadbdExe); err == nil {
-				version := strings.TrimPrefix(entry.Name(), "mariadb-")
+				version := strings.TrimPrefix(dirName, "mariadb-")
 				result.MariaDBList = append(result.MariaDBList, ServiceInfo{
 					Name:    "mariadb",
 					Version: version,

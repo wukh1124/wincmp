@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"syscall"
 
+	"wincmp/internal/i18n"
 	"wincmp/internal/scanner"
 )
 
@@ -26,12 +27,12 @@ func (m *Manager) StartPHPCGI(phpInfo scanner.PHPVersionInfo) error {
 	serviceKey := PHPServiceKey(phpInfo.Version)
 
 	if m.IsRunning(serviceKey) {
-		return fmt.Errorf("PHP-CGI %s 已經在運行中", phpInfo.Version)
+		return fmt.Errorf("%s", i18n.Tfmt("PHP-CGI %s 已經在運行中", phpInfo.Version))
 	}
 
 	ports := phpInfo.GetPHPPorts()
-	m.log("php", "🚀 啟動 PHP-CGI %s (%d 個行程)...", phpInfo.Version, len(ports))
-	m.log("php", "  執行檔: %s", phpInfo.ExePath)
+	m.log("php", "%s", i18n.Tfmt("🚀 啟動 PHP-CGI %s (%d 個行程)...", phpInfo.Version, len(ports)))
+	m.log("php", "%s", i18n.Tfmt("  執行檔: %s", phpInfo.ExePath))
 
 	// 為 PHP 動態注入 PATH 環境變數（確保 DLL 依賴正確載入）
 	phpDir := filepath.Dir(phpInfo.ExePath)
@@ -62,13 +63,13 @@ func (m *Manager) StartPHPCGI(phpInfo scanner.PHPVersionInfo) error {
 
 		if err := cmd.Start(); err != nil {
 			// 有一個啟動失敗，終止已啟動的
-			m.errorLog("php", fmt.Sprintf("PHP-CGI %s 在 Port %d 啟動失敗", phpInfo.Version, port), err)
+			m.errorLog("php", i18n.Tfmt("PHP-CGI %s 在 Port %d 啟動失敗", phpInfo.Version, port), err)
 			for _, c := range cmds {
 				if c.Process != nil {
 					_ = c.Process.Kill()
 				}
 			}
-			return fmt.Errorf("PHP-CGI %s 啟動失敗: %w", phpInfo.Version, err)
+			return fmt.Errorf("%s: %w", i18n.Tfmt("PHP-CGI %s 啟動失敗", phpInfo.Version), err)
 		}
 
 		m.log("php", "  ✓ PID %d → %s", cmd.Process.Pid, bindAddr)
@@ -76,7 +77,7 @@ func (m *Manager) StartPHPCGI(phpInfo scanner.PHPVersionInfo) error {
 	}
 
 	m.register(serviceKey, "PHP-CGI "+phpInfo.Version, phpInfo.ExePath, cmds)
-	m.log("php", "✅ PHP-CGI %s 已啟動 (%s)", phpInfo.Version, phpInfo.GetPortRangeStr())
+	m.log("php", "%s", i18n.Tfmt("✅ PHP-CGI %s 已啟動 (%s)", phpInfo.Version, phpInfo.GetPortRangeStr()))
 
 	// 監控每個行程的退出，單一程序退出時更新 PID 列表，所有退出則 unregister
 	var exitedCount int32
@@ -92,17 +93,17 @@ func (m *Manager) StartPHPCGI(phpInfo scanner.PHPVersionInfo) error {
 					m.RemovePID(serviceKey, c.Process.Pid)
 				}
 				if err != nil {
-					m.errorLog("php", fmt.Sprintf("PHP-CGI %s (Port %d) 異常退出，剩餘 %d 個程序", phpInfo.Version, port, stillRunning), err)
+					m.errorLog("php", i18n.Tfmt("PHP-CGI %s (Port %d) 異常退出，剩餘 %d 個程序", phpInfo.Version, port, stillRunning), err)
 				} else {
-					m.log("php", "ℹ️ PHP-CGI %s (Port %d) 已退出，剩餘 %d 個程序", phpInfo.Version, port, stillRunning)
+					m.log("php", "%s", i18n.Tfmt("ℹ️ PHP-CGI %s (Port %d) 已退出，剩餘 %d 個程序", phpInfo.Version, port, stillRunning))
 				}
 			} else {
 				// 所有程序都已退出
 				if m.IsRunning(serviceKey) {
 					if err != nil {
-						m.errorLog("php", fmt.Sprintf("PHP-CGI %s 最後一個程序 (Port %d) 異常退出", phpInfo.Version, port), err)
+						m.errorLog("php", i18n.Tfmt("PHP-CGI %s 最後一個程序 (Port %d) 異常退出", phpInfo.Version, port), err)
 					} else {
-						m.log("php", "ℹ️ PHP-CGI %s 所有程序已退出", phpInfo.Version)
+						m.log("php", "%s", i18n.Tfmt("ℹ️ PHP-CGI %s 所有程序已退出", phpInfo.Version))
 					}
 					m.unregister(serviceKey)
 				}
@@ -118,14 +119,14 @@ func (m *Manager) StopPHPCGI(version string) error {
 	serviceKey := PHPServiceKey(version)
 
 	if !m.IsRunning(serviceKey) {
-		return fmt.Errorf("PHP-CGI %s 未在運行", version)
+		return fmt.Errorf("%s", i18n.Tfmt("PHP-CGI %s 未在運行", version))
 	}
 
-	m.log("php", "🛑 停止 PHP-CGI %s...", version)
+	m.log("php", "%s", i18n.Tfmt("🛑 停止 PHP-CGI %s...", version))
 	if err := m.stopService(serviceKey); err != nil {
-		m.errorLog("php", fmt.Sprintf("PHP-CGI %s 停止失敗", version), err)
+		m.errorLog("php", i18n.Tfmt("PHP-CGI %s 停止失敗", version), err)
 		return err
 	}
-	m.log("php", "✅ PHP-CGI %s 已停止", version)
+	m.log("php", "%s", i18n.Tfmt("✅ PHP-CGI %s 已停止", version))
 	return nil
 }

@@ -5,6 +5,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"wincmp/internal/i18n"
 )
 
 const mailpitServiceKey = "mailpit"
@@ -17,7 +19,7 @@ func MailpitServiceKey() string {
 // StartMailpit 啟動 Mailpit 服務
 func (m *Manager) StartMailpit(version, exePath string, smtpPort, httpPort int, useDB bool) error {
 	if m.IsRunning(mailpitServiceKey) {
-		return fmt.Errorf("Mailpit 已經在運行中")
+		return fmt.Errorf("%s", i18n.T("Mailpit 已經在運行中"))
 	}
 
 	args := []string{
@@ -30,32 +32,32 @@ func (m *Manager) StartMailpit(version, exePath string, smtpPort, httpPort int, 
 	if useDB {
 		dataDir := filepath.Join(m.baseDir, "data", "mailpit")
 		if err := os.MkdirAll(dataDir, 0700); err != nil {
-			return fmt.Errorf("建立 Mailpit 資料目錄失敗: %w", err)
+			return fmt.Errorf("%s: %w", i18n.T("建立 Mailpit 資料目錄失敗"), err)
 		}
 		args = append(args, "-d", dataDir)
-		m.log("mailpit", "  資料目錄: %s", dataDir)
+		m.log("mailpit", "%s", i18n.Tfmt("  資料目錄: %s", dataDir))
 	}
 
 	cmd := m.createCommand(exePath, args...)
 	m.pipeOutput(cmd, "mailpit", "Mailpit")
 
-	m.log("mailpit", "🚀 啟動 Mailpit...")
-	m.log("mailpit", "  執行檔: %s", exePath)
-	m.log("mailpit", "  SMTP Port: %d", smtpPort)
-	m.log("mailpit", "  HTTP Port: %d", httpPort)
+	m.log("mailpit", "%s", i18n.T("🚀 啟動 Mailpit..."))
+	m.log("mailpit", "%s", i18n.Tfmt("  執行檔: %s", exePath))
+	m.log("mailpit", "%s", i18n.Tfmt("  SMTP Port: %d", smtpPort))
+	m.log("mailpit", "%s", i18n.Tfmt("  HTTP Port: %d", httpPort))
 	if useDB {
-		m.log("mailpit", "  持久化: 啟用 (database)")
+		m.log("mailpit", "%s", i18n.T("  持久化: 啟用 (database)"))
 	} else {
-		m.log("mailpit", "  持久化: 停用 (記憶體模式)")
+		m.log("mailpit", "%s", i18n.T("  持久化: 停用 (記憶體模式)"))
 	}
 
 	if err := cmd.Start(); err != nil {
-		m.errorLog("mailpit", "Mailpit 啟動失敗", err)
-		return fmt.Errorf("Mailpit 啟動失敗: %w", err)
+		m.errorLog("mailpit", i18n.T("Mailpit 啟動失敗"), err)
+		return fmt.Errorf("%s: %w", i18n.T("Mailpit 啟動失敗"), err)
 	}
 
 	m.register(mailpitServiceKey, fmt.Sprintf("Mailpit (%s)", version), exePath, []*exec.Cmd{cmd})
-	m.log("mailpit", "✅ Mailpit (%s) 已啟動 (PID: %d)", version, cmd.Process.Pid)
+	m.log("mailpit", "%s", i18n.Tfmt("✅ Mailpit (%s) 已啟動 (PID: %d)", version, cmd.Process.Pid))
 
 	go m.waitForExit(cmd, mailpitServiceKey, "mailpit", "Mailpit")
 
@@ -65,14 +67,14 @@ func (m *Manager) StartMailpit(version, exePath string, smtpPort, httpPort int, 
 // StopMailpit 停止 Mailpit 服務
 func (m *Manager) StopMailpit() error {
 	if !m.IsRunning(mailpitServiceKey) {
-		return fmt.Errorf("Mailpit 未在運行")
+		return fmt.Errorf("%s", i18n.T("Mailpit 未在運行"))
 	}
 
-	m.log("mailpit", "🛑 停止 Mailpit...")
+	m.log("mailpit", "%s", i18n.T("🛑 停止 Mailpit..."))
 	if err := m.stopService(mailpitServiceKey); err != nil {
-		m.errorLog("mailpit", "Mailpit 停止失敗", err)
+		m.errorLog("mailpit", i18n.T("Mailpit 停止失敗"), err)
 		return err
 	}
-	m.log("mailpit", "✅ Mailpit 已停止")
+	m.log("mailpit", "%s", i18n.T("✅ Mailpit 已停止"))
 	return nil
 }

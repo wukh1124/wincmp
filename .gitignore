@@ -64,6 +64,7 @@ vendor/
 *.7z
 *.zip
 *.caddy
+!/packaging/**/*.caddy
 /conf/certs/
 /conf/ssl/*
 !/conf/ssl/.gitkeep

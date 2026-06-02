@@ -15,6 +15,7 @@ import (
 	net "github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
 	"wincmp/internal/config"
+	"wincmp/internal/i18n"
 	"wincmp/internal/preset"
 )
 
@@ -34,7 +35,7 @@ func sanitizeRuntimeCommand(cmd string) (string, error) {
 		temp := regexp.MustCompile(`>nul`).ReplaceAllString(sanitized, "___REDIRECT_NUL___")
 		temp = regexp.MustCompile(`>NUL`).ReplaceAllString(temp, "___REDIRECT_NUL___")
 		if shellMetacharPattern.MatchString(temp) {
-			return "", fmt.Errorf("啟動指令含不安全的字元，已拒絕執行: %s", cmd)
+			return "", fmt.Errorf("%s", i18n.Tfmt("啟動指令含不安全的字元，已拒絕執行: %s", cmd))
 		}
 		sanitized = regexp.MustCompile(`___REDIRECT_NUL___`).ReplaceAllString(temp, ">nul")
 	}
@@ -65,7 +66,7 @@ func CheckRuntimeEnv(runtime string) (string, error) {
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			return "", fmt.Errorf("Python 未安裝或未加入 PATH: %v", err)
+			return "", fmt.Errorf("%s", i18n.Tfmt("Python 未安裝或未加入 PATH: %v", err))
 		}
 		return strings.TrimSpace(string(out)), nil
 	case "go", "go_air", "go_run":
@@ -75,7 +76,7 @@ func CheckRuntimeEnv(runtime string) (string, error) {
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			return "", fmt.Errorf("Go 未安裝或未加入 PATH: %v", err)
+			return "", fmt.Errorf("%s", i18n.Tfmt("Go 未安裝或未加入 PATH: %v", err))
 		}
 		return strings.TrimSpace(string(out)), nil
 	default:
@@ -96,39 +97,39 @@ func IsRuntimeTypeNeedEnvCheck(runtimeType string) bool {
 // CheckSystemRuntimeAvailable 檢查系統 PATH 中是否有可用的 Node.js 或 Bun
 // 回傳執行檔路徑和是否找到的布林值
 func CheckSystemRuntimeAvailable(runtimeType string) (string, bool) {
+	var target string
 	switch runtimeType {
 	case "node":
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		// 嘗試尋找 npm
-		cmd := exec.CommandContext(ctx, "where", "npm")
-		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
-		out, err := cmd.Output()
-		if err == nil && len(out) > 0 {
-			// 取第一個路徑（where 會回傳所有匹配項，每行一個）
-			paths := strings.Split(strings.TrimSpace(string(out)), "\n")
-			if len(paths) > 0 && paths[0] != "" {
-				return strings.TrimSpace(paths[0]), true
-			}
-		}
-		return "", false
+		target = "npm"
 	case "bun":
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		// 嘗試尋找 bun
-		cmd := exec.CommandContext(ctx, "where", "bun")
-		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
-		out, err := cmd.Output()
-		if err == nil && len(out) > 0 {
-			paths := strings.Split(strings.TrimSpace(string(out)), "\n")
-			if len(paths) > 0 && paths[0] != "" {
-				return strings.TrimSpace(paths[0]), true
-			}
-		}
-		return "", false
+		target = "bun"
 	default:
 		return "", false
 	}
+
+	// 1. 優先使用 Go 標準庫 exec.LookPath 尋找系統 PATH
+	if path, err := exec.LookPath(target); err == nil && path != "" {
+		return path, true
+	}
+
+	// 2. 備用方案: 透過 cmd.exe 執行 where 指令
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "where", target)
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
+	out, err := cmd.Output()
+	if err == nil && len(out) > 0 {
+		// 取第一個路徑（where 會回傳所有匹配項，每行一個）
+		paths := strings.Split(strings.TrimSpace(string(out)), "\n")
+		if len(paths) > 0 {
+			path := strings.TrimSpace(paths[0])
+			path = strings.TrimRight(path, "\r") // 移除可能殘留的 \r
+			if path != "" {
+				return path, true
+			}
+		}
+	}
+	return "", false
 }
 
 // buildRuntimeCommand 根據 Preset 與 Runtime 類型建構執行指令
@@ -230,14 +231,14 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 	serviceKey := RuntimeServiceKey(project.Name)
 
 	if m.IsRunning(serviceKey) {
-		m.log("runtime", "⚠️ [%s] Runtime 進程已經在執行中", project.Name)
-		return fmt.Errorf("進程已在執行中")
+		m.log("runtime", "%s", i18n.Tfmt("⚠️ [%s] Runtime 進程已經在執行中", project.Name))
+		return fmt.Errorf("%s", i18n.T("進程已在執行中"))
 	}
 
 	rootPath := project.RootPath
 	if rootPath == "" {
-		m.errorLog("runtime", fmt.Sprintf("[%s] 專案根目錄未設定", project.Name), nil)
-		return fmt.Errorf("專案根目錄未設定")
+		m.errorLog("runtime", i18n.Tfmt("[%s] 專案根目錄未設定", project.Name), nil)
+		return fmt.Errorf("%s", i18n.T("專案根目錄未設定"))
 	}
 
 	// 檢查外部 Runtime 是否可用
@@ -248,32 +249,32 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 			return fmt.Errorf("%v", err)
 		}
 		if version != "" {
-			m.log("runtime", "ℹ️ [%s] 偵測到 %s", project.Name, version)
+			m.log("runtime", "%s", i18n.Tfmt("ℹ️ [%s] 偵測到 %s", project.Name, version))
 		}
 	}
 
 	// 建構執行指令
 	runtimeCmd := buildRuntimeCommand(project, exePath)
 	if runtimeCmd == "" {
-		m.errorLog("runtime", fmt.Sprintf("[%s] 無法建構啟動指令 (Runtime: %s, Type: %s)", project.Name, project.RuntimeType, project.Type), nil)
-		return fmt.Errorf("無法建構啟動指令")
+		m.errorLog("runtime", i18n.Tfmt("[%s] 無法建構啟動指令 (Runtime: %s, Type: %s)", project.Name, project.RuntimeType, project.Type), nil)
+		return fmt.Errorf("%s", i18n.T("無法建構啟動指令"))
 	}
 
 	// 清理啟動指令中的危險中繼字元，防止命令注入
 	var err error
 	runtimeCmd, err = sanitizeRuntimeCommand(runtimeCmd)
 	if err != nil {
-		m.errorLog("runtime", fmt.Sprintf("[%s] 啟動指令安全性驗證失敗", project.Name), err)
+		m.errorLog("runtime", i18n.Tfmt("[%s] 啟動指令安全性驗證失敗", project.Name), err)
 		return fmt.Errorf("%v", err)
 	}
 
 	// 記錄日誌訊息方便偵錯
-	binMode := "系統 PATH"
+	binMode := i18n.T("系統 PATH")
 	if project.UseWinCMPBin {
-		binMode = "WinCMP 內建路徑"
+		binMode = i18n.T("WinCMP 內建路徑")
 	}
-	m.log("runtime", "🚀 [%s] 準備啟動。模式: %s", project.Name, binMode)
-	m.log("runtime", "💻 [%s] 啟動指令: %s", project.Name, runtimeCmd)
+	m.log("runtime", "%s", i18n.Tfmt("🚀 [%s] 準備啟動。模式: %s", project.Name, binMode))
+	m.log("runtime", "%s", i18n.Tfmt("💻 [%s] 啟動指令: %s", project.Name, runtimeCmd))
 
 	// 環境變數處理
 	env := os.Environ()
@@ -362,10 +363,10 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 	}
 
 	if mode == "Terminal" {
-		m.log("runtime", "▶️ [%s] 正在以 Terminal 模式啟動 %s", project.Name, runtimeLabel)
+		m.log("runtime", "%s", i18n.Tfmt("▶️ [%s] 正在以 Terminal 模式啟動 %s", project.Name, runtimeLabel))
 
 		if err := startCmd.Start(); err != nil {
-			m.errorLog("runtime", fmt.Sprintf("[%s] 啟動失敗", project.Name), err)
+			m.errorLog("runtime", i18n.Tfmt("[%s] 啟動失敗", project.Name), err)
 			return err
 		}
 
@@ -374,17 +375,17 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 		// Terminal 模式用 Port 偵測管理生命週期
 		m.registerRuntimeTerminal(serviceKey, project.Name, exePath, port)
 
-		m.log("runtime", "✅ [%s] Terminal 模式已啟動 (Port: %d)", project.Name, port)
+		m.log("runtime", "%s", i18n.Tfmt("✅ [%s] Terminal 模式已啟動 (Port: %d)", project.Name, port))
 		return nil
 	}
 
 	// ─── Background 模式 ───
-	m.log("runtime", "▶️ [%s] 正在以 Background 模式啟動 %s", project.Name, runtimeLabel)
+	m.log("runtime", "%s", i18n.Tfmt("▶️ [%s] 正在以 Background 模式啟動 %s", project.Name, runtimeLabel))
 
 	m.pipeRuntimeOutput(startCmd, "runtime", runtimeLabel+" ("+project.Name+")")
 
 	if err := startCmd.Start(); err != nil {
-		m.errorLog("runtime", fmt.Sprintf("[%s] 啟動失敗", project.Name), err)
+		m.errorLog("runtime", i18n.Tfmt("[%s] 啟動失敗", project.Name), err)
 		return err
 	}
 
@@ -395,9 +396,9 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 		err := startCmd.Wait()
 		if m.IsRunning(serviceKey) {
 			if err != nil {
-				m.errorLog("runtime", fmt.Sprintf("[%s] 異常退出", project.Name), err)
+				m.errorLog("runtime", i18n.Tfmt("[%s] 異常退出", project.Name), err)
 			} else {
-				m.log("runtime", "ℹ️ [%s] Runtime 進程已結束", project.Name)
+				m.log("runtime", "%s", i18n.Tfmt("ℹ️ [%s] Runtime 進程已結束", project.Name))
 			}
 			m.unregister(serviceKey)
 		}
@@ -406,7 +407,7 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 	// 背景 PID 動態更新
 	go m.trackRuntimePIDs(serviceKey, project.Name, port, false)
 
-	m.log("runtime", "✅ [%s] Background 模式已啟動 (PID: %d)", project.Name, startCmd.Process.Pid)
+	m.log("runtime", "%s", i18n.Tfmt("✅ [%s] Background 模式已啟動 (PID: %d)", project.Name, startCmd.Process.Pid))
 	return nil
 }
 
@@ -431,7 +432,7 @@ func (m *Manager) trackRuntimePIDs(serviceKey, projectName string, port int, isT
 				m.UpdatePIDs(serviceKey, pids)
 			} else if isTerminal {
 				if m.IsRunning(serviceKey) {
-					m.log("runtime", "ℹ️ [%s] Terminal 模式 Runtime 已停止 (Port %d 已釋放)", projectName, port)
+					m.log("runtime", "%s", i18n.Tfmt("ℹ️ [%s] Terminal 模式 Runtime 已停止 (Port %d 已釋放)", projectName, port))
 					m.unregister(serviceKey)
 				}
 				return
@@ -465,46 +466,86 @@ func (m *Manager) registerRuntimeTerminal(serviceKey, projectName, exePath strin
 func (m *Manager) StopRuntime(project config.ProjectConfig) error {
 	serviceKey := RuntimeServiceKey(project.Name)
 
-	if !m.IsRunning(serviceKey) {
-		return fmt.Errorf("服務 %s 未在運行", project.Name)
+	m.mu.Lock()
+	state, exists := m.services[serviceKey]
+	if !exists || !state.Running {
+		m.mu.Unlock()
+		return fmt.Errorf("%s", i18n.Tfmt("服務 %s 未在運行", project.Name))
 	}
-
-	pids := m.GetPIDs(serviceKey)
-	m.unregister(serviceKey)
+	pids := state.PIDs
+	cmds := state.Commands
+	m.mu.Unlock()
 
 	runtimeLabel := project.RuntimeType
 	if runtimeLabel == "" {
 		runtimeLabel = "node"
 	}
 
-	// 策略 1: 用已知 PID 殺進程樹 (Background 模式)
-	for _, pid := range pids {
-		killCmd := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(pid))
-		killCmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
-		if err := killCmd.Run(); err != nil {
-			m.log("runtime", "⚠️ [%s] taskkill PID %d: %v", project.Name, pid, err)
-		} else {
-			m.log("runtime", "⏹️ [%s] 已停止 Runtime 進程樹 (PID: %d)", project.Name, pid)
+	// 1. 先終止最外層的啟動 Cmd 進程 (如 cmd.exe)
+	for _, cmd := range cmds {
+		if cmd != nil && cmd.Process != nil {
+			if err := cmd.Process.Kill(); err != nil {
+				if !isProcessFinished(err) {
+					m.log("runtime", "%s", i18n.Tfmt("⚠️ [%s] 無法終止主程序 PID %d: %v", project.Name, cmd.Process.Pid, err))
+				}
+			} else {
+				m.log("runtime", "%s", i18n.Tfmt("⏹️ [%s] 已終止主程序進程 (PID: %d)", project.Name, cmd.Process.Pid))
+			}
 		}
 	}
 
-	// 策略 2: 透過 Port 反查 PID 殺除 (Terminal 模式保底)
+	// 2. 策略 1: 用已知 PID 殺進程樹 (Background 模式)
+	for _, pid := range pids {
+		if pid <= 0 {
+			continue
+		}
+		// 優先使用 Go 底層 TerminateProcess，這通常不會因為 PATH 等問題而失敗
+		proc, err := os.FindProcess(pid)
+		if err == nil {
+			if killErr := proc.Kill(); killErr == nil {
+				m.log("runtime", "%s", i18n.Tfmt("⏹️ [%s] 已透過 Go TerminateProcess 停止進程 (PID: %d)", project.Name, pid))
+				continue
+			}
+		}
+
+		// 備用方案: taskkill
+		killCmd := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(pid))
+		killCmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
+		if out, err := killCmd.CombinedOutput(); err != nil {
+			m.log("runtime", "%s", i18n.Tfmt("⚠️ [%s] taskkill PID %d 失敗: %v (輸出: %s)", project.Name, pid, err, strings.TrimSpace(string(out))))
+		} else {
+			m.log("runtime", "%s", i18n.Tfmt("⏹️ [%s] 已透過 taskkill 停止 Runtime 進程樹 (PID: %d)", project.Name, pid))
+		}
+	}
+
+	// 3. 策略 2: 透過 Port 反查 PID 殺除 (Terminal 模式保底)
 	port := project.RuntimePort
 	if port > 0 {
 		time.Sleep(500 * time.Millisecond)
 		residualPID := findPIDByPort(port)
 		if residualPID > 0 {
+			proc, err := os.FindProcess(residualPID)
+			if err == nil {
+				if killErr := proc.Kill(); killErr == nil {
+					m.log("runtime", "%s", i18n.Tfmt("⏹️ [%s] 已透過 Go TerminateProcess 停止殘留進程 (PID: %d)", project.Name, residualPID))
+					m.unregister(serviceKey)
+					m.log("runtime", "%s", i18n.Tfmt("⏹️ [%s] %s 已停止", project.Name, runtimeLabel))
+					return nil
+				}
+			}
+
 			killCmd := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(residualPID))
 			killCmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
-			if err := killCmd.Run(); err != nil {
-				m.log("runtime", "⚠️ [%s] 備用 taskkill PID %d: %v", project.Name, residualPID, err)
+			if out, err := killCmd.CombinedOutput(); err != nil {
+				m.log("runtime", "%s", i18n.Tfmt("⚠️ [%s] 備用 taskkill PID %d 失敗: %v (輸出: %s)", project.Name, residualPID, err, strings.TrimSpace(string(out))))
 			} else {
-				m.log("runtime", "⏹️ [%s] 已透過 Port %d 停止殘留進程 (PID: %d)", project.Name, port, residualPID)
+				m.log("runtime", "%s", i18n.Tfmt("⏹️ [%s] 已透過 Port %d 停止殘留進程 (PID: %d)", project.Name, port, residualPID))
 			}
 		}
 	}
 
-	m.log("runtime", "⏹️ [%s] %s 已停止", project.Name, runtimeLabel)
+	m.unregister(serviceKey)
+	m.log("runtime", "%s", i18n.Tfmt("⏹️ [%s] %s 已停止", project.Name, runtimeLabel))
 	return nil
 }
 
@@ -512,11 +553,11 @@ func (m *Manager) StopRuntime(project config.ProjectConfig) error {
 func (m *Manager) pipeRuntimeOutput(cmd *exec.Cmd, category string, serviceName string) {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		m.errorLog(category, fmt.Sprintf("%s: 建立 stdout pipe 失敗", serviceName), err)
+		m.errorLog(category, i18n.Tfmt("%s: 建立 stdout pipe 失敗", serviceName), err)
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		m.errorLog(category, fmt.Sprintf("%s: 建立 stderr pipe 失敗", serviceName), err)
+		m.errorLog(category, i18n.Tfmt("%s: 建立 stderr pipe 失敗", serviceName), err)
 	}
 
 	go func() {

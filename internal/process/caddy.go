@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"wincmp/internal/i18n"
 )
 
 const caddyServiceKey = "caddy"
@@ -13,7 +15,7 @@ const caddyServiceKey = "caddy"
 // StartCaddy 啟動 Caddy 服務
 func (m *Manager) StartCaddy(version, exePath string) error {
 	if m.IsRunning(caddyServiceKey) {
-		return fmt.Errorf("Caddy 已經在運行中")
+		return fmt.Errorf("%s", i18n.T("Caddy 已經在運行中"))
 	}
 
 	configPath := filepath.Join(m.baseDir, "conf", "Caddyfile")
@@ -28,17 +30,17 @@ func (m *Manager) StartCaddy(version, exePath string) error {
 	// 擷取 stdout/stderr 輸出到 Terminal Logs
 	m.pipeOutput(cmd, "caddy", "Caddy")
 
-	m.log("caddy", "🚀 啟動 Caddy...")
-	m.log("caddy", "  執行檔: %s", exePath)
-	m.log("caddy", "  設定檔: %s", configPath)
+	m.log("caddy", "%s", i18n.T("🚀 啟動 Caddy..."))
+	m.log("caddy", "%s", i18n.Tfmt("  執行檔: %s", exePath))
+	m.log("caddy", "%s", i18n.Tfmt("  設定檔: %s", configPath))
 
 	if err := cmd.Start(); err != nil {
-		m.errorLog("caddy", "Caddy 啟動失敗", err)
-		return fmt.Errorf("Caddy 啟動失敗: %w", err)
+		m.errorLog("caddy", i18n.T("Caddy 啟動失敗"), err)
+		return fmt.Errorf("%s: %w", i18n.T("Caddy 啟動失敗"), err)
 	}
 
 	m.register(caddyServiceKey, fmt.Sprintf("Caddy (%s)", version), exePath, []*exec.Cmd{cmd})
-	m.log("caddy", "✅ Caddy (%s) 已啟動 (PID: %d)", version, cmd.Process.Pid)
+	m.log("caddy", "%s", i18n.Tfmt("✅ Caddy (%s) 已啟動 (PID: %d)", version, cmd.Process.Pid))
 
 	// 監控程序退出
 	go m.waitForExit(cmd, caddyServiceKey, "caddy", "Caddy")
@@ -49,15 +51,15 @@ func (m *Manager) StartCaddy(version, exePath string) error {
 // StopCaddy 停止 Caddy 服務
 func (m *Manager) StopCaddy() error {
 	if !m.IsRunning(caddyServiceKey) {
-		return fmt.Errorf("Caddy 未在運行")
+		return fmt.Errorf("%s", i18n.T("Caddy 未在運行"))
 	}
 
-	m.log("caddy", "🛑 停止 Caddy...")
+	m.log("caddy", "%s", i18n.T("🛑 停止 Caddy..."))
 	if err := m.stopService(caddyServiceKey); err != nil {
-		m.errorLog("caddy", "Caddy 停止失敗", err)
+		m.errorLog("caddy", i18n.T("Caddy 停止失敗"), err)
 		return err
 	}
-	m.log("caddy", "✅ Caddy 已停止")
+	m.log("caddy", "%s", i18n.T("✅ Caddy 已停止"))
 
 	// Caddy 停止後清理 timberjack 在 Windows 上無法刪除的殘留 log 檔
 	m.cleanupStaleRotatedLogs()
@@ -68,7 +70,7 @@ func (m *Manager) StopCaddy() error {
 // ReloadCaddy 重載 Caddy 設定
 func (m *Manager) ReloadCaddy(exePath string) error {
 	if !m.IsRunning(caddyServiceKey) {
-		return fmt.Errorf("Caddy 未在運行，無法重載")
+		return fmt.Errorf("%s", i18n.T("Caddy 未在運行，無法重載"))
 	}
 
 	configPath := filepath.Join(m.baseDir, "conf", "Caddyfile")
@@ -79,14 +81,14 @@ func (m *Manager) ReloadCaddy(exePath string) error {
 		"--adapter", "caddyfile",
 	)
 
-	m.log("caddy", "🔄 重載 Caddy 設定...")
+	m.log("caddy", "%s", i18n.T("🔄 重載 Caddy 設定..."))
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		m.errorLog("caddy", fmt.Sprintf("Caddy 重載失敗\n%s", string(output)), err)
-		return fmt.Errorf("Caddy 重載失敗: %w", err)
+		m.errorLog("caddy", i18n.Tfmt("Caddy 重載失敗\n%s", string(output)), err)
+		return fmt.Errorf("%s: %w", i18n.T("Caddy 重載失敗"), err)
 	}
 
-	m.log("caddy", "✅ Caddy 設定已重載")
+	m.log("caddy", "%s", i18n.T("✅ Caddy 設定已重載"))
 	return nil
 }
 
@@ -128,15 +130,15 @@ func (m *Manager) cleanupStaleRotatedLogs() {
 		if gzBaseSet[name] {
 			fullPath := filepath.Join(logsDir, name)
 			if err := os.Remove(fullPath); err != nil {
-				m.errorLog("caddy", fmt.Sprintf("清理殘留 log 檔失敗: %s", name), err)
+				m.errorLog("caddy", i18n.Tfmt("清理殘留 log 檔失敗: %s", name), err)
 			} else {
 				cleaned++
-				m.log("caddy", "🧹 清理殘留 log: %s", name)
+				m.log("caddy", "%s", i18n.Tfmt("🧹 清理殘留 log: %s", name))
 			}
 		}
 	}
 
 	if cleaned > 0 {
-		m.log("caddy", "🧹 已清理 %d 個 timberjack 殘留 log 檔", cleaned)
+		m.log("caddy", "%s", i18n.Tfmt("🧹 已清理 %d 個 timberjack 殘留 log 檔", cleaned))
 	}
 }

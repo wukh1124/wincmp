@@ -22,11 +22,14 @@ type GlobalConfig struct {
 	DefaultSSL string `json:"default_ssl"`
 	LogFile    string `json:"log_file"`
 
+	DependencyURL string `json:"dependency_url"`
+
 	// 系統設定
 	RestoreLastState bool             `json:"restore_last_state"`
 	MinimizeToTray   bool             `json:"minimize_to_tray"`
 	RunOnBoot        bool             `json:"run_on_boot"`
 	Theme            string           `json:"theme"` // 主題設定: "light", "dark", "system" (預設)
+	Language         string           `json:"language"` // 語言設定: "zh-TW" (預設), "en-US"
 	LastServiceState LastServiceState `json:"last_service_state,omitempty"`
 
 	// 日誌設定
@@ -186,6 +189,16 @@ func Load(path string) (*WincmpConfig, error) {
 		} else {
 			cfg.Global.MariaDBPassword = dec
 		}
+	}
+
+	// 補全可能缺失的預設依賴更新網址
+	if cfg.Global.DependencyURL == "" {
+		cfg.Global.DependencyURL = "https://raw.githubusercontent.com/wktabdev/wincmp/main/conf/dependencies.json"
+	}
+
+	// 預設語言為繁體中文
+	if cfg.Global.Language == "" {
+		cfg.Global.Language = "zh-TW"
 	}
 
 	return &cfg, nil

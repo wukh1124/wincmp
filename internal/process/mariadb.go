@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"wincmp/internal/i18n"
 )
 
 const MariaDBExternalServiceKey = "mariadb-external"
@@ -77,14 +79,14 @@ func (m *Manager) StartMariaDBAsync(
 		defer close(done)
 
 		serviceKey := MariaDBExternalServiceKey
-		displayName := "外部 " + externalType
+		displayName := i18n.T("外部 ") + externalType
 		if !external {
 			serviceKey = MariaDBServiceKey(version)
 			displayName = "MariaDB " + version
 		}
 
 		if m.IsRunning(serviceKey) {
-			errCh <- fmt.Errorf("%s 已經在運行中", displayName)
+			errCh <- fmt.Errorf("%s", i18n.Tfmt("%s 已經在運行中", displayName))
 			return
 		}
 
@@ -97,11 +99,11 @@ func (m *Manager) StartMariaDBAsync(
 			dataDir = externalDatadir
 
 			if _, err := os.Stat(exePath); os.IsNotExist(err) {
-				errCh <- fmt.Errorf("執行檔不存在: %s，請確認 Basedir 路徑正確", exePath)
+				errCh <- fmt.Errorf("%s", i18n.Tfmt("執行檔不存在: %s，請確認 Basedir 路徑正確", exePath))
 				return
 			}
 			if _, err := os.Stat(dataDir); os.IsNotExist(err) {
-				errCh <- fmt.Errorf("資料目錄不存在: %s，請先初始化資料庫", dataDir)
+				errCh <- fmt.Errorf("%s", i18n.Tfmt("資料目錄不存在: %s，請先初始化資料庫", dataDir))
 				return
 			}
 		} else {
@@ -112,14 +114,14 @@ func (m *Manager) StartMariaDBAsync(
 			mysqlDBPath := filepath.Join(dataDir, "mysql")
 
 			if _, err := os.Stat(mysqlDBPath); os.IsNotExist(err) {
-				m.log("mariadb", "目錄 %s 不存在，正在初始化 MariaDB 資料庫...", mysqlDBPath)
+				m.log("mariadb", "%s", i18n.Tfmt("目錄 %s 不存在，正在初始化 MariaDB 資料庫...", mysqlDBPath))
 
 				// 安全清除：只刪除已知暫存檔，避免 RemoveAll 清空整個目錄
 				if err := safeCleanDataDir(dataDir); err != nil {
-					m.errorLog("mariadb", "清除資料目錄暫存檔失敗", err)
+					m.errorLog("mariadb", i18n.T("清除資料目錄暫存檔失敗"), err)
 				}
 				if err := os.MkdirAll(dataDir, 0700); err != nil {
-					errCh <- fmt.Errorf("建立資料目錄失敗: %w", err)
+					errCh <- fmt.Errorf("%s: %w", i18n.T("建立資料目錄失敗"), err)
 					return
 				}
 
@@ -128,11 +130,11 @@ func (m *Manager) StartMariaDBAsync(
 				m.pipeOutput(initCmd, "mariadb-init", "MariaDB-Init")
 
 				if err := initCmd.Run(); err != nil {
-					m.errorLog("mariadb", "MariaDB 資料庫初始化失敗", err)
-					errCh <- fmt.Errorf("MariaDB 初始化失敗: %w", err)
+					m.errorLog("mariadb", i18n.T("MariaDB 資料庫初始化失敗"), err)
+					errCh <- fmt.Errorf("%s: %w", i18n.T("MariaDB 初始化失敗"), err)
 					return
 				}
-				m.log("mariadb", "✅ MariaDB 資料庫初始化完成")
+				m.log("mariadb", "%s", i18n.T("✅ MariaDB 資料庫初始化完成"))
 			}
 		}
 
@@ -141,7 +143,7 @@ func (m *Manager) StartMariaDBAsync(
 		if port > 0 {
 			portLabel = fmt.Sprintf("%d", port)
 		} else {
-			portLabel = "3306 (預設)"
+			portLabel = i18n.T("3306 (預設)")
 		}
 
 		if external {
@@ -161,24 +163,24 @@ func (m *Manager) StartMariaDBAsync(
 		}
 		m.pipeOutput(cmd, "mariadb", "MariaDB")
 
-		m.log("mariadb", "🚀 啟動 %s...", displayName)
-		m.log("mariadb", "  執行檔: %s", exePath)
-		m.log("mariadb", "  Port: %s", portLabel)
+		m.log("mariadb", "%s", i18n.Tfmt("🚀 啟動 %s...", displayName))
+		m.log("mariadb", "%s", i18n.Tfmt("  執行檔: %s", exePath))
+		m.log("mariadb", "%s", i18n.Tfmt("  Port: %s", portLabel))
 		if external {
-			m.log("mariadb", "  Basedir: %s", externalBasedir)
-			m.log("mariadb", "  Datadir: %s", dataDir)
+			m.log("mariadb", "%s", i18n.Tfmt("  Basedir: %s", externalBasedir))
+			m.log("mariadb", "%s", i18n.Tfmt("  Datadir: %s", dataDir))
 		} else {
-			m.log("mariadb", "  設定檔: %s", myIniPath)
+			m.log("mariadb", "%s", i18n.Tfmt("  設定檔: %s", myIniPath))
 		}
 
 		if err := cmd.Start(); err != nil {
-			m.errorLog("mariadb", fmt.Sprintf("%s 啟動失敗", displayName), err)
-			errCh <- fmt.Errorf("%s 啟動失敗: %w", displayName, err)
+			m.errorLog("mariadb", i18n.Tfmt("%s 啟動失敗", displayName), err)
+			errCh <- fmt.Errorf("%s: %w", i18n.Tfmt("%s 啟動失敗", displayName), err)
 			return
 		}
 
 		m.register(serviceKey, displayName, exePath, []*exec.Cmd{cmd})
-		m.log("mariadb", "✅ %s 已啟動 (PID: %d)", displayName, cmd.Process.Pid)
+		m.log("mariadb", "%s", i18n.Tfmt("✅ %s 已啟動 (PID: %d)", displayName, cmd.Process.Pid))
 
 		go m.waitForExit(cmd, serviceKey, "mariadb", displayName)
 		errCh <- nil
@@ -201,10 +203,10 @@ func (m *Manager) StopMariaDB(
 	}
 
 	if !m.IsRunning(serviceKey) {
-		return fmt.Errorf("%s 未在運行", displayName)
+		return fmt.Errorf("%s", i18n.Tfmt("%s 未在運行", displayName))
 	}
 
-	m.log("mariadb", "🛑 停止 %s...", displayName)
+	m.log("mariadb", "%s", i18n.Tfmt("🛑 停止 %s...", displayName))
 
 	var adminExe string
 	if external {
@@ -215,15 +217,15 @@ func (m *Manager) StopMariaDB(
 
 	shutdownCmd := m.createCommand(adminExe, "-u", "root", "-P", fmt.Sprintf("%d", port), "shutdown")
 	if err := shutdownCmd.Run(); err != nil {
-		m.errorLog("mariadb", "admin shutdown 失敗，改用強制終止", err)
+		m.errorLog("mariadb", i18n.T("admin shutdown 失敗，改用強制終止"), err)
 		if err := m.stopService(serviceKey); err != nil {
-			m.errorLog("mariadb", fmt.Sprintf("%s 停止失敗", displayName), err)
+			m.errorLog("mariadb", i18n.Tfmt("%s 停止失敗", displayName), err)
 			return err
 		}
 	} else {
 		m.unregister(serviceKey)
 	}
 
-	m.log("mariadb", "✅ %s 已停止", displayName)
+	m.log("mariadb", "%s", i18n.Tfmt("✅ %s 已停止", displayName))
 	return nil
 }
