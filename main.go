@@ -63,23 +63,25 @@ type tabSwitchReq struct {
 }
 
 var (
-	sysLog          = binding.NewString()
-	caddyLog        = binding.NewString()
-	dbLog           = binding.NewString()
-	mailpitLog      = binding.NewString()
-	phpLog          = binding.NewString()
-	runtimeLog      = binding.NewString()
-	logEntries      map[string]*container.Scroll
-	logTabs         *container.AppTabs
-	runtimeTabItem  *container.TabItem
-	procMgr         *process.Manager
-	resourceMonitor *resource.Monitor
-	scanRes         *scanner.ScanResult
-	appCfg          *config.WincmpConfig
-	depCfg          config.DependencyConfig
-	baseDir         string
-	isZenityOpen    atomic.Bool
-	myApp           fyne.App
+	sysLog                  = binding.NewString()
+	caddyLog                = binding.NewString()
+	dbLog                   = binding.NewString()
+	mailpitLog              = binding.NewString()
+	phpLog                  = binding.NewString()
+	runtimeLog              = binding.NewString()
+	logEntries              map[string]*container.Scroll
+	logTabs                 *container.AppTabs
+	runtimeTabItem          *container.TabItem
+	procMgr                 *process.Manager
+	resourceMonitor         *resource.Monitor
+	scanRes                 *scanner.ScanResult
+	appCfg                  *config.WincmpConfig
+	depCfg                  config.DependencyConfig
+	depFileExistsAtStart    bool
+	dependencyManagerDialog dialog.Dialog
+	baseDir                 string
+	isZenityOpen            atomic.Bool
+	myApp                   fyne.App
 
 	runtimeLogWriters map[string]*lumberjack.Logger
 	appLogWriter      *lumberjack.Logger
@@ -1086,6 +1088,9 @@ func main() {
 
 	// --- 載入依賴設定檔 ---
 	depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
+	_, statErr := os.Stat(depCfgPath)
+	depFileExistsAtStart = !os.IsNotExist(statErr)
+
 	var depLoadErr error
 	depCfg, depLoadErr = config.LoadDependencies(depCfgPath)
 	if depLoadErr != nil {
@@ -1487,6 +1492,10 @@ func createDashboard(win fyne.Window, refreshProjects func()) fyne.CanvasObject 
 			nil, nil, nil,
 			widget.NewButtonWithIcon("Manage Dependencies", theme.DownloadIcon(), func() {
 				showDependencyManager(win)
+				if !depFileExistsAtStart {
+					fetchLatestDependenciesInBackground(win)
+					depFileExistsAtStart = true
+				}
 			}),
 			widget.NewLabelWithStyle("Service Modules Manager", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		),
@@ -2070,14 +2079,140 @@ func checkCoreDependencies(win fyne.Window) {
 	fyne.Do(func() {
 		dialog.NewCustomConfirm("Dependency Missing", "Auto Download (Recommended)", "Configure Later", dialogContent, func(confirm bool) {
 			if confirm {
-				startAutoDownload(win, missingCaddy, missingPHP, missingMariaDB)
+				fetchDependenciesForAutoDownload(win, missingCaddy, missingPHP, missingMariaDB)
 			}
 		}, win).Show()
 	})
 }
 
-// startAutoDownload 執行非同步下載與安裝核心元件
-func startAutoDownload(win fyne.Window, missingCaddy, missingPHP, missingMariaDB bool) {
+// fetchDependenciesForAutoDownload 背景取得最新依賴配置後，再讓用戶選擇 PHP 版本或直接執行下載
+func fetchDependenciesForAutoDownload(win fyne.Window, missingCaddy, missingPHP, missingMariaDB bool) {
+	progress := dialog.NewProgressInfinite("取得最新版本", "正在從遠端獲取最新依賴資訊...", win)
+	progress.Show()
+
+	go func() {
+		url := "https://raw.githubusercontent.com/wktabdev/wincmp/main/conf/dependencies.json"
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Get(url)
+
+		success := false
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				var newCfg config.DependencyConfig
+				if err := json.NewDecoder(resp.Body).Decode(&newCfg); err == nil {
+					requiredKeys := []string{"caddy", "mariadb", "composer", "heidisql", "node"}
+					valid := true
+					for _, key := range requiredKeys {
+						if _, ok := newCfg[key]; !ok {
+							valid = false
+							break
+						}
+					}
+					if valid {
+						hasPHP := false
+						for k := range newCfg {
+							if strings.HasPrefix(k, "php") && k != "php" {
+								hasPHP = true
+								break
+							}
+						}
+						if !hasPHP {
+							valid = false
+						}
+					}
+					if valid {
+						depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
+						if err := config.SaveDependencies(depCfgPath, newCfg); err == nil {
+							depCfg = newCfg
+							success = true
+							addLog("system", "✓ 自動下載並更新最新依賴建議版本成功 (Auto Download 流程)")
+						}
+					}
+				}
+			}
+		}
+
+		if !success {
+			addLog("system", "⚠️ 自動下載核心依賴時，無法取得遠端最新配置，將使用本地快取配置")
+			depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
+			if loaded, err := config.LoadDependencies(depCfgPath); err == nil {
+				depCfg = loaded
+			}
+		}
+
+		// 先在 UI 執行緒中隱藏載入中進度條
+		fyne.Do(func() {
+			progress.Hide()
+		})
+
+		// 讓 UI 執行緒有時間進行 UI 清理，避免 Fyne 對話框疊加衝突
+		time.Sleep(150 * time.Millisecond)
+
+		// 隨後再決定是顯示選擇視窗，還是直接開始下載
+		fyne.Do(func() {
+			if missingPHP {
+				// 動態撈取所有 PHP 版本並依版本號降序排序
+				type phpOption struct {
+					key     string
+					version string
+					label   string
+				}
+				var phpOpts []phpOption
+				for k, item := range depCfg {
+					if strings.HasPrefix(k, "php") && k != "php" {
+						parts := strings.Split(item.Version, ".")
+						majorMin := item.Version
+						if len(parts) >= 2 {
+							majorMin = parts[0] + "." + parts[1]
+						}
+						phpOpts = append(phpOpts, phpOption{
+							key:     k,
+							version: item.Version,
+							label:   fmt.Sprintf("PHP %s NTS", majorMin),
+						})
+					}
+				}
+
+				sort.Slice(phpOpts, func(i, j int) bool {
+					return compareVersions(phpOpts[i].version, phpOpts[j].version) > 0
+				})
+
+				var options []string
+				optionToKeyMap := make(map[string]string)
+				for _, opt := range phpOpts {
+					options = append(options, opt.label)
+					optionToKeyMap[opt.label] = opt.key
+				}
+
+				radio := widget.NewRadioGroup(options, nil)
+				if len(options) > 0 {
+					radio.SetSelected(options[0]) // 預設選中最高版本
+				}
+
+				content := container.NewVBox(
+					widget.NewLabel("WinCMP detected that you have not installed the core PHP environment.\nPlease select the PHP version you wish to install:"),
+					radio,
+				)
+
+				d := dialog.NewCustomConfirm("Select PHP Core Version", "Confirm & Download", "Cancel", content, func(confirm bool) {
+					if confirm {
+						selected := radio.Selected
+						phpKey := optionToKeyMap[selected]
+						runActualAutoDownload(win, missingCaddy, missingMariaDB, phpKey)
+					}
+				}, win)
+				d.Show()
+			} else {
+				// PHP 已安裝，直接下載 Caddy 或 MariaDB
+				runActualAutoDownload(win, missingCaddy, missingMariaDB, "")
+			}
+		})
+	}()
+}
+
+// runActualAutoDownload 執行非同步下載與安裝核心元件
+func runActualAutoDownload(win fyne.Window, missingCaddy, missingMariaDB bool, phpVersionKey string) {
 	type depSpec struct {
 		name    string
 		url     string
@@ -2098,13 +2233,13 @@ func startAutoDownload(win fyne.Window, missingCaddy, missingPHP, missingMariaDB
 		})
 	}
 
-	if missingPHP {
-		php83Ver := depCfg["php83"].Version
+	if phpVersionKey != "" {
+		phpVer := depCfg[phpVersionKey].Version
 		specs = append(specs, depSpec{
-			name:    "PHP v" + php83Ver + " NTS",
-			url:     depCfg["php83"].URL,
-			destZip: filepath.Join(binDir, "php_"+php83Ver+".zip"),
-			destDir: filepath.Join(binDir, "php", "php-"+php83Ver),
+			name:    "PHP v" + phpVer + " NTS",
+			url:     depCfg[phpVersionKey].URL,
+			destZip: filepath.Join(binDir, "php_"+phpVer+".zip"),
+			destDir: filepath.Join(binDir, "php", "php-"+phpVer),
 		})
 	}
 
@@ -2333,6 +2468,13 @@ func getLocalNodeVersion() string {
 	return ""
 }
 
+func getLocalMailpitVersion() string {
+	if len(scanRes.MailpitList) > 0 {
+		return scanRes.MailpitList[0].Version
+	}
+	return ""
+}
+
 // depSpec 定義依賴元件的下載規格
 type depSpec struct {
 	name    string
@@ -2443,33 +2585,6 @@ func showDependencyManager(win fyne.Window) {
 		destDir: filepath.Join(binDir, "mariadb"),
 	}
 
-	php73Ver := depCfg["php73"].Version
-	php73Url := depCfg["php73"].URL
-	php73Spec := depSpec{
-		name:    "PHP v" + php73Ver,
-		url:     php73Url,
-		destZip: filepath.Join(binDir, "php_"+php73Ver+".zip"),
-		destDir: filepath.Join(binDir, "php", "php-"+php73Ver),
-	}
-
-	php82Ver := depCfg["php82"].Version
-	php82Url := depCfg["php82"].URL
-	php82Spec := depSpec{
-		name:    "PHP v" + php82Ver,
-		url:     php82Url,
-		destZip: filepath.Join(binDir, "php_"+php82Ver+".zip"),
-		destDir: filepath.Join(binDir, "php", "php-"+php82Ver),
-	}
-
-	php83Ver := depCfg["php83"].Version
-	php83Url := depCfg["php83"].URL
-	php83Spec := depSpec{
-		name:    "PHP v" + php83Ver,
-		url:     php83Url,
-		destZip: filepath.Join(binDir, "php_"+php83Ver+".zip"),
-		destDir: filepath.Join(binDir, "php", "php-"+php83Ver),
-	}
-
 	composerVer := depCfg["composer"].Version
 	composerUrl := depCfg["composer"].URL
 	composerSpec := depSpec{
@@ -2497,104 +2612,276 @@ func showDependencyManager(win fyne.Window) {
 		destDir: filepath.Join(binDir, "node"),
 	}
 
-	var d dialog.Dialog
+	mailpitVer := depCfg["mailpit"].Version
+	mailpitUrl := depCfg["mailpit"].URL
+	mailpitSpec := depSpec{
+		name:    "Mailpit v" + mailpitVer,
+		url:     mailpitUrl,
+		destZip: filepath.Join(binDir, "mailpit_"+mailpitVer+".zip"),
+		destDir: filepath.Join(binDir, "mailpit", "mailpit-"+mailpitVer),
+	}
+
+	// 動態載入 dependencies.json 內所有的 PHP 版本並按版本降序排序
+	type phpOption struct {
+		key     string
+		version string
+		url     string
+	}
+	var phpOpts []phpOption
+	for k, item := range depCfg {
+		if strings.HasPrefix(k, "php") && k != "php" {
+			phpOpts = append(phpOpts, phpOption{
+				key:     k,
+				version: item.Version,
+				url:     item.URL,
+			})
+		}
+	}
+
+	sort.Slice(phpOpts, func(i, j int) bool {
+		return compareVersions(phpOpts[i].version, phpOpts[j].version) > 0
+	})
+
+	var phpRows []fyne.CanvasObject
+	for i, opt := range phpOpts {
+		optVer := opt.version
+		optUrl := opt.url
+		phpSpec := depSpec{
+			name:    "PHP v" + optVer + " NTS",
+			url:     optUrl,
+			destZip: filepath.Join(binDir, "php_"+optVer+".zip"),
+			destDir: filepath.Join(binDir, "php", "php-"+optVer),
+		}
+
+		parts := strings.Split(optVer, ".")
+		majorMin := optVer
+		if len(parts) >= 2 {
+			majorMin = parts[0] + "." + parts[1]
+		}
+
+		row := createDependencyRow(win, &dependencyManagerDialog, "PHP "+majorMin+" NTS", getLocalPHPVersion(majorMin), optVer, phpSpec)
+		phpRows = append(phpRows, row)
+		if i < len(phpOpts)-1 {
+			phpRows = append(phpRows, widget.NewSeparator())
+		}
+	}
 
 	coreRows := container.NewVBox(
-		createDependencyRow(win, &d, "Caddy Server", getLocalCaddyVersion(), caddyVer, caddySpec),
+		createDependencyRow(win, &dependencyManagerDialog, "Caddy Server", getLocalCaddyVersion(), caddyVer, caddySpec),
 		widget.NewSeparator(),
-		createDependencyRow(win, &d, "MariaDB Database", getLocalMariaDBVersion(), mariaDBVer, mariaDBSpec),
-		widget.NewSeparator(),
-		createDependencyRow(win, &d, "PHP 7.3 NTS", getLocalPHPVersion("7.3"), php73Ver, php73Spec),
-		widget.NewSeparator(),
-		createDependencyRow(win, &d, "PHP 8.2 NTS", getLocalPHPVersion("8.2"), php82Ver, php82Spec),
-		widget.NewSeparator(),
-		createDependencyRow(win, &d, "PHP 8.3 NTS", getLocalPHPVersion("8.3"), php83Ver, php83Spec),
+		createDependencyRow(win, &dependencyManagerDialog, "MariaDB Database", getLocalMariaDBVersion(), mariaDBVer, mariaDBSpec),
 	)
-	coreCard := widget.NewCard("Core Dependencies", "Web server, database and PHP versions", coreRows)
+	coreCard := widget.NewCard("Core Dependencies", "Web server and database", coreRows)
+
+	phpCard := widget.NewCard("PHP Runtimes", "Download and manage PHP versions", container.NewVBox(phpRows...))
 
 	otherRows := container.NewVBox(
-		createDependencyRow(win, &d, "Composer", getLocalComposerVersion(), composerVer, composerSpec),
+		createDependencyRow(win, &dependencyManagerDialog, "Composer", getLocalComposerVersion(), composerVer, composerSpec),
 		widget.NewSeparator(),
-		createDependencyRow(win, &d, "HeidiSQL", getLocalHeidiSQLVersion(), heidiSQLVer, heidiSQLSpec),
+		createDependencyRow(win, &dependencyManagerDialog, "HeidiSQL", getLocalHeidiSQLVersion(), heidiSQLVer, heidiSQLSpec),
 		widget.NewSeparator(),
-		createDependencyRow(win, &d, "Node.js LTS", getLocalNodeVersion(), nodeVer, nodeSpec),
+		createDependencyRow(win, &dependencyManagerDialog, "Node.js LTS", getLocalNodeVersion(), nodeVer, nodeSpec),
+		widget.NewSeparator(),
+		createDependencyRow(win, &dependencyManagerDialog, "Mailpit", getLocalMailpitVersion(), mailpitVer, mailpitSpec),
 	)
 	otherCard := widget.NewCard("Other Dependencies", "Package managers, GUI tools and runtime systems", otherRows)
 
-	fetchBtn := widget.NewButtonWithIcon("取得最新建議版本", theme.DownloadIcon(), func() {
-		fetchLatestDependencies(win, d)
+	scrollContent := container.NewVScroll(container.NewVBox(
+		coreCard,
+		phpCard,
+		otherCard,
+	))
+	scrollContent.SetMinSize(fyne.NewSize(650, 480))
+
+	topBar := container.NewHBox(
+		layout.NewSpacer(),
+		widget.NewButtonWithIcon("Fetch", theme.ViewRefreshIcon(), func() {
+			manualFetchDependencies(win)
+		}),
+	)
+
+	dialogContent := container.NewBorder(topBar, nil, nil, nil, scrollContent)
+
+	dependencyManagerDialog = dialog.NewCustom("Dependency Manager", "Close", dialogContent, win)
+	dependencyManagerDialog.SetOnClosed(func() {
+		dependencyManagerDialog = nil
 	})
-
-	scrollContent := container.NewVScroll(container.NewVBox(fetchBtn, coreCard, otherCard))
-	scrollContent.SetMinSize(fyne.NewSize(650, 420))
-
-	d = dialog.NewCustom("Dependency Manager", "Close", scrollContent, win)
-	d.Show()
+	dependencyManagerDialog.Show()
 }
 
-func fetchLatestDependencies(win fyne.Window, d dialog.Dialog) {
-	progress := dialog.NewProgressInfinite("取得最新版本", "正在從遠端獲取最新依賴資訊...", win)
+// manualFetchDependencies 手動從遠端取得最新建議依賴版本並更新本地 dependencies.json，完成後自動刷新 UI
+func manualFetchDependencies(win fyne.Window) {
+	progress := dialog.NewProgressInfinite("手動獲取最新依賴", "正在從遠端獲取最新依賴資訊...", win)
 	progress.Show()
 
 	go func() {
-		defer progress.Hide()
-
 		url := "https://raw.githubusercontent.com/wktabdev/wincmp/main/conf/dependencies.json"
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Get(url)
-		if err != nil {
-			fyne.Do(func() {
-				dialog.ShowError(fmt.Errorf("無法連線至伺服器: %w", err), win)
-			})
-			return
-		}
-		defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			fyne.Do(func() {
-				dialog.ShowError(fmt.Errorf("伺服器回應錯誤: %s", resp.Status), win)
-			})
-			return
-		}
-
+		success := false
+		var fetchErr error = err
 		var newCfg config.DependencyConfig
-		if err := json.NewDecoder(resp.Body).Decode(&newCfg); err != nil {
-			fyne.Do(func() {
-				dialog.ShowError(fmt.Errorf("解析資料失敗: %w", err), win)
-			})
-			return
-		}
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				if err := json.NewDecoder(resp.Body).Decode(&newCfg); err == nil {
+					// 與本地現有的配置進行合併，以遠端最新資料優先，保留本地有而遠端沒有的欄位（如 mailpit 或新增的 PHP 版本）
+					for k, v := range depCfg {
+						if _, ok := newCfg[k]; !ok {
+							newCfg[k] = v
+						}
+					}
 
-		// 簡單驗證資料完整性
-		requiredKeys := []string{"caddy", "mariadb", "php73", "php82", "php83", "composer", "heidisql", "node"}
-		for _, key := range requiredKeys {
-			if _, ok := newCfg[key]; !ok {
-				fyne.Do(func() {
-					dialog.ShowError(fmt.Errorf("取得的設定檔格式不正確，缺少欄位: %s", key), win)
-				})
-				return
+					// 簡單驗證資料完整性
+					requiredKeys := []string{"caddy", "mariadb", "composer", "heidisql", "node", "mailpit"}
+					valid := true
+					for _, key := range requiredKeys {
+						if _, ok := newCfg[key]; !ok {
+							valid = false
+							break
+						}
+					}
+					if valid {
+						hasPHP := false
+						for k := range newCfg {
+							if strings.HasPrefix(k, "php") && k != "php" {
+								hasPHP = true
+								break
+							}
+						}
+						if !hasPHP {
+							valid = false
+						}
+					}
+					if valid {
+						depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
+						if err := config.SaveDependencies(depCfgPath, newCfg); err == nil {
+							depCfg = newCfg
+							success = true
+							addLog("system", "✓ 手動下載並更新最新依賴建議版本成功")
+						} else {
+							fetchErr = err
+							addErrorLog("system", "手動獲取時，無法儲存下載的依賴建議版本", err)
+						}
+					} else {
+						fetchErr = fmt.Errorf("依賴設定檔格式不正確，缺少必要欄位")
+						addLog("system", "⚠️ 手動獲取的依賴設定檔格式不正確，缺少必要欄位")
+					}
+				} else {
+					fetchErr = err
+					addErrorLog("system", "無法解析下載的依賴設定檔", err)
+				}
+			} else {
+				fetchErr = fmt.Errorf("伺服器回應錯誤狀態碼: %d", resp.StatusCode)
+				addLog("system", fmt.Sprintf("⚠️ 手動獲取依賴建議版本伺服器回應錯誤狀態碼: %d", resp.StatusCode))
 			}
+		} else {
+			addErrorLog("system", "手動連線伺服器取得最新依賴資訊失敗，請檢查網路連線", err)
 		}
-
-		// 儲存至本地
-		depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
-		if err := config.SaveDependencies(depCfgPath, newCfg); err != nil {
-			fyne.Do(func() {
-				dialog.ShowError(fmt.Errorf("儲存設定檔失敗: %w", err), win)
-			})
-			return
-		}
-
-		// 更新記憶體中的依賴配置
-		depCfg = newCfg
 
 		fyne.Do(func() {
-			dialog.ShowInformation("成功", "已成功更新最新建議依賴版本！", win)
-			if d != nil {
-				d.Hide()
+			progress.Hide()
+			if success {
+				// 若依賴管理器視窗仍開啟，則關閉舊的並重新建立以更新資料
+				if dependencyManagerDialog != nil {
+					dependencyManagerDialog.Hide()
+					showDependencyManager(win)
+				}
+				dialog.ShowInformation("獲取成功", "最新依賴資訊已成功下載並更新！", win)
+			} else {
+				// 自訂錯誤對話框，避免 Fyne 框架自動偵測系統 Locale 導致的簡體字標題「错误」與按鈕「好」
+				errMsg := "無法獲取最新依賴資訊，請檢查網路連線或稍後再試。"
+				if fetchErr != nil {
+					errMsg = fmt.Sprintf("無法獲取最新依賴資訊：\n%v\n\n請檢查網路連線或稍後再試。", fetchErr)
+				}
+				errLabel := widget.NewLabel(errMsg)
+				errLabel.Wrapping = fyne.TextWrapWord
+				
+				// 限制最大寬度與高度以防錯誤訊息太長拉寬視窗
+				scroll := container.NewVScroll(errLabel)
+				scroll.SetMinSize(fyne.NewSize(380, 100))
+				
+				errDialog := dialog.NewCustom("錯誤", "確定", scroll, win)
+				errDialog.Show()
 			}
-			showDependencyManager(win)
 		})
+	}()
+}
+
+// fetchLatestDependenciesInBackground 在背景取得最新建議依賴版本並更新本地 dependencies.json，完成後若視窗仍開啟則自動刷新
+func fetchLatestDependenciesInBackground(win fyne.Window) {
+	go func() {
+		url := "https://raw.githubusercontent.com/wktabdev/wincmp/main/conf/dependencies.json"
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Get(url)
+
+		success := false
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				var newCfg config.DependencyConfig
+				if err := json.NewDecoder(resp.Body).Decode(&newCfg); err == nil {
+					// 與本地現有的配置進行合併，以遠端最新資料優先，保留本地有而遠端沒有的欄位（如 mailpit 或新增的 PHP 版本）
+					for k, v := range depCfg {
+						if _, ok := newCfg[k]; !ok {
+							newCfg[k] = v
+						}
+					}
+
+					// 簡單驗證資料完整性
+					requiredKeys := []string{"caddy", "mariadb", "composer", "heidisql", "node", "mailpit"}
+					valid := true
+					for _, key := range requiredKeys {
+						if _, ok := newCfg[key]; !ok {
+							valid = false
+							break
+						}
+					}
+					if valid {
+						hasPHP := false
+						for k := range newCfg {
+							if strings.HasPrefix(k, "php") && k != "php" {
+								hasPHP = true
+								break
+							}
+						}
+						if !hasPHP {
+							valid = false
+						}
+					}
+					if valid {
+						depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
+						if err := config.SaveDependencies(depCfgPath, newCfg); err == nil {
+							depCfg = newCfg
+							success = true
+							addLog("system", "✓ 背景下載並更新最新依賴建議版本成功")
+						} else {
+							addErrorLog("system", "無法儲存背景下載的依賴建議版本", err)
+						}
+					} else {
+						addLog("system", "⚠️ 背景下載的依賴設定檔格式不正確，缺少必要欄位")
+					}
+				} else {
+					addErrorLog("system", "無法解析背景下載的依賴設定檔", err)
+				}
+			} else {
+				addLog("system", fmt.Sprintf("⚠️ 背景下載依賴建議版本伺服器回應錯誤狀態碼: %d", resp.StatusCode))
+			}
+		} else {
+			addErrorLog("system", "背景連線伺服器取得最新依賴資訊失敗，將使用本地快取配置", err)
+		}
+
+		if success {
+			fyne.Do(func() {
+				// 若依賴管理器視窗仍開啟，則關閉舊的並重新建立以更新資料
+				if dependencyManagerDialog != nil {
+					dependencyManagerDialog.Hide()
+					showDependencyManager(win)
+					addLog("system", "✓ 依賴管理器面板已自動刷新最新建議版本")
+				}
+			})
+		}
 	}()
 }
 
@@ -2722,6 +3009,24 @@ func startSingleDependencyDownload(win fyne.Window, spec depSpec) {
 						if renameErr := os.Rename(oldDir, newDir); renameErr != nil {
 							addErrorLog("system", "Node.js directory rename failed", renameErr)
 						}
+					}
+				}
+			}
+
+			if strings.HasPrefix(spec.name, "Mailpit v") {
+				version := strings.TrimPrefix(spec.name, "Mailpit v")
+				oldDir := filepath.Join(binDir, "mailpit", "mailpit-"+version, "mailpit-windows-amd64")
+				if _, err := os.Stat(oldDir); err == nil {
+					// 搬移裡面的檔案
+					files, err := os.ReadDir(oldDir)
+					if err == nil {
+						for _, file := range files {
+							os.Rename(
+								filepath.Join(oldDir, file.Name()),
+								filepath.Join(binDir, "mailpit", "mailpit-"+version, file.Name()),
+							)
+						}
+						os.Remove(oldDir) // 移除空資料夾
 					}
 				}
 			}

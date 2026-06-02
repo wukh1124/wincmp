@@ -38,6 +38,10 @@ var DefaultDependencies = DependencyConfig{
 		Version: "8.3.28",
 		URL:     "https://windows.php.net/downloads/releases/archives/php-8.3.28-nts-Win32-vs16-x64.zip",
 	},
+	"php84": {
+		Version: "8.4.21",
+		URL:     "https://downloads.php.net/~windows/releases/archives/php-8.4.21-nts-Win32-vs17-x64.zip",
+	},
 	"composer": {
 		Version: "2.7.7",
 		URL:     "https://github.com/composer/composer/releases/download/2.7.7/composer.phar",
@@ -49,6 +53,10 @@ var DefaultDependencies = DependencyConfig{
 	"node": {
 		Version: "20.15.0",
 		URL:     "https://nodejs.org/dist/v20.15.0/node-v20.15.0-win-x64.zip",
+	},
+	"mailpit": {
+		Version: "1.30.1",
+		URL:     "https://github.com/axllent/mailpit/releases/download/v1.30.1/mailpit-windows-amd64.zip",
 	},
 }
 
