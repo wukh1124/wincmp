@@ -32,6 +32,7 @@ import (
 
 	"wincmp/internal/config"
 	"wincmp/internal/detect"
+	"wincmp/internal/downloader"
 	"wincmp/internal/hosts"
 	"wincmp/internal/port"
 	"wincmp/internal/preset"
@@ -39,7 +40,6 @@ import (
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
 	"wincmp/internal/singleinstance"
-	"wincmp/internal/downloader"
 
 	"fyne.io/fyne/v2/data/binding"
 
@@ -746,7 +746,7 @@ func openLocalPath(path string, force bool) {
 	}
 	cleanBase := filepath.Clean(baseDir)
 	cleanAbs := filepath.Clean(absPath)
-	
+
 	// 特別許可：若 force 為 true 則跳過目錄限制 (但仍保留副檔名檢查)
 	if !force && !strings.HasPrefix(cleanAbs, cleanBase+string(os.PathSeparator)) && cleanAbs != cleanBase {
 		addErrorLog("system", "路徑不在允許的目錄內: "+absPath, nil)
@@ -2539,7 +2539,7 @@ func fetchLatestDependencies(win fyne.Window, d dialog.Dialog) {
 	go func() {
 		defer progress.Hide()
 
-		url := "https://raw.githubusercontent.com/wukh1124/wincmp/main/conf/dependencies.json"
+		url := "https://raw.githubusercontent.com/wktabdev/wincmp/main/conf/dependencies.json"
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Get(url)
 		if err != nil {
@@ -5090,7 +5090,7 @@ func showHostsWriteFailedDialog(missingDomains []string) {
 		hostsContent := sb.String()
 
 		desc := widget.NewLabel("由於沒有管理員權限，無法自動更新系統 Hosts 檔案。\n請手動將以下內容新增到您的系統 Hosts 中：")
-		
+
 		richText := widget.NewRichText(
 			&widget.TextSegment{
 				Style: widget.RichTextStyleCodeBlock,
