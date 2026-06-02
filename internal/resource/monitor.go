@@ -14,6 +14,7 @@ import (
 	"fyne.io/fyne/v2"
 	"github.com/shirou/gopsutil/v3/process"
 
+	"wincmp/internal/i18n"
 	procmgr "wincmp/internal/process"
 )
 
@@ -204,10 +205,10 @@ func (m *Monitor) FetchStackBreakdown(ramStr, cpuStr string) string {
 	services := pm.GetServiceBreakdown()
 	if len(services) == 0 {
 		var sb strings.Builder
-		sb.WriteString("WinCMP 資源監控\n\n")
-		sb.WriteString(fmt.Sprintf("主程式 RAM:   %s\n", ramStr))
-		sb.WriteString(fmt.Sprintf("主程式 CPU:   %s\n\n", cpuStr))
-		sb.WriteString("目前沒有啟動中的子服務")
+		sb.WriteString(i18n.T("WinCMP 資源監控") + "\n\n")
+		sb.WriteString(i18n.Tfmt("主程式 RAM:   %s", ramStr) + "\n")
+		sb.WriteString(i18n.Tfmt("主程式 CPU:   %s", cpuStr) + "\n\n")
+		sb.WriteString(i18n.T("目前沒有啟動中的子服務"))
 		m.lastBreakdown = sb.String()
 		m.lastBreakTime = time.Now()
 		return m.lastBreakdown
@@ -248,11 +249,11 @@ func (m *Monitor) FetchStackBreakdown(ramStr, cpuStr string) string {
 	totalMB := totalRAM / 1024 / 1024
 
 	var sb strings.Builder
-	sb.WriteString("WinCMP 資源監控\n\n")
-	sb.WriteString(fmt.Sprintf("主程式 RAM:   %s\n", ramStr))
-	sb.WriteString(fmt.Sprintf("主程式 CPU:   %s\n\n", cpuStr))
+	sb.WriteString(i18n.T("WinCMP 資源監控") + "\n\n")
+	sb.WriteString(i18n.Tfmt("主程式 RAM:   %s", ramStr) + "\n")
+	sb.WriteString(i18n.Tfmt("主程式 CPU:   %s", cpuStr) + "\n\n")
 
-	sb.WriteString("── Stack Total 明細 ──\n")
+	sb.WriteString(i18n.T("── Stack Total 明細 ──") + "\n")
 	for _, line := range lines {
 		sb.WriteString(line)
 		sb.WriteByte('\n')

@@ -149,7 +149,7 @@ if (Test-Path $DataPath) {
 
 # 7. Verify required release files
 Write-Host "[7] Verifying required documentation..." -ForegroundColor Gray
-$RequiredFiles = @("readme.md", "CHANGELOG.md", "LICENSE")
+$RequiredFiles = @("readme.md", "CHANGELOG.md", "CHANGELOG_zh.md", "LICENSE")
 $MissingFiles = @()
 
 foreach ($file in $RequiredFiles) {

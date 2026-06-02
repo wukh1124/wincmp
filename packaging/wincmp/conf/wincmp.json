@@ -7,6 +7,7 @@
     "minimize_to_tray": false,
     "run_on_boot": false,
     "theme": "Dark Gray",
+    "language": "en-US",
     "last_service_state": {
       "caddy": false,
       "mariadb": false,
@@ -29,6 +30,5 @@
       }
     }
   },
-  "projects": [
-  ]
+  "projects": []
 }

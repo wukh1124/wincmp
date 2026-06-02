@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/sys/windows"
@@ -34,6 +35,7 @@ import (
 	"wincmp/internal/detect"
 	"wincmp/internal/downloader"
 	"wincmp/internal/hosts"
+	"wincmp/internal/i18n"
 	"wincmp/internal/port"
 	"wincmp/internal/preset"
 	"wincmp/internal/process"
@@ -743,7 +745,7 @@ var blockedExecExts = map[string]bool{
 func openLocalPath(path string, force bool) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		addErrorLog("system", "路徑無效: "+path, err)
+		addErrorLog("system", i18n.Tfmt("路徑無效: %s", path), err)
 		return
 	}
 	cleanBase := filepath.Clean(baseDir)
@@ -751,20 +753,20 @@ func openLocalPath(path string, force bool) {
 
 	// 特別許可：若 force 為 true 則跳過目錄限制 (但仍保留副檔名檢查)
 	if !force && !strings.HasPrefix(cleanAbs, cleanBase+string(os.PathSeparator)) && cleanAbs != cleanBase {
-		addErrorLog("system", "路徑不在允許的目錄內: "+absPath, nil)
+		addErrorLog("system", i18n.Tfmt("路徑不在允許的目錄內: %s", absPath), nil)
 		return
 	}
 	info, err := os.Stat(absPath)
 	if err == nil && !info.IsDir() {
 		ext := strings.ToLower(filepath.Ext(absPath))
 		if blockedExecExts[ext] {
-			addErrorLog("system", "不允許開啟可執行檔: "+absPath, nil)
+			addErrorLog("system", i18n.Tfmt("不允許開啟可執行檔: %s", absPath), nil)
 			return
 		}
 	}
 	err = windows.ShellExecute(0, toPtr("open"), toPtr(absPath), nil, nil, 1)
 	if err != nil {
-		addErrorLog("system", "開啟失敗: "+absPath, err)
+		addErrorLog("system", i18n.Tfmt("開啟失敗: %s", absPath), err)
 	}
 }
 
@@ -773,7 +775,7 @@ func openLatestLog(prefix string) {
 	pattern := filepath.Join(logDir, prefix+"-*.log")
 	matches, err := filepath.Glob(pattern)
 	if err != nil || len(matches) == 0 {
-		addErrorLog("system", "找不到日誌檔: "+prefix, nil)
+		addErrorLog("system", i18n.Tfmt("找不到日誌檔: %s", prefix), nil)
 		return
 	}
 	sort.Strings(matches)
@@ -836,7 +838,7 @@ func saveLastServiceState() {
 
 	cfgPath := filepath.Join(baseDir, "conf", "wincmp.json")
 	if err := appCfg.Save(cfgPath); err != nil {
-		addErrorLog("system", "無法儲存服務狀態至設定檔", err)
+		addErrorLog("system", i18n.T("無法儲存服務狀態至設定檔"), err)
 	}
 }
 
@@ -847,7 +849,7 @@ func saveAndQuit(myApp fyne.App) {
 		return
 	}
 
-	addLog("system", "正在儲存狀態與關閉所有服務...")
+	addLog("system", i18n.T("正在儲存狀態與關閉所有服務..."))
 	saveLastServiceState()
 	closeDBPool()
 	stopLogBufferSync()
@@ -859,9 +861,73 @@ func saveAndQuit(myApp fyne.App) {
 	myApp.Quit()
 }
 
+// restartAndQuit 儲存目前服務狀態，關閉所有服務，並重啟 WinCMP
+func restartAndQuit() {
+	if !isQuitting.CompareAndSwap(false, true) {
+		return
+	}
+
+	addLog("system", i18n.T("正在重啟 WinCMP..."))
+	saveLastServiceState()
+	closeDBPool()
+	stopLogBufferSync()
+	close(tabSwitchDone)
+	procMgr.StopAll()
+	if resourceMonitor != nil {
+		resourceMonitor.Stop()
+	}
+
+	// 提前釋放單實例鎖，這樣新啟動的行程才能順利取得鎖並初始化
+	singleinstance.Release()
+
+	execPath, err := os.Executable()
+	if err != nil {
+		dialog.ShowError(fmt.Errorf(i18n.Tfmt("無法取得執行檔路徑: %v", err)), getMainWindow())
+		isQuitting.Store(false)
+		return
+	}
+
+	cmd := exec.Command(execPath, "--restart")
+	cmd.Dir = baseDir
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: 0x01000000, // CREATE_BREAKAWAY_FROM_JOB
+	}
+
+	if err := cmd.Start(); err != nil {
+		addErrorLog("system", i18n.T("自動重啟失敗"), err)
+		dialog.ShowError(fmt.Errorf(i18n.Tfmt("自動重啟失敗: %v", err)), getMainWindow())
+		isQuitting.Store(false)
+		return
+	}
+
+	os.Exit(0)
+}
+
 func main() {
+	isRestart := false
+	for _, arg := range os.Args {
+		if arg == "--restart" {
+			isRestart = true
+			break
+		}
+	}
+
 	// ─── 單一執行個體防護 ──────────────────────────────
-	isFirst, err := singleinstance.TryAcquire()
+	var isFirst bool
+	var err error
+	if isRestart {
+		// 如果是重啟，最多等待 2 秒（20 次，每次 100ms）讓舊進程完全釋放 Mutex
+		for i := 0; i < 20; i++ {
+			isFirst, err = singleinstance.TryAcquire()
+			if err == nil && isFirst {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	} else {
+		isFirst, err = singleinstance.TryAcquire()
+	}
+
 	if err != nil {
 		// Mutex 建立失敗，保守地繼續執行
 		// (極少見，通常是系統資源問題)
@@ -896,6 +962,25 @@ func main() {
 	// 初始化日誌寫入器 (lumberjack 全域實例)
 	initLogWriters()
 	startLogBufferSync()
+
+	// --- 提早載入設定檔以套用語言設定 ---
+	cfgPath := filepath.Join(baseDir, "conf", "wincmp.json")
+	var configLoadErr error
+	appCfg, configLoadErr = config.Load(cfgPath)
+	if configLoadErr != nil {
+		// 使用預設設定
+		appCfg = &config.WincmpConfig{
+			Global: config.GlobalConfig{
+				DefaultWWW:       "www",
+				DefaultSSL:       "conf/ssl",
+				RestoreLastState: bool(true), // 用於相容性
+				MinimizeToTray:   false,
+				AutoUpdateHosts:  true,
+				DependencyURL:    "https://raw.githubusercontent.com/wktabdev/wincmp/main/conf/dependencies.json",
+			},
+		}
+	}
+	i18n.SetLanguage(appCfg.Global.Language)
 
 	// 初始化分頁切換 channel 和處理 goroutine
 	isLogTabSwitchAllowed.Store(false) // 初始化期間禁止 Log Tab 自動切換
@@ -984,8 +1069,8 @@ func main() {
 		})
 	}
 
-	addLog("system", "正在初始化 WinCMP...")
-	addLog("system", fmt.Sprintf("專案根目錄: %s", baseDir))
+	addLog("system", i18n.T("正在初始化 WinCMP..."))
+	addLog("system", i18n.Tfmt("專案根目錄: %s", baseDir))
 
 	// --- 建立程序管理器 ---
 	procMgr = process.NewManager(baseDir, addLog, addErrorLog)
@@ -994,97 +1079,84 @@ func main() {
 	resourceMonitor = resource.NewAppResourceMonitor(procMgr)
 
 	// --- 掃描已安裝的服務版本 ---
-	addLog("system", "掃描 ./bin 目錄中的服務版本...")
+	addLog("system", i18n.T("掃描 ./bin 目錄中的服務版本..."))
 	scanRes, err = scanner.ScanBinDir(baseDir)
 	if err != nil {
-		addErrorLog("system", "掃描服務版本失敗", err)
+		addErrorLog("system", i18n.T("掃描服務版本失敗"), err)
 	} else {
 		if len(scanRes.CaddyList) > 0 {
 			versions := make([]string, len(scanRes.CaddyList))
 			for i, c := range scanRes.CaddyList {
 				versions[i] = c.Version
 			}
-			addLog("system", fmt.Sprintf("  ✓ 找到 Caddy 版本: [%s]", strings.Join(versions, ", ")))
+			addLog("system", i18n.Tfmt("  ✓ 找到 Caddy 版本: [%s]", strings.Join(versions, ", ")))
 		} else {
-			addLog("system", "  ✗ 未找到 Caddy")
+			addLog("system", i18n.T("  ✗ 未找到 Caddy"))
 		}
 		if len(scanRes.ComposerList) > 0 {
 			versions := make([]string, len(scanRes.ComposerList))
 			for i, c := range scanRes.ComposerList {
 				versions[i] = c.Version
 			}
-			addLog("system", fmt.Sprintf("  ✓ 找到 Composer 版本: [%s]", strings.Join(versions, ", ")))
+			addLog("system", i18n.Tfmt("  ✓ 找到 Composer 版本: [%s]", strings.Join(versions, ", ")))
 		} else {
-			addLog("system", "  ✗ 未找到 Composer")
+			addLog("system", i18n.T("  ✗ 未找到 Composer"))
 		}
 		if len(scanRes.HeidiSQLList) > 0 {
 			versions := make([]string, len(scanRes.HeidiSQLList))
 			for i, h := range scanRes.HeidiSQLList {
 				versions[i] = h.Version
 			}
-			addLog("system", fmt.Sprintf("  ✓ 找到 HeidiSQL 版本: [%s]", strings.Join(versions, ", ")))
+			addLog("system", i18n.Tfmt("  ✓ 找到 HeidiSQL 版本: [%s]", strings.Join(versions, ", ")))
 		} else {
-			addLog("system", "  ✗ 未找到 HeidiSQL")
+			addLog("system", i18n.T("  ✗ 未找到 HeidiSQL"))
 		}
 		if len(scanRes.MailpitList) > 0 {
 			versions := make([]string, len(scanRes.MailpitList))
 			for i, mp := range scanRes.MailpitList {
 				versions[i] = mp.Version
 			}
-			addLog("system", fmt.Sprintf("  ✓ 找到 Mailpit 版本: [%s]", strings.Join(versions, ", ")))
+			addLog("system", i18n.Tfmt("  ✓ 找到 Mailpit 版本: [%s]", strings.Join(versions, ", ")))
 		} else {
-			addLog("system", "  ✗ 未找到 Mailpit")
+			addLog("system", i18n.T("  ✗ 未找到 Mailpit"))
 		}
 		if len(scanRes.MariaDBList) > 0 {
 			versions := make([]string, len(scanRes.MariaDBList))
 			for i, m := range scanRes.MariaDBList {
 				versions[i] = m.Version
 			}
-			addLog("system", fmt.Sprintf("  ✓ 找到 MariaDB 版本: [%s]", strings.Join(versions, ", ")))
+			addLog("system", i18n.Tfmt("  ✓ 找到 MariaDB 版本: [%s]", strings.Join(versions, ", ")))
 		} else {
-			addLog("system", "  ✗ 未找到 MariaDB")
+			addLog("system", i18n.T("  ✗ 未找到 MariaDB"))
 		}
 		if len(scanRes.NodeList) > 0 {
 			versions := make([]string, len(scanRes.NodeList))
 			for i, n := range scanRes.NodeList {
 				versions[i] = n.Version
 			}
-			addLog("system", fmt.Sprintf("  ✓ 找到 Node 版本: [%s]", strings.Join(versions, ", ")))
+			addLog("system", i18n.Tfmt("  ✓ 找到 Node 版本: [%s]", strings.Join(versions, ", ")))
 		} else {
-			addLog("system", "  ✗ 未找到 Node")
+			addLog("system", i18n.T("  ✗ 未找到 Node"))
 		}
 		if len(scanRes.PHPList) > 0 {
 			versions := make([]string, len(scanRes.PHPList))
 			for i, p := range scanRes.PHPList {
 				versions[i] = p.Version
 			}
-			addLog("system", fmt.Sprintf("  ✓ 找到 PHP 版本: [%s]", strings.Join(versions, ", ")))
+			addLog("system", i18n.Tfmt("  ✓ 找到 PHP 版本: [%s]", strings.Join(versions, ", ")))
 			if len(scanRes.SkippedPHP) > 0 {
-				addLog("system", fmt.Sprintf("  ℹ 略過舊 Patch 版本 (僅保留最新): [%s]", strings.Join(scanRes.SkippedPHP, ", ")))
+				addLog("system", i18n.Tfmt("  ℹ 略過舊 Patch 版本 (僅保留最新): [%s]", strings.Join(scanRes.SkippedPHP, ", ")))
 			}
 		} else {
-			addLog("system", "  ✗ 未找到 PHP")
+			addLog("system", i18n.T("  ✗ 未找到 PHP"))
 		}
 	}
 
-	// --- 載入設定檔 ---
-	cfgPath := filepath.Join(baseDir, "conf", "wincmp.json")
-	appCfg, err = config.Load(cfgPath)
-	if err != nil {
-		addErrorLog("system", "無法載入設定檔", err)
-		// 使用預設設定
-		appCfg = &config.WincmpConfig{
-			Global: config.GlobalConfig{
-				DefaultWWW:       "www",
-				DefaultSSL:       "conf/ssl",
-				RestoreLastState: bool(true), // 用於相容性
-				MinimizeToTray:   false,
-				AutoUpdateHosts:  true,
-				DependencyURL:    "https://raw.githubusercontent.com/wktabdev/wincmp/main/conf/dependencies.json",
-			},
-		}
+	// --- 載入設定檔狀態記錄 ---
+	if configLoadErr != nil {
+		addErrorLog("system", i18n.T("無法載入設定檔"), configLoadErr)
 	} else {
-		addLog("system", fmt.Sprintf("  ✓ 設定檔已載入 (%d 個專案)", len(appCfg.Projects)))
+		addLog("system", i18n.Tfmt("  ✓ 設定檔已載入 (%d 個專案)", len(appCfg.Projects)))
 	}
 
 	// --- 載入依賴設定檔 ---
@@ -1095,10 +1167,10 @@ func main() {
 	var depLoadErr error
 	depCfg, depLoadErr = config.LoadDependencies(depCfgPath)
 	if depLoadErr != nil {
-		addErrorLog("system", "無法載入依賴設定檔，將使用預設設定", depLoadErr)
+		addErrorLog("system", i18n.T("無法載入依賴設定檔，將使用預設設定"), depLoadErr)
 		depCfg = config.DefaultDependencies
 	} else {
-		addLog("system", "  ✓ 依賴設定檔已載入")
+		addLog("system", i18n.T("  ✓ 依賴設定檔已載入"))
 	}
 
 	cleanupOldLogs(appCfg.Global.MaxLogRetention)
@@ -1123,7 +1195,7 @@ func main() {
 					p.RuntimeType = detRes.Runtime
 				}
 				needsSave = true
-				addLog("system", fmt.Sprintf("  ↳ 自動遷移專案 [%s] 的框架類型為: %s", p.Name, detRes.Type))
+				addLog("system", i18n.Tfmt("  ↳ 自動遷移專案 [%s] 的框架類型為: %s", p.Name, detRes.Type))
 			}
 		}
 		// 如果 Type 是 "go" 舊值，嘗試判斷是 PocketBase 還是 Go API
@@ -1139,7 +1211,7 @@ func main() {
 				p.RuntimeType = preset.RuntimeGoAir
 			}
 			needsSave = true
-			addLog("system", fmt.Sprintf("  ↳ 自動遷移專案 [%s] 的類型為: %s", p.Name, p.Type))
+			addLog("system", i18n.Tfmt("  ↳ 自動遷移專案 [%s] 的類型為: %s", p.Name, p.Type))
 		}
 	}
 	if needsSave {
@@ -1153,7 +1225,7 @@ func main() {
 	}
 	for name, count := range nameCount {
 		if count > 1 {
-			addLog("system", fmt.Sprintf("⚠️ 發現 %d 個重複項目名稱 [%s]，Runtime Log 可能出現混淆，建議修改項目名稱以區分", count, name))
+			addLog("system", i18n.Tfmt("⚠️ 發現 %d 個重複項目名稱 [%s]，Runtime Log 可能出現混淆，建議修改項目名稱以區分", count, name))
 		}
 	}
 
@@ -1172,7 +1244,7 @@ func main() {
 	if appCfg.Global.RestoreLastState {
 		if appCfg.Global.LastServiceState.Caddy && len(scanRes.CaddyList) > 0 {
 			info := scanRes.CaddyList[0]
-			addLog("system", "自動啟動上次執行的服務: Caddy")
+			addLog("system", i18n.T("自動啟動上次執行的服務: Caddy"))
 			if err := checkSSLCerts(); err == nil && regenerateCaddyAndReload() == nil {
 				procMgr.StartCaddy(info.Version, info.ExePath)
 			}
@@ -1180,7 +1252,7 @@ func main() {
 
 		if appCfg.Global.LastServiceState.MariaDB && len(scanRes.MariaDBList) > 0 {
 			info := scanRes.MariaDBList[0]
-			addLog("system", "自動啟動上次執行的服務: MariaDB")
+			addLog("system", i18n.T("自動啟動上次執行的服務: MariaDB"))
 			go func() {
 				done, errCh := procMgr.StartMariaDBAsync(
 					info.Version,
@@ -1192,7 +1264,7 @@ func main() {
 				)
 				<-done
 				if err := <-errCh; err != nil {
-					addErrorLog("mariadb", "自動啟動 MariaDB 失敗", err)
+					addErrorLog("mariadb", i18n.T("自動啟動 MariaDB 失敗"), err)
 				}
 			}()
 		}
@@ -1207,9 +1279,9 @@ func main() {
 			if appCfg.Global.MailpitHTTPPort > 0 {
 				mpHttp = appCfg.Global.MailpitHTTPPort
 			}
-			addLog("system", "自動啟動上次執行的服務: Mailpit")
+			addLog("system", i18n.T("自動啟動上次執行的服務: Mailpit"))
 			if err := procMgr.StartMailpit(mpInfo.Version, mpInfo.ExePath, mpSmtp, mpHttp, appCfg.Global.MailpitUseDB); err != nil {
-				addErrorLog("mailpit", "自動啟動 Mailpit 失敗", err)
+				addErrorLog("mailpit", i18n.T("自動啟動 Mailpit 失敗"), err)
 			}
 		}
 	}
@@ -1230,7 +1302,7 @@ func main() {
 		for i := range scanRes.PHPList {
 			info := &scanRes.PHPList[i]
 			if appCfg.Global.LastServiceState.PHP[info.Version] {
-				addLog("system", fmt.Sprintf("自動啟動上次執行的服務: PHP-CGI %s", info.Version))
+				addLog("system", i18n.Tfmt("自動啟動上次執行的服務: PHP-CGI %s", info.Version))
 				procMgr.StartPHPCGI(*info)
 			}
 		}
@@ -1248,7 +1320,7 @@ func main() {
 	isLogTabSwitchAllowed.Store(true)
 
 	resourceStatusLabel := newDynamicTooltipLabel("WinCMP RAM: -- MB | CPU: -- %", myWindow)
-	resourceStatusLabel.SetToolTip("WinCMP 資源監控\n\n載入中...")
+	resourceStatusLabel.SetToolTip(i18n.T("WinCMP 資源監控\n\n載入中..."))
 	logTitle := widget.NewLabelWithStyle("Terminal Logs", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	caddyLogBtn := widget.NewButtonWithIcon("Caddy.log", theme.DocumentIcon(), func() {
 		openLocalPath(filepath.Join(baseDir, "logs", "caddy.log"), false)
@@ -1561,10 +1633,10 @@ func checkSSLCerts() error {
 		if certExists {
 			if _, err := os.Stat(crt); os.IsNotExist(err) {
 				certExists = false
-				addLog("caddy", fmt.Sprintf("⚠️ 專案 %s: 憑證遺失，將使用自動 TLS", proj.Name))
+				addLog("caddy", i18n.Tfmt("⚠️ 專案 %s: 憑證遺失，將使用自動 TLS", proj.Name))
 			} else if _, err := os.Stat(key); os.IsNotExist(err) {
 				certExists = false
-				addLog("caddy", fmt.Sprintf("⚠️ 專案 %s: 金鑰遺失，將使用自動 TLS", proj.Name))
+				addLog("caddy", i18n.Tfmt("⚠️ 專案 %s: 金鑰遺失，將使用自動 TLS", proj.Name))
 			}
 		}
 	}
@@ -1585,7 +1657,7 @@ func scanDefaultWWW() {
 	}
 	entries, err := os.ReadDir(wwwDir)
 	if err != nil {
-		addErrorLog("system", "無法掃描 www 目錄", err)
+		addErrorLog("system", i18n.T("無法掃描 www 目錄"), err)
 		return
 	}
 
@@ -1638,15 +1710,15 @@ func scanDefaultWWW() {
 			added++
 
 			if projectType == preset.TypeLaravel {
-				addLog("system", fmt.Sprintf("  ↳ %s: 偵測為 Laravel (Confidence: %d, Reasons: %s)", name, detRes.Confidence, strings.Join(detRes.Reasons, ", ")))
+				addLog("system", i18n.Tfmt("  ↳ %s: 偵測為 Laravel (Confidence: %d, Reasons: %s)", name, detRes.Confidence, strings.Join(detRes.Reasons, ", ")))
 			} else if projectType != preset.TypeStatic && projectType != "" {
-				addLog("system", fmt.Sprintf("  ↳ %s: 偵測為 %s (Runtime: %s, Confidence: %d, Reasons: %s)", name, preset.GetProjectTypeLabel(projectType), preset.GetRuntimeLabel(runtimeType), detRes.Confidence, strings.Join(detRes.Reasons, ", ")))
+				addLog("system", i18n.Tfmt("  ↳ %s: 偵測為 %s (Runtime: %s, Confidence: %d, Reasons: %s)", name, preset.GetProjectTypeLabel(projectType), preset.GetRuntimeLabel(runtimeType), detRes.Confidence, strings.Join(detRes.Reasons, ", ")))
 			}
 		}
 	}
 	if added > 0 {
 		appCfg.Save(filepath.Join(baseDir, "conf", "wincmp.json"))
-		addLog("system", fmt.Sprintf("📌 已自動掃描並加入 %d 個新專案", added))
+		addLog("system", i18n.Tfmt("📌 已自動掃描並加入 %d 個新專案", added))
 		triggerHostsUpdate()
 	}
 }
@@ -1853,19 +1925,19 @@ func generateCaddyfiles() error {
 				if crtErr != nil || keyErr != nil {
 					certExists = false
 					if crtErr != nil {
-						addErrorLog("caddy", fmt.Sprintf("專案 %s: 憑證路徑不安全 (%v)，使用自動 TLS", proj.Name, crtErr), nil)
+						addErrorLog("caddy", i18n.Tfmt("專案 %s: 憑證路徑不安全 (%v)，使用自動 TLS", proj.Name, crtErr), nil)
 					}
 					if keyErr != nil {
-						addErrorLog("caddy", fmt.Sprintf("專案 %s: 金鑰路徑不安全 (%v)，使用自動 TLS", proj.Name, keyErr), nil)
+						addErrorLog("caddy", i18n.Tfmt("專案 %s: 金鑰路徑不安全 (%v)，使用自動 TLS", proj.Name, keyErr), nil)
 					}
 				} else {
 					// 檢查憑證與金鑰檔案是否存在
 					if _, err := os.Stat(crt); os.IsNotExist(err) {
 						certExists = false
-						addErrorLog("caddy", fmt.Sprintf("專案 %s: 憑證遺失，使用自動 TLS", proj.Name), nil)
+						addErrorLog("caddy", i18n.Tfmt("專案 %s: 憑證遺失，使用自動 TLS", proj.Name), nil)
 					} else if _, err := os.Stat(key); os.IsNotExist(err) {
 						certExists = false
-						addErrorLog("caddy", fmt.Sprintf("專案 %s: 金鑰遺失，使用自動 TLS", proj.Name), nil)
+						addErrorLog("caddy", i18n.Tfmt("專案 %s: 金鑰遺失，使用自動 TLS", proj.Name), nil)
 					}
 				}
 			}
@@ -1915,9 +1987,9 @@ func regenerateCaddyAndReload() error {
 	if procMgr.IsRunning("caddy") {
 		exePath := procMgr.GetExePath("caddy")
 		if err := procMgr.ReloadCaddy(exePath); err != nil {
-			addErrorLog("system", "Reload Caddy 失敗", err)
+			addErrorLog("system", i18n.T("Reload Caddy 失敗"), err)
 		} else {
-			addLog("system", "✅ Caddy 設定已重新載入")
+			addLog("system", i18n.T("✅ Caddy 設定已重新載入"))
 		}
 	}
 	triggerHostsUpdate()
@@ -1972,12 +2044,11 @@ func checkPHPForProjects(win fyne.Window) {
 	for _, s := range statuses {
 		if !s.IsRunning {
 			hasUnstarted = true
-			addLog("system", fmt.Sprintf("⚠️ 專案 %s 需要 PHP %s，但 PHP %s 尚未啟動！",
-				s.ProjectName, s.PHPVersion, s.PHPVersion))
+			addLog("system", i18n.Tfmt("⚠️ 專案 %s 需要 PHP %s，但 PHP %s 尚未啟動！", s.ProjectName, s.PHPVersion, s.PHPVersion))
 		}
 	}
 	if hasUnstarted {
-		addLog("system", "💡 請在 Dashboard 的 PHP FastCGI 區塊啟動對應版本")
+		addLog("system", i18n.T("💡 請在 Dashboard 的 PHP FastCGI 區塊啟動對應版本"))
 	}
 
 	// 方案 B: Dialog 彈窗（僅在有未啟動的 PHP 時顯示）
@@ -2027,9 +2098,9 @@ func checkPHPForProjects(win fyne.Window) {
 			}
 			for _, phpInfo := range toStart {
 				if err := procMgr.StartPHPCGI(*phpInfo); err != nil {
-					addErrorLog("php", fmt.Sprintf("啟動 PHP %s 失敗", phpInfo.Version), err)
+					addErrorLog("php", i18n.Tfmt("啟動 PHP %s 失敗", phpInfo.Version), err)
 				} else {
-					addLog("php", fmt.Sprintf("✅ PHP %s 已啟動", phpInfo.Version))
+					addLog("php", i18n.Tfmt("✅ PHP %s 已啟動", phpInfo.Version))
 				}
 			}
 			refreshAllPHPStatus()
@@ -2088,7 +2159,7 @@ func checkCoreDependencies(win fyne.Window) {
 
 // fetchDependenciesForAutoDownload 背景取得最新依賴配置後，再讓用戶選擇 PHP 版本或直接執行下載
 func fetchDependenciesForAutoDownload(win fyne.Window, missingCaddy, missingPHP, missingMariaDB bool) {
-	progress := dialog.NewProgressInfinite("取得最新版本", "正在從遠端獲取最新依賴資訊...", win)
+	progress := dialog.NewProgressInfinite(i18n.T("取得最新版本"), i18n.T("正在從遠端獲取最新依賴資訊..."), win)
 	progress.Show()
 
 	go func() {
@@ -2137,7 +2208,7 @@ func fetchDependenciesForAutoDownload(win fyne.Window, missingCaddy, missingPHP,
 						if err := config.SaveDependencies(depCfgPath, newCfg); err == nil {
 							depCfg = newCfg
 							success = true
-							addLog("system", "✓ 自動下載並更新最新依賴建議版本成功 (Auto Download 流程)")
+							addLog("system", i18n.T("✓ 自動下載並更新最新依賴建議版本成功 (Auto Download 流程)"))
 						}
 					}
 				}
@@ -2145,7 +2216,7 @@ func fetchDependenciesForAutoDownload(win fyne.Window, missingCaddy, missingPHP,
 		}
 
 		if !success {
-			addLog("system", "⚠️ 自動下載核心依賴時，無法取得遠端最新配置，將使用本地快取配置")
+			addLog("system", i18n.T("⚠️ 自動下載核心依賴時，無法取得遠端最新配置，將使用本地快取配置"))
 			depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
 			if loaded, err := config.LoadDependencies(depCfgPath); err == nil {
 				depCfg = loaded
@@ -2571,9 +2642,9 @@ func showDependencyManager(win fyne.Window) {
 	depCfgPath := filepath.Join(baseDir, "conf", "dependencies.json")
 	if loaded, err := config.LoadDependencies(depCfgPath); err == nil {
 		depCfg = loaded
-		addLog("system", fmt.Sprintf("✓ 重新載入依賴設定檔成功，Caddy: %s, HeidiSQL: %s, Node: %s", depCfg["caddy"].Version, depCfg["heidisql"].Version, depCfg["node"].Version))
+		addLog("system", i18n.Tfmt("✓ 重新載入依賴設定檔成功，Caddy: %s, HeidiSQL: %s, Node: %s", depCfg["caddy"].Version, depCfg["heidisql"].Version, depCfg["node"].Version))
 	} else {
-		addErrorLog("system", "重新載入依賴設定檔失敗，將使用記憶體中現有配置", err)
+		addErrorLog("system", i18n.T("重新載入依賴設定檔失敗，將使用記憶體中現有配置"), err)
 	}
 
 	binDir := filepath.Join(baseDir, "bin")
@@ -2722,7 +2793,7 @@ func showDependencyManager(win fyne.Window) {
 
 // manualFetchDependencies 手動從遠端取得最新建議依賴版本並更新本地 dependencies.json，完成後自動刷新 UI
 func manualFetchDependencies(win fyne.Window) {
-	progress := dialog.NewProgressInfinite("手動獲取最新依賴", "正在從遠端獲取最新依賴資訊...", win)
+	progress := dialog.NewProgressInfinite(i18n.T("手動獲取最新依賴"), i18n.T("正在從遠端獲取最新依賴資訊..."), win)
 	progress.Show()
 
 	go func() {
@@ -2773,25 +2844,25 @@ func manualFetchDependencies(win fyne.Window) {
 						if err := config.SaveDependencies(depCfgPath, newCfg); err == nil {
 							depCfg = newCfg
 							success = true
-							addLog("system", "✓ 手動下載並更新最新依賴建議版本成功")
+							addLog("system", i18n.T("✓ 手動下載並更新最新依賴建議版本成功"))
 						} else {
 							fetchErr = err
-							addErrorLog("system", "手動獲取時，無法儲存下載的依賴建議版本", err)
+							addErrorLog("system", i18n.T("手動獲取時，無法儲存下載的依賴建議版本"), err)
 						}
 					} else {
 						fetchErr = fmt.Errorf("依賴設定檔格式不正確，缺少必要欄位")
-						addLog("system", "⚠️ 手動獲取的依賴設定檔格式不正確，缺少必要欄位")
+						addLog("system", i18n.T("⚠️ 手動獲取的依賴設定檔格式不正確，缺少必要欄位"))
 					}
 				} else {
 					fetchErr = err
-					addErrorLog("system", "無法解析下載的依賴設定檔", err)
+					addErrorLog("system", i18n.T("無法解析下載的依賴設定檔"), err)
 				}
 			} else {
 				fetchErr = fmt.Errorf("伺服器回應錯誤狀態碼: %d", resp.StatusCode)
-				addLog("system", fmt.Sprintf("⚠️ 手動獲取依賴建議版本伺服器回應錯誤狀態碼: %d", resp.StatusCode))
+				addLog("system", i18n.Tfmt("⚠️ 手動獲取依賴建議版本伺服器回應錯誤狀態碼: %d", resp.StatusCode))
 			}
 		} else {
-			addErrorLog("system", "手動連線伺服器取得最新依賴資訊失敗，請檢查網路連線", err)
+			addErrorLog("system", i18n.T("手動連線伺服器取得最新依賴資訊失敗，請檢查網路連線"), err)
 		}
 
 		fyne.Do(func() {
@@ -2802,7 +2873,13 @@ func manualFetchDependencies(win fyne.Window) {
 					dependencyManagerDialog.Hide()
 					showDependencyManager(win)
 				}
-				dialog.ShowInformation("獲取成功", "最新依賴資訊已成功下載並更新！", win)
+				infoDlg := dialog.NewInformation(
+					i18n.T("獲取成功"),
+					i18n.T("最新依賴資訊已成功下載並更新！"),
+					win,
+				)
+				infoDlg.SetDismissText(i18n.T("確定"))
+				infoDlg.Show()
 			} else {
 				// 自訂錯誤對話框，避免 Fyne 框架自動偵測系統 Locale 導致的簡體字標題「错误」與按鈕「好」
 				errMsg := "無法獲取最新依賴資訊，請檢查網路連線或稍後再試。"
@@ -2872,21 +2949,21 @@ func fetchLatestDependenciesInBackground(win fyne.Window) {
 						if err := config.SaveDependencies(depCfgPath, newCfg); err == nil {
 							depCfg = newCfg
 							success = true
-							addLog("system", "✓ 背景下載並更新最新依賴建議版本成功")
+							addLog("system", i18n.T("✓ 背景下載並更新最新依賴建議版本成功"))
 						} else {
-							addErrorLog("system", "無法儲存背景下載的依賴建議版本", err)
+							addErrorLog("system", i18n.T("無法儲存背景下載的依賴建議版本"), err)
 						}
 					} else {
-						addLog("system", "⚠️ 背景下載的依賴設定檔格式不正確，缺少必要欄位")
+						addLog("system", i18n.T("⚠️ 背景下載的依賴設定檔格式不正確，缺少必要欄位"))
 					}
 				} else {
-					addErrorLog("system", "無法解析背景下載的依賴設定檔", err)
+					addErrorLog("system", i18n.T("無法解析背景下載的依賴設定檔"), err)
 				}
 			} else {
-				addLog("system", fmt.Sprintf("⚠️ 背景下載依賴建議版本伺服器回應錯誤狀態碼: %d", resp.StatusCode))
+				addLog("system", i18n.Tfmt("⚠️ 背景下載依賴建議版本伺服器回應錯誤狀態碼: %d", resp.StatusCode))
 			}
 		} else {
-			addErrorLog("system", "背景連線伺服器取得最新依賴資訊失敗，將使用本地快取配置", err)
+			addErrorLog("system", i18n.T("背景連線伺服器取得最新依賴資訊失敗，將使用本地快取配置"), err)
 		}
 
 		if success {
@@ -2895,7 +2972,7 @@ func fetchLatestDependenciesInBackground(win fyne.Window) {
 				if dependencyManagerDialog != nil {
 					dependencyManagerDialog.Hide()
 					showDependencyManager(win)
-					addLog("system", "✓ 依賴管理器面板已自動刷新最新建議版本")
+					addLog("system", i18n.T("✓ 依賴管理器面板已自動刷新最新建議版本"))
 				}
 			})
 		}
@@ -3093,7 +3170,7 @@ func createCaddyRow(win fyne.Window, info scanner.ServiceInfo, refreshProjects f
 
 	reloadBtn = widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
 		if err := procMgr.ReloadCaddy(info.ExePath); err != nil {
-			addErrorLog("caddy", "重載 Caddy 失敗", err)
+			addErrorLog("caddy", i18n.T("重載 Caddy 失敗"), err)
 		} else {
 			triggerHostsUpdate()
 		}
@@ -3108,22 +3185,22 @@ func createCaddyRow(win fyne.Window, info scanner.ServiceInfo, refreshProjects f
 			})
 			if len(blocked) > 0 {
 				for _, p := range blocked {
-					addErrorLog("caddy", fmt.Sprintf("通訊埠 %d 被佔用，無法啟動 Caddy", p.Port), nil)
+					addErrorLog("caddy", i18n.Tfmt("通訊埠 %d 被佔用，無法啟動 Caddy", p.Port), nil)
 				}
 				return
 			}
 
 			if err := checkSSLCerts(); err != nil {
 				dialog.ShowError(err, win)
-				addErrorLog("caddy", "SSL 檢查失敗", err)
+				addErrorLog("caddy", i18n.T("SSL 檢查失敗"), err)
 				return
 			}
 			if err := regenerateCaddyAndReload(); err != nil {
-				addErrorLog("caddy", "生成配置失敗", err)
+				addErrorLog("caddy", i18n.T("生成配置失敗"), err)
 				return
 			}
 			if err := procMgr.StartCaddy(info.Version, info.ExePath); err != nil {
-				addErrorLog("caddy", "啟動 Caddy 失敗", err)
+				addErrorLog("caddy", i18n.T("啟動 Caddy 失敗"), err)
 				return
 			}
 			pids := procMgr.GetPIDs("caddy")
@@ -3138,7 +3215,7 @@ func createCaddyRow(win fyne.Window, info scanner.ServiceInfo, refreshProjects f
 			saveLastServiceState()
 		} else {
 			if err := procMgr.StopCaddy(); err != nil {
-				addErrorLog("caddy", "停止 Caddy 失敗", err)
+				addErrorLog("caddy", i18n.T("停止 Caddy 失敗"), err)
 				return
 			}
 			statusLabel.SetText("Stopped")
@@ -3218,7 +3295,7 @@ func createMariaDBRow(win fyne.Window, info scanner.ServiceInfo) fyne.CanvasObje
 			})
 			if len(blocked) > 0 {
 				for _, p := range blocked {
-					addErrorLog("mariadb", fmt.Sprintf("通訊埠 %d 被佔用，無法啟動 %s", p.Port, serviceName), nil)
+					addErrorLog("mariadb", i18n.Tfmt("通訊埠 %d 被佔用，無法啟動 %s", p.Port, serviceName), nil)
 				}
 				return
 			}
@@ -3242,7 +3319,7 @@ func createMariaDBRow(win fyne.Window, info scanner.ServiceInfo) fyne.CanvasObje
 
 					err := <-errCh
 					if err != nil {
-						addErrorLog("mariadb", "啟動 "+serviceName+" 失敗", err)
+						addErrorLog("mariadb", i18n.Tfmt("啟動 %s 失敗", serviceName), err)
 						return
 					}
 					pids := procMgr.GetPIDs(serviceKey)
@@ -3271,9 +3348,9 @@ func createMariaDBRow(win fyne.Window, info scanner.ServiceInfo) fyne.CanvasObje
 				dataDir := filepath.Join(baseDir, "data", "mariadb")
 
 				if needsInit {
-					dialog.ShowConfirm(
-						"MariaDB 初始化確認",
-						fmt.Sprintf("MariaDB 資料庫即將進行初始化（約需 10-30 秒）。\n\n路徑: %s\n\n初始化將會清空上述路徑下的資料，確定要繼續嗎？", dataDir),
+					confirmDlg := dialog.NewConfirm(
+						i18n.T("MariaDB 初始化確認"),
+						i18n.Tfmt("MariaDB 資料庫即將進行初始化（約需 10-30 秒）。\n\n路徑: %s\n\n初始化將會清空上述路徑下的資料，確定要繼續嗎？", dataDir),
 						func(confirmed bool) {
 							if confirmed {
 								startMariaDBWithUI()
@@ -3281,6 +3358,9 @@ func createMariaDBRow(win fyne.Window, info scanner.ServiceInfo) fyne.CanvasObje
 						},
 						win,
 					)
+					confirmDlg.SetConfirmText(i18n.T("是"))
+					confirmDlg.SetDismissText(i18n.T("否"))
+					confirmDlg.Show()
 					return
 				}
 			}
@@ -3294,7 +3374,7 @@ func createMariaDBRow(win fyne.Window, info scanner.ServiceInfo) fyne.CanvasObje
 				appCfg.Global.MariaDBType,
 				appCfg.Global.MariaDBPort,
 			); err != nil {
-				addErrorLog("mariadb", "停止 "+serviceName+" 失敗", err)
+				addErrorLog("mariadb", i18n.Tfmt("停止 %s 失敗", serviceName), err)
 				return
 			}
 			statusLabel.SetText("Stopped")
@@ -3375,13 +3455,13 @@ func createMailpitRow(win fyne.Window, info scanner.ServiceInfo) fyne.CanvasObje
 			})
 			if len(blocked) > 0 {
 				for _, p := range blocked {
-					addErrorLog("mailpit", fmt.Sprintf("通訊埠 %d 被佔用，無法啟動 Mailpit", p.Port), nil)
+					addErrorLog("mailpit", i18n.Tfmt("通訊埠 %d 被佔用，無法啟動 Mailpit", p.Port), nil)
 				}
 				return
 			}
 
 			if err := procMgr.StartMailpit(info.Version, info.ExePath, smtpPort, httpPort, appCfg.Global.MailpitUseDB); err != nil {
-				addErrorLog("mailpit", "啟動 Mailpit 失敗", err)
+				addErrorLog("mailpit", i18n.T("啟動 Mailpit 失敗"), err)
 				return
 			}
 			pids := procMgr.GetPIDs(process.MailpitServiceKey())
@@ -3394,7 +3474,7 @@ func createMailpitRow(win fyne.Window, info scanner.ServiceInfo) fyne.CanvasObje
 			saveLastServiceState()
 		} else {
 			if err := procMgr.StopMailpit(); err != nil {
-				addErrorLog("mailpit", "停止 Mailpit 失敗", err)
+				addErrorLog("mailpit", i18n.T("停止 Mailpit 失敗"), err)
 				return
 			}
 			statusLabel.SetText("Stopped")
@@ -3460,7 +3540,7 @@ func showMailpitSettingsDialog(win fyne.Window) {
 		httpPortEntry.SetText("8025")
 	}
 
-	useDBCheck := widget.NewCheck("持久化存儲 (Database)", nil)
+	useDBCheck := widget.NewCheck(i18n.T("持久化存儲 (Database)"), nil)
 	useDBCheck.SetChecked(appCfg.Global.MailpitUseDB)
 
 	httpPort := 8025
@@ -3468,17 +3548,17 @@ func showMailpitSettingsDialog(win fyne.Window) {
 		httpPort = appCfg.Global.MailpitHTTPPort
 	}
 
-	copyURLBtn := widget.NewButtonWithIcon("複製網址", theme.ContentCopyIcon(), func() {
+	copyURLBtn := widget.NewButtonWithIcon(i18n.T("複製網址"), theme.ContentCopyIcon(), func() {
 		url := fmt.Sprintf("http://localhost:%d", httpPort)
 		win.Clipboard().SetContent(url)
-		addLog("mailpit", fmt.Sprintf("已複製 Mailpit 網址: %s", url))
+		addLog("mailpit", i18n.Tfmt("已複製 Mailpit 網址: %s", url))
 	})
 
-	smtpHint := canvas.NewText("SMTP 端口，用於接收郵件（預設 1025）", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	smtpHint := canvas.NewText(i18n.T("SMTP 端口，用於接收郵件（預設 1025）"), color.NRGBA{R: 150, G: 150, B: 150, A: 255})
 	smtpHint.TextSize = 10
-	httpHint := canvas.NewText("網頁管理介面端口（預設 8025）", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	httpHint := canvas.NewText(i18n.T("網頁管理介面端口（預設 8025）"), color.NRGBA{R: 150, G: 150, B: 150, A: 255})
 	httpHint.TextSize = 10
-	dbHint := canvas.NewText("啟用後郵件將保存至 data/mailpit 目錄，重啟後不遺失", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	dbHint := canvas.NewText(i18n.T("啟用後郵件將保存至 data/mailpit 目錄，重啟後不遺失"), color.NRGBA{R: 150, G: 150, B: 150, A: 255})
 	dbHint.TextSize = 10
 
 	form := widget.NewForm(
@@ -3488,25 +3568,25 @@ func showMailpitSettingsDialog(win fyne.Window) {
 		widget.NewFormItem("Data Storage", container.NewVBox(useDBCheck, dbHint)),
 	)
 
-	d := dialog.NewCustomConfirm("Mailpit Settings", "Save", "Cancel", container.NewVScroll(form), func(save bool) {
+	d := dialog.NewCustomConfirm(i18n.T("Mailpit Settings"), i18n.T("儲存"), i18n.T("取消"), container.NewVScroll(form), func(save bool) {
 		if !save {
 			return
 		}
 
 		smtpPortVal, err := strconv.Atoi(smtpPortEntry.Text)
 		if err != nil || smtpPortVal < 1 || smtpPortVal > 65535 {
-			dialog.ShowError(fmt.Errorf("SMTP Port 必須是 1-65535 的數字"), win)
+			dialog.ShowError(fmt.Errorf(i18n.T("SMTP Port 必須是 1-65535 的數字")), win)
 			return
 		}
 
 		httpPortVal, err := strconv.Atoi(httpPortEntry.Text)
 		if err != nil || httpPortVal < 1 || httpPortVal > 65535 {
-			dialog.ShowError(fmt.Errorf("HTTP Port 必須是 1-65535 的數字"), win)
+			dialog.ShowError(fmt.Errorf(i18n.T("HTTP Port 必須是 1-65535 的數字")), win)
 			return
 		}
 
 		if smtpPortVal == httpPortVal {
-			dialog.ShowError(fmt.Errorf("SMTP Port 和 HTTP Port 不能相同"), win)
+			dialog.ShowError(fmt.Errorf(i18n.T("SMTP Port 和 HTTP Port 不能相同")), win)
 			return
 		}
 
@@ -3536,7 +3616,7 @@ func showMailpitSettingsDialog(win fyne.Window) {
 		}
 		if len(blocked) > 0 {
 			for _, p := range blocked {
-				dialog.ShowError(fmt.Errorf("Port %d 已被佔用", p.Port), win)
+				dialog.ShowError(fmt.Errorf(i18n.Tfmt("Port %d 已被佔用", p.Port)), win)
 				return
 			}
 		}
@@ -3547,15 +3627,15 @@ func showMailpitSettingsDialog(win fyne.Window) {
 
 		cfgPath := filepath.Join(baseDir, "conf", "wincmp.json")
 		if err := appCfg.Save(cfgPath); err != nil {
-			dialog.ShowError(fmt.Errorf("儲存設定失敗: %v", err), win)
+			dialog.ShowError(fmt.Errorf(i18n.Tfmt("儲存設定失敗: %v", err)), win)
 			return
 		}
 
-		dbMode := "記憶體"
+		dbMode := i18n.T("記憶體")
 		if useDBCheck.Checked {
-			dbMode = "持久化"
+			dbMode = i18n.T("持久化")
 		}
-		addLog("mailpit", fmt.Sprintf("Mailpit 設定已儲存: SMTP=%d, HTTP=%d, 存儲=%s", smtpPortVal, httpPortVal, dbMode))
+		addLog("mailpit", i18n.Tfmt("Mailpit 設定已儲存: SMTP=%d, HTTP=%d, 存儲=%s", smtpPortVal, httpPortVal, dbMode))
 
 		// 重新整理 Dashboard
 		newDashboard := createDashboard(win, func() {})
@@ -3620,10 +3700,10 @@ func createPHPRow(info scanner.PHPVersionInfo) fyne.CanvasObject {
 		cfgPath := filepath.Join(baseDir, "conf", "wincmp.json")
 		appCfg.Save(cfgPath)
 
-		addLog("php", fmt.Sprintf("PHP %s 進程數變更為 %d (重啟後生效)", info.MajorMin, count))
+		addLog("php", i18n.Tfmt("PHP %s 進程數變更為 %d (重啟後生效)", info.MajorMin, count))
 
 		if procMgr.IsRunning("caddy") {
-			addLog("caddy", "PHP 進程配置已更變，請重載 (Reload) 或重啟 Caddy 以套用新端口")
+			addLog("caddy", i18n.T("PHP 進程配置已更變，請重載 (Reload) 或重啟 Caddy 以套用新端口"))
 		}
 	}
 
@@ -3643,7 +3723,7 @@ func createPHPRow(info scanner.PHPVersionInfo) fyne.CanvasObject {
 			blocked := port.CheckPorts(portInfos)
 			if len(blocked) > 0 {
 				for _, p := range blocked {
-					addErrorLog("php", fmt.Sprintf("通訊埠 %d 被佔用，無法啟動 PHP-CGI %s", p.Port, info.Version), nil)
+					addErrorLog("php", i18n.Tfmt("通訊埠 %d 被佔用，無法啟動 PHP-CGI %s", p.Port, info.Version), nil)
 				}
 				return
 			}
@@ -3655,7 +3735,7 @@ func createPHPRow(info scanner.PHPVersionInfo) fyne.CanvasObject {
 			}
 
 			if err := procMgr.StartPHPCGI(info); err != nil {
-				addErrorLog("php", "啟動 PHP-CGI 失敗", err)
+				addErrorLog("php", i18n.T("啟動 PHP-CGI 失敗"), err)
 				return
 			}
 			monitorUptime(serviceKey, uptimeData)
@@ -3663,7 +3743,7 @@ func createPHPRow(info scanner.PHPVersionInfo) fyne.CanvasObject {
 			refreshAllPHPStatus()
 		} else {
 			if err := procMgr.StopPHPCGI(info.Version); err != nil {
-				addErrorLog("php", "停止 PHP-CGI 失敗", err)
+				addErrorLog("php", i18n.T("停止 PHP-CGI 失敗"), err)
 				return
 			}
 			saveLastServiceState()
@@ -4106,8 +4186,9 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 				isRunning := procMgr.IsRunning(serviceKey) || process.CheckRuntimeRunning(origRuntimePort)
 				if isRunning {
 					runtimeLabel := preset.GetFullTypeLabel(origType, proj.RuntimeType, len(scanRes.BunList) > 0)
-					dialog.ShowConfirm("停止 Runtime",
-						fmt.Sprintf("「%s」的設定變更會影響 %s 運行。\n是否要自動停止正在運行的 Runtime？", proj.Name, runtimeLabel),
+					confirmDlg := dialog.NewConfirm(
+						i18n.T("停止 Runtime"),
+						i18n.Tfmt("「%s」的設定變更會影響 %s 運行。\n是否要自動停止正在運行的 Runtime？", proj.Name, runtimeLabel),
 						func(confirm bool) {
 							if confirm {
 								go func() {
@@ -4116,6 +4197,9 @@ func showProjectEditor(win fyne.Window, proj *config.ProjectConfig, onSave func(
 								}()
 							}
 						}, win)
+					confirmDlg.SetConfirmText(i18n.T("是"))
+					confirmDlg.SetDismissText(i18n.T("否"))
+					confirmDlg.Show()
 					return
 				}
 			}
@@ -4266,7 +4350,7 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 				}
 				url := scheme + domain
 				win.Clipboard().SetContent(url)
-				addLog("system", fmt.Sprintf("📋 已複製網址到剪貼簿: %s", url))
+				addLog("system", i18n.Tfmt("📋 已複製網址到剪貼簿: %s", url))
 			})
 
 			domainsBox.Objects = []fyne.CanvasObject{container.NewBorder(nil, nil, nil, copyBtn, domainsHover)}
@@ -4285,26 +4369,34 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 					regenerateCaddyAndReload()
 					appCfg.RefreshConfigExists(baseDir)
 					list.Refresh()
-					addLog("system", fmt.Sprintf("✅ 已更新專案: %s", proj.Name))
+					addLog("system", i18n.Tfmt("✅ 已更新專案: %s", proj.Name))
 				})
 			}
 			btns.Objects[1].(*widget.Button).OnTapped = func() {
-				dialog.ShowConfirm("刪除專案", fmt.Sprintf("確定要從清單移除 %s 嗎？\n(不會刪除實際檔案)", proj.Name), func(b bool) {
-					if b {
-						// 使用名稱而非索引定位，避免並行操作時 index 錯位
-						for j := range appCfg.Projects {
-							if appCfg.Projects[j].Name == proj.Name {
-								appCfg.Projects = append(appCfg.Projects[:j], appCfg.Projects[j+1:]...)
-								break
+				confirmDlg := dialog.NewConfirm(
+					i18n.T("刪除專案"),
+					i18n.Tfmt("確定要從清單移除 %s 嗎？\n(不會刪除實際檔案)", proj.Name),
+					func(b bool) {
+						if b {
+							// 使用名稱而非索引定位，避免並行操作時 index 錯位
+							for j := range appCfg.Projects {
+								if appCfg.Projects[j].Name == proj.Name {
+									appCfg.Projects = append(appCfg.Projects[:j], appCfg.Projects[j+1:]...)
+									break
+								}
 							}
+							appCfg.Save(filepath.Join(baseDir, "conf", "wincmp.json"))
+							regenerateCaddyAndReload()
+							appCfg.RefreshConfigExists(baseDir)
+							list.Refresh()
+							addLog("system", i18n.Tfmt("✅ 已移除專案: %s", proj.Name))
 						}
-						appCfg.Save(filepath.Join(baseDir, "conf", "wincmp.json"))
-						regenerateCaddyAndReload()
-						appCfg.RefreshConfigExists(baseDir)
-						list.Refresh()
-						addLog("system", fmt.Sprintf("✅ 已移除專案: %s", proj.Name))
-					}
-				}, win)
+					},
+					win,
+				)
+				confirmDlg.SetConfirmText(i18n.T("是"))
+				confirmDlg.SetDismissText(i18n.T("否"))
+				confirmDlg.Show()
 			}
 		},
 	)
@@ -4355,7 +4447,7 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 
 				// 更新 UI
 				list.Refresh()
-				addLog("system", fmt.Sprintf("📌 已新增專案: %s，即將自動開啟編輯器", name))
+				addLog("system", i18n.Tfmt("📌 已新增專案: %s，即將自動開啟編輯器", name))
 
 				// 自動開啟編輯器 (稍微延遲以避開 Zenity Blocker 的競爭或干擾)
 				time.AfterFunc(300*time.Millisecond, func() {
@@ -4374,7 +4466,7 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 								appCfg.Save(filepath.Join(baseDir, "conf", "wincmp.json"))
 								regenerateCaddyAndReload()
 								list.Refresh()
-								addLog("system", fmt.Sprintf("✅ 已更新專案: %s", latestProj.Name))
+								addLog("system", i18n.Tfmt("✅ 已更新專案: %s", latestProj.Name))
 							})
 						}
 					})
@@ -4385,9 +4477,9 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 					if phpVersion != "" {
 						phpInfo = fmt.Sprintf(", 建議 PHP: %s", phpVersion)
 					}
-					addLog("system", fmt.Sprintf("  ↳ 偵測為 Laravel%s (Confidence: %d, Reasons: %s)", phpInfo, detRes.Confidence, strings.Join(detRes.Reasons, ", ")))
+					addLog("system", i18n.Tfmt("  ↳ 偵測為 Laravel%s (Confidence: %d, Reasons: %s)", phpInfo, detRes.Confidence, strings.Join(detRes.Reasons, ", ")))
 				} else if projectType != "" && projectType != preset.TypeStatic {
-					addLog("system", fmt.Sprintf("  ↳ 偵測為 %s (Confidence: %d, Reasons: %s)", preset.GetProjectTypeLabel(projectType), detRes.Confidence, strings.Join(detRes.Reasons, ", ")))
+					addLog("system", i18n.Tfmt("  ↳ 偵測為 %s (Confidence: %d, Reasons: %s)", preset.GetProjectTypeLabel(projectType), detRes.Confidence, strings.Join(detRes.Reasons, ", ")))
 				}
 			},
 			zenity.Title("Select Project Folder"),
@@ -4396,7 +4488,7 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 
 	scanBtn := widget.NewButtonWithIcon("Scan WWW", theme.SearchIcon(), func() {
 		if appCfg.Global.DefaultWWW == "" {
-			dialog.ShowInformation("提示", "尚未設定預設 WWW 目錄，請至 Settings 頁面設定。", win)
+			dialog.ShowInformation(i18n.T("提示"), i18n.T("尚未設定預設 WWW 目錄，請至 Settings 頁面設定。"), win)
 			return
 		}
 
@@ -4408,15 +4500,23 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 			wwwDir = filepath.Join(baseDir, appCfg.Global.DefaultWWW)
 		}
 
-		msg := fmt.Sprintf("確定要自動掃描預設目錄嗎？\n\n路徑：%s\n\n系統將會嘗試將此目錄下的所有「子資料夾」加入為網頁專案清單。\n(已存在的專案將不會重複加入)", wwwDir)
+		msg := i18n.Tfmt("確定要自動掃描預設目錄嗎？\n\n路徑：%s\n\n系統將會嘗試將此目錄下的所有「子資料夾」加入為網頁專案清單。\n(已存在的專案將不會重複加入)", wwwDir)
 
-		dialog.ShowConfirm("掃描確認", msg, func(confirm bool) {
-			if confirm {
-				scanDefaultWWW()
-				list.Refresh()
-				addLog("system", "🔍 手動掃描預設目錄完成")
-			}
-		}, win)
+		confirmDlg := dialog.NewConfirm(
+			i18n.T("掃描確認"),
+			msg,
+			func(confirm bool) {
+				if confirm {
+					scanDefaultWWW()
+					list.Refresh()
+					addLog("system", i18n.T("🔍 手動掃描預設目錄完成"))
+				}
+			},
+			win,
+		)
+		confirmDlg.SetConfirmText(i18n.T("是"))
+		confirmDlg.SetDismissText(i18n.T("否"))
+		confirmDlg.Show()
 	})
 
 	// 加上提示
@@ -4615,7 +4715,7 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 	}
 
 	// 先宣告控制變數，以便在 refreshUI 中存取
-	notRunningMsg := widget.NewLabel("請先至 Dashboard 頁面啟動 MariaDB 服務，\n再使用 Database Explorer。")
+	notRunningMsg := widget.NewLabel(i18n.T("請先至 Dashboard 頁面啟動 MariaDB 服務，\n再使用 Database Explorer。"))
 	notRunningMsg.Wrapping = fyne.TextWrapWord
 	notRunningMsg.Alignment = fyne.TextAlignCenter
 	var notRunningBox *fyne.Container
@@ -4634,7 +4734,7 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 				loadingIndicator.Hide()
 				isMainTabLoading.Store(false)
 				if logEnabled {
-					addLog("system", "DB Explorer: MariaDB 未運行")
+					addLog("system", i18n.T("DB Explorer: MariaDB 未運行"))
 				}
 			})
 			return
@@ -4642,7 +4742,7 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 
 		fyne.Do(func() {
 			loadingIndicator.Show()
-			statusLabel.SetText("連線中...")
+			statusLabel.SetText(i18n.T("連線中..."))
 			split.Hide()
 			if notRunningBox != nil {
 				notRunningBox.Hide()
@@ -4655,9 +4755,9 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 				loadingIndicator.Hide()
 				isMainTabLoading.Store(false)
 				if err != nil {
-					statusLabel.SetText(fmt.Sprintf("連線失敗: %v", err))
-					addLog("system", fmt.Sprintf("DB Explorer: 連線失敗 - %v", err))
-					notRunningMsg.SetText(fmt.Sprintf("⚠️ 無法連線到 MariaDB\n\n錯誤: %v\n\n請確認 MariaDB 已正常啟動並運行中。", err))
+					statusLabel.SetText(i18n.Tfmt("連線失敗: %v", err))
+					addLog("system", i18n.Tfmt("DB Explorer: 連線失敗 - %v", err))
+					notRunningMsg.SetText(i18n.Tfmt("⚠️ 無法連線到 MariaDB\n\n錯誤: %v\n\n請確認 MariaDB 已正常啟動並運行中。", err))
 					if notRunningBox != nil {
 						notRunningBox.Show()
 					}
@@ -4665,11 +4765,11 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 				}
 
 				split.Show()
-				statusLabel.SetText("已連線")
+				statusLabel.SetText(i18n.T("已連線"))
 				schemaListData.Set(databases)
-				tableHeader.SetText("選擇左側的資料庫以檢視資料表")
+				tableHeader.SetText(i18n.T("選擇左側的資料庫以檢視資料表"))
 				tableListData.Set([]string{})
-				addLog("system", fmt.Sprintf("DB Explorer: 已載入 %d 個資料庫", len(databases)))
+				addLog("system", i18n.Tfmt("已載入 %d 個資料庫", len(databases)))
 			})
 		}()
 	}
@@ -4683,13 +4783,13 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 	// 使用 Container 控制 Icon 大小
 	iconContainer := container.NewGridWrap(fyne.NewSize(64, 64), notRunningIcon)
 
-	notRunningTitle := widget.NewLabelWithStyle("MariaDB 尚未啟動", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
+	notRunningTitle := widget.NewLabelWithStyle(i18n.T("MariaDB 尚未啟動"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
 
 	// 使用透明矩形撐開寬度，解決「直排文字」Bug
 	spacer := canvas.NewRectangle(color.Transparent)
 	spacer.SetMinSize(fyne.NewSize(450, 0))
 
-	dashboardBtn := widget.NewButtonWithIcon("前往 Dashboard", theme.HomeIcon(), func() {
+	dashboardBtn := widget.NewButtonWithIcon(i18n.T("前往 Dashboard"), theme.HomeIcon(), func() {
 		if mainTabs != nil {
 			mainTabs.SelectIndex(0)
 		}
@@ -4713,18 +4813,18 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 			return
 		}
 		selectedSchema := schemas[id]
-		tableHeader.SetText(fmt.Sprintf("資料庫 '%s' 的資料表：", selectedSchema))
-		tableListData.Set([]string{"載入中..."})
+		tableHeader.SetText(i18n.Tfmt("資料庫 '%s' 的資料表：", selectedSchema))
+		tableListData.Set([]string{i18n.T("載入中...")})
 
 		go func() {
 			tables, err := queryTables(selectedSchema)
 			fyne.Do(func() {
 				if err != nil {
-					tableListData.Set([]string{fmt.Sprintf("查詢失敗: %v", err)})
+					tableListData.Set([]string{i18n.Tfmt("查詢失敗: %v", err)})
 					return
 				}
 				if len(tables) == 0 {
-					tableListData.Set([]string{"（此資料庫沒有資料表）"})
+					tableListData.Set([]string{i18n.T("（此資料庫沒有資料表）")})
 				} else {
 					tableListData.Set(tables)
 				}
@@ -4742,7 +4842,7 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 
 	heidiSQLBtn := widget.NewButtonWithIcon("Open in HeidiSQL", theme.ComputerIcon(), func() {
 		if len(scanRes.HeidiSQLList) == 0 {
-			addLog("system", "DB Explorer: 找不到 HeidiSQL 執行檔")
+			addLog("system", i18n.T("DB Explorer: 找不到 HeidiSQL 執行檔"))
 			return
 		}
 		heidiPath := scanRes.HeidiSQLList[0].ExePath
@@ -4751,7 +4851,7 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 			port = 3306
 		}
 		if port < 1 || port > 65535 {
-			addLog("system", "DB Explorer: 無效的連接埠號")
+			addLog("system", i18n.T("DB Explorer: 無效的連接埠號"))
 			return
 		}
 		user := appCfg.Global.MariaDBUser
@@ -4759,16 +4859,16 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 			user = "root"
 		}
 		if !validDbUserPattern.MatchString(user) {
-			addLog("system", "DB Explorer: 使用者名稱含不合法字元")
+			addLog("system", i18n.T("DB Explorer: 使用者名稱含不合法字元"))
 			return
 		}
 		cmd := exec.Command(heidiPath, "-h=127.0.0.1", fmt.Sprintf("-P=%d", port), fmt.Sprintf("-u=%s", user))
 		if err := cmd.Start(); err != nil {
-			addErrorLog("system", "啟動 HeidiSQL 失敗", err)
+			addErrorLog("system", i18n.T("啟動 HeidiSQL 失敗"), err)
 			return
 		}
 		go cmd.Wait()
-		addLog("system", fmt.Sprintf("DB Explorer: 已啟動 HeidiSQL (127.0.0.1:%d)", port))
+		addLog("system", i18n.Tfmt("DB Explorer: 已啟動 HeidiSQL (127.0.0.1:%d)", port))
 	})
 
 	toolbar := container.NewHBox(refreshBtn, heidiSQLBtn)
@@ -4859,6 +4959,15 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 		canvas.NewText("  ", color.NRGBA{R: 0, G: 0, B: 0, A: 0}),
 	)
 
+	// --- 0. Language Settings 組件聲明 ---
+	langOptions := []string{"zh-TW", "en-US"}
+	langSelect := widget.NewSelect(langOptions, nil)
+	if appCfg.Global.Language == "" {
+		langSelect.SetSelected("zh-TW")
+	} else {
+		langSelect.SetSelected(appCfg.Global.Language)
+	}
+
 	// --- 1. Basic Settings 組件聲明 ---
 	wwwDirEntry := newScrollPassthroughEntry()
 	wwwDirEntry.SetText(appCfg.Global.DefaultWWW)
@@ -4943,7 +5052,7 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 
 			cfgPath := filepath.Join(baseDir, "conf", "wincmp.json")
 			if err := appCfg.Save(cfgPath); err != nil {
-				addErrorLog("system", "自動儲存設定失敗", err)
+				addErrorLog("system", i18n.T("自動儲存設定失敗"), err)
 			} else {
 				addLog("system", fmt.Sprintf("⚙️ %s: [%v] ➔ [%v] (Auto Saved)", settingName, oldVal, newVal))
 				cleanupOldLogs(days)
@@ -5019,7 +5128,7 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 		}
 
 		// 顯示 Loading Overlay，避免主題切換期間卡頓讓用戶誤以為當機
-		overlay := showCenterOverlay(win, "正在切換主題...", color.NRGBA{R: 225, G: 225, B: 225, A: 255}, 180)
+		overlay := showCenterOverlay(win, i18n.T("正在切換主題..."), color.NRGBA{R: 225, G: 225, B: 225, A: 255}, 180)
 
 		// 延遲執行主題切換，讓 Overlay 先渲染出來
 		time.AfterFunc(30*time.Millisecond, func() {
@@ -5029,6 +5138,31 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 				debouncedSave("Theme", oldTheme, selected)
 			})
 		})
+	}
+
+	langSelect.OnChanged = func(selected string) {
+		if selected == appCfg.Global.Language {
+			return
+		}
+		oldLang := appCfg.Global.Language
+		appCfg.Global.Language = selected
+		i18n.SetLanguage(selected)
+		debouncedSave("Language", oldLang, selected)
+
+		content := widget.NewLabel(i18n.T("語言設定已變更，需重新啟動 WinCMP 以完全套用。是否立即重啟？"))
+		d := dialog.NewCustomConfirm(
+			i18n.T("提示"),
+			i18n.T("立即重啟"),
+			i18n.T("稍後重啟"),
+			content,
+			func(restart bool) {
+				if restart {
+					restartAndQuit()
+				}
+			},
+			win,
+		)
+		d.Show()
 	}
 
 	// --- 佈局組合 ---
@@ -5054,7 +5188,7 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 	)
 
 	logTitle := widget.NewLabelWithStyle("Log Settings", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	maxLogLinesHint := canvas.NewText("(僅限制顯示行數，不影響日誌檔保存)", color.NRGBA{R: 128, G: 128, B: 128, A: 255})
+	maxLogLinesHint := canvas.NewText(i18n.T("(僅限制顯示行數，不影響日誌檔保存)"), color.NRGBA{R: 128, G: 128, B: 128, A: 255})
 	maxLogLinesHint.TextSize = 10
 	logForm := widget.NewForm(
 		widget.NewFormItem("Retention (Days)", maxLogEntry),
@@ -5074,11 +5208,11 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 	configTitle := widget.NewLabelWithStyle("Config", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 
 	// 優化：為 Config 按鈕加入簡單說明
-	hostsHint := canvas.NewText("(系統 Hosts)", color.NRGBA{R: 128, G: 128, B: 128, A: 255})
+	hostsHint := canvas.NewText(i18n.T("(系統 Hosts)"), color.NRGBA{R: 128, G: 128, B: 128, A: 255})
 	hostsHint.TextSize = 10
-	phpIniHint := canvas.NewText("(PHP 全域設定)", color.NRGBA{R: 128, G: 128, B: 128, A: 255})
+	phpIniHint := canvas.NewText(i18n.T("(PHP 全域設定)"), color.NRGBA{R: 128, G: 128, B: 128, A: 255})
 	phpIniHint.TextSize = 10
-	winCMPHint := canvas.NewText("(核心設定)", color.NRGBA{R: 128, G: 128, B: 128, A: 255})
+	winCMPHint := canvas.NewText(i18n.T("(核心設定)"), color.NRGBA{R: 128, G: 128, B: 128, A: 255})
 	winCMPHint.TextSize = 10
 
 	configBtns := container.NewHBox(
@@ -5087,11 +5221,19 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 		container.NewVBox(jsonConfigBtn, container.NewCenter(winCMPHint)),
 	)
 
+	langTitle := widget.NewLabelWithStyle(i18n.T("語言"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	langForm := widget.NewForm(
+		widget.NewFormItem(i18n.T("顯示語言"), langSelect),
+	)
+
 	scrollContent := container.NewVBox(
 		header,
 		widget.NewSeparator(),
 		configTitle,
 		configBtns,
+		widget.NewSeparator(),
+		langTitle,
+		langForm,
 		widget.NewSeparator(),
 		basicTitle,
 		basicForm,
@@ -5112,7 +5254,7 @@ func createSettingsTab(win fyne.Window) fyne.CanvasObject {
 
 // showMariaDBSettingsDialog 顯示 MariaDB 設定對話框
 func showMariaDBSettingsDialog(win fyne.Window) {
-	runningModeHint := canvas.NewText("選擇「內建」使用 WinCMP 內建的 MariaDB，選擇「自訂」使用您電腦中現有的資料庫。", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	runningModeHint := canvas.NewText(i18n.T("選擇「內建」使用 WinCMP 內建的 MariaDB，選擇「自訂」使用您電腦中現有的資料庫。"), color.NRGBA{R: 150, G: 150, B: 150, A: 255})
 	runningModeHint.TextSize = 10
 
 	dbType := appCfg.Global.MariaDBType
@@ -5122,14 +5264,14 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 	typeSelect := widget.NewSelect([]string{"MariaDB", "MySQL"}, nil)
 	typeSelect.SetSelected(dbType)
 
-	dbEngineHint := canvas.NewText("請選擇與您 Binary Path 中一致的資料庫類型 (MySQL 或 MariaDB)。", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	dbEngineHint := canvas.NewText(i18n.T("請選擇與您 Binary Path 中一致的資料庫類型 (MySQL 或 MariaDB)。"), color.NRGBA{R: 150, G: 150, B: 150, A: 255})
 	dbEngineHint.TextSize = 10
 
-	binaryPathHint := canvas.NewText("請選擇包含 bin 資料夾的根目錄 (例如：...\\mysql-8.4.3-winx64)", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	binaryPathHint := canvas.NewText(i18n.T("請選擇包含 bin 資料夾的根目錄 (例如：...\\mysql-8.4.3-winx64)"), color.NRGBA{R: 150, G: 150, B: 150, A: 255})
 	binaryPathHint.TextSize = 10
 	binaryPathEntry := newScrollPassthroughEntry()
 	binaryPathEntry.SetText(appCfg.Global.MariaDBBasedir)
-	binaryPathBrowse := widget.NewButtonWithIcon("Browse", theme.FolderOpenIcon(), func() {
+	binaryPathBrowse := widget.NewButtonWithIcon(i18n.T("瀏覽"), theme.FolderOpenIcon(), func() {
 		openZenitySelector(win, binaryPathEntry.Text, baseDir, true,
 			func(path string) {
 				binaryPathEntry.SetText(path)
@@ -5141,21 +5283,21 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 					}
 				}
 			},
-			zenity.Title("Select MariaDB/MySQL Binary Path"))
+			zenity.Title(i18n.T("Select MariaDB/MySQL Binary Path")))
 	})
 	binaryPathFormItem := widget.NewFormItem("Binary Path", container.NewVBox(
 		container.NewBorder(nil, nil, nil, binaryPathBrowse, binaryPathEntry),
 		binaryPathHint,
 	))
 
-	dataPathHint := canvas.NewText("資料庫檔案存放位置 (例如：\\data\\mysql-8.4.3)，建議與程式目錄分開存放以利升級。", color.NRGBA{R: 150, G: 150, B: 150, A: 255})
+	dataPathHint := canvas.NewText(i18n.T("資料庫檔案存放位置 (例如：\\data\\mysql-8.4.3)，建議與程式目錄分開存放以利升級。"), color.NRGBA{R: 150, G: 150, B: 150, A: 255})
 	dataPathHint.TextSize = 10
 	dataPathEntry := newScrollPassthroughEntry()
 	dataPathEntry.SetText(appCfg.Global.MariaDBDatadir)
-	dataPathBrowse := widget.NewButtonWithIcon("Browse", theme.FolderOpenIcon(), func() {
+	dataPathBrowse := widget.NewButtonWithIcon(i18n.T("瀏覽"), theme.FolderOpenIcon(), func() {
 		openZenitySelector(win, dataPathEntry.Text, baseDir, true,
 			func(path string) { dataPathEntry.SetText(path) },
-			zenity.Title("Select MariaDB/MySQL Data Path"))
+			zenity.Title(i18n.T("Select MariaDB/MySQL Data Path")))
 	})
 	dataPathFormItem := widget.NewFormItem("Data Path", container.NewVBox(
 		container.NewBorder(nil, nil, nil, dataPathBrowse, dataPathEntry),
@@ -5170,8 +5312,11 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 	}
 	portFormItem := widget.NewFormItem("Port", portEntry)
 
-	runningModeGroup := widget.NewRadioGroup([]string{"內建 (使用預設 MariaDB 實例)", "自訂 (手動指定 Binary Path 與 Data Path)"}, func(selected string) {
-		if selected == "自訂 (手動指定 Binary Path 與 Data Path)" {
+	runningModeGroup := widget.NewRadioGroup([]string{
+		i18n.T("內建 (使用預設 MariaDB 實例)"),
+		i18n.T("自訂 (手動指定 Binary Path 與 Data Path)"),
+	}, func(selected string) {
+		if selected == i18n.T("自訂 (手動指定 Binary Path 與 Data Path)") {
 			typeSelect.Enable()
 			dbEngineHint.Show()
 			binaryPathFormItem.Widget.Show()
@@ -5184,9 +5329,9 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 		}
 	})
 	if appCfg.Global.MariaDBExternal {
-		runningModeGroup.Selected = "自訂 (手動指定 Binary Path 與 Data Path)"
+		runningModeGroup.Selected = i18n.T("自訂 (手動指定 Binary Path 與 Data Path)")
 	} else {
-		runningModeGroup.Selected = "內建 (使用預設 MariaDB 實例)"
+		runningModeGroup.Selected = i18n.T("內建 (使用預設 MariaDB 實例)")
 	}
 
 	form := widget.NewForm(
@@ -5204,50 +5349,50 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 		dataPathFormItem.Widget.Hide()
 	}
 
-	d := dialog.NewCustomConfirm("Database Settings", "Save", "Cancel", container.NewVScroll(form), func(save bool) {
+	d := dialog.NewCustomConfirm(i18n.T("Database Settings"), i18n.T("儲存"), i18n.T("取消"), container.NewVScroll(form), func(save bool) {
 		if !save {
 			return
 		}
 
-		isExt := runningModeGroup.Selected == "自訂 (手動指定 Binary Path 與 Data Path)"
+		isExt := runningModeGroup.Selected == i18n.T("自訂 (手動指定 Binary Path 與 Data Path)")
 		basedir := binaryPathEntry.Text
 		datadir := dataPathEntry.Text
 		dbTypeSel := typeSelect.Selected
-
+ 
 		portStr := portEntry.Text
 		portVal := 0
 		if portStr != "" {
 			var err error
 			portVal, err = strconv.Atoi(portStr)
 			if err != nil || portVal < 1 || portVal > 65535 {
-				dialog.ShowError(fmt.Errorf("Port 必須是 1-65535 的數字"), win)
+				dialog.ShowError(fmt.Errorf(i18n.T("Port 必須是 1-65535 的數字")), win)
 				return
 			}
 		}
-
+ 
 		if portVal > 0 {
 			blocked := port.CheckPorts([]port.PortInfo{
 				{Service: "MariaDB", Port: portVal},
 			})
 			if len(blocked) > 0 {
 				for _, p := range blocked {
-					dialog.ShowError(fmt.Errorf("Port %d 已被佔用，無法使用", p.Port), win)
+					dialog.ShowError(fmt.Errorf(i18n.Tfmt("Port %d 已被佔用，無法使用", p.Port)), win)
 					return
 				}
 			}
 		}
-
+ 
 		if isExt {
 			if basedir == "" {
-				dialog.ShowError(fmt.Errorf("外部模式必須指定 Binary Path"), win)
+				dialog.ShowError(fmt.Errorf(i18n.T("外部模式必須指定 Binary Path")), win)
 				return
 			}
 			if datadir == "" {
-				dialog.ShowError(fmt.Errorf("外部模式必須指定 Data Path"), win)
+				dialog.ShowError(fmt.Errorf(i18n.T("外部模式必須指定 Data Path")), win)
 				return
 			}
 			if _, err := os.Stat(datadir); os.IsNotExist(err) {
-				dialog.ShowError(fmt.Errorf("資料目錄不存在: %s\n\n請先初始化資料庫", datadir), win)
+				dialog.ShowError(fmt.Errorf(i18n.Tfmt("資料目錄不存在: %s\n\n請先初始化資料庫", datadir)), win)
 				return
 			}
 		}
@@ -5260,7 +5405,7 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 
 		cfgPath := filepath.Join(baseDir, "conf", "wincmp.json")
 		if err := appCfg.Save(cfgPath); err != nil {
-			dialog.ShowError(fmt.Errorf("儲存設定失敗: %v", err), win)
+			dialog.ShowError(fmt.Errorf(i18n.Tfmt("儲存設定失敗: %v", err)), win)
 			return
 		}
 
@@ -5278,15 +5423,15 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 			}
 		}
 
-		mode := "內建"
+		mode := i18n.T("內建")
 		if isExt {
-			mode = "外部 " + dbTypeSel
+			mode = i18n.T("外部 ") + dbTypeSel
 		}
-		portLabel := "3306 (預設)"
+		portLabel := i18n.T("3306 (預設)")
 		if portVal > 0 {
 			portLabel = fmt.Sprintf("%d", portVal)
 		}
-		addLog("system", fmt.Sprintf("MariaDB 設定已儲存: 模式=%s, Port=%s", mode, portLabel))
+		addLog("system", i18n.Tfmt("MariaDB 設定已儲存: 模式=%s, Port=%s", mode, portLabel))
 
 		newDashboard := createDashboard(win, func() {})
 		mainTabs.Items[0].Content = newDashboard
@@ -5301,10 +5446,10 @@ func showMariaDBSettingsDialog(win fyne.Window) {
 func refreshSystemTray(myApp fyne.App, myWindow fyne.Window) {
 	if desk, ok := myApp.(desktop.App); ok {
 		m := fyne.NewMenu("WinCMP",
-			fyne.NewMenuItem("顯示 WinCMP", func() {
+			fyne.NewMenuItem(i18n.T("顯示 WinCMP"), func() {
 				myWindow.Show()
 			}),
-			fyne.NewMenuItem("完全退出 (Quit)", func() {
+			fyne.NewMenuItem(i18n.T("完全退出 (Quit)"), func() {
 				saveAndQuit(myApp)
 			}),
 		)
@@ -5336,16 +5481,16 @@ func triggerHostsUpdate() {
 	// 1. 檢查缺失網域
 	missing, err := hosts.CheckHosts(allDomains)
 	if err != nil {
-		addErrorLog("system", "檢查 Hosts 失敗", err)
+		addErrorLog("system", i18n.T("檢查 Hosts 失敗"), err)
 		return
 	}
 
 	if len(missing) == 0 {
-		// addLog("system", "ℹ️ 系統 Hosts 已包含所有專案網域，無需更新")
+		// addLog("system", i18n.T("ℹ️ 系統 Hosts 已包含所有專案網域，無需更新"))
 		return
 	}
 
-	addLog("system", fmt.Sprintf("🔍 偵測到 %d 個網域不在系統 Hosts 中: %s", len(missing), strings.Join(missing, ", ")))
+	addLog("system", i18n.Tfmt("🔍 偵測到 %d 個網域不在系統 Hosts 中: %s", len(missing), strings.Join(missing, ", ")))
 
 	// 檢查是否有無效域名（含底線等非法字元）
 	var invalidDomains []string
@@ -5360,32 +5505,32 @@ func triggerHostsUpdate() {
 
 	// 如果有無效域名，顯示警告
 	if len(invalidDomains) > 0 {
-		addLog("system", fmt.Sprintf("⚠️ 以下網域含非法字元(含底線)，已跳過: %v", invalidDomains))
+		addLog("system", i18n.Tfmt("⚠️ 以下網域含非法字元(含底線)，已跳過: %v", invalidDomains))
 	}
 
 	if len(validMissing) == 0 {
 		// 沒有有效域名需要更新，直接返回
-		addErrorLog("system", "更新系統 Hosts 失敗", fmt.Errorf("所有域名均含非法字元，請手動新增至 hosts: %v", invalidDomains))
+		addErrorLog("system", i18n.T("更新系統 Hosts 失敗"), fmt.Errorf("所有域名均含非法字元，請手動新增至 hosts: %v", invalidDomains))
 		return
 	}
 
 	// 2. 備份 Hosts
 	backupPath, err := hosts.BackupHosts(baseDir)
 	if err != nil {
-		addErrorLog("system", "備份 Hosts 失敗 (將停止更新)", err)
+		addErrorLog("system", i18n.T("備份 Hosts 失敗 (將停止更新)"), err)
 		return
 	}
-	addLog("system", fmt.Sprintf("✅ 已備份現有 Hosts 到: %s", backupPath))
+	addLog("system", i18n.Tfmt("✅ 已備份現有 Hosts 到: %s", backupPath))
 
 	// 3. 更新 Hosts（只寫入有效域名）
 	err = hosts.UpdateHosts(validMissing)
 	if err != nil {
-		addErrorLog("system", "更新系統 Hosts 失敗", err)
+		addErrorLog("system", i18n.T("更新系統 Hosts 失敗"), err)
 		showHostsWriteFailedDialog(validMissing)
 		return
 	}
 
-	addLog("system", fmt.Sprintf("🚀 已成功將 %d 個網域寫入系統 Hosts 檔", len(validMissing)))
+	addLog("system", i18n.Tfmt("🚀 已成功將 %d 個網域寫入系統 Hosts 檔", len(validMissing)))
 }
 
 // getMainWindow 獲取當前應用程式的主視窗
@@ -5411,34 +5556,34 @@ func showHostsWriteFailedDialog(missingDomains []string) {
 		}
 		hostsContent := sb.String()
 
-		desc := widget.NewLabel("由於沒有管理員權限，無法自動更新系統 Hosts 檔案。\n請手動將以下內容新增到您的系統 Hosts 中：")
-
+		desc := widget.NewLabel(i18n.T("由於沒有管理員權限，無法自動更新系統 Hosts 檔案。\n請手動將以下內容新增到您的系統 Hosts 中："))
+ 
 		richText := widget.NewRichText(
 			&widget.TextSegment{
 				Style: widget.RichTextStyleCodeBlock,
 				Text:  hostsContent,
 			},
 		)
-
-		copyBtn := widget.NewButtonWithIcon("複製內容", theme.ContentCopyIcon(), func() {
+ 
+		copyBtn := widget.NewButtonWithIcon(i18n.T("複製內容"), theme.ContentCopyIcon(), func() {
 			win.Clipboard().SetContent(hostsContent)
-			dialog.ShowInformation("成功", "已複製到剪貼簿", win)
+			dialog.ShowInformation(i18n.T("成功"), i18n.T("已複製到剪貼簿"), win)
 		})
-
-		openBtn := widget.NewButtonWithIcon("以管理員權限開啟 Hosts 檔案", theme.DocumentCreateIcon(), func() {
+ 
+		openBtn := widget.NewButtonWithIcon(i18n.T("以管理員權限開啟 Hosts 檔案"), theme.DocumentCreateIcon(), func() {
 			cmd := exec.Command("powershell", "-Command", `Start-Process notepad.exe -ArgumentList "C:\Windows\System32\drivers\etc\hosts" -Verb runAs`)
 			if err := cmd.Run(); err != nil {
-				dialog.ShowError(fmt.Errorf("無法開啟 Hosts 檔案: %w", err), win)
+				dialog.ShowError(fmt.Errorf(i18n.Tfmt("無法開啟 Hosts 檔案: %w", err), win), win)
 			}
 		})
-
+ 
 		content := container.NewVBox(
 			desc,
 			container.NewGridWrap(fyne.NewSize(500, 150), container.NewScroll(richText)),
 			container.NewHBox(copyBtn, openBtn),
 		)
-
-		d := dialog.NewCustom("Hosts 更新失敗", "關閉", content, win)
+ 
+		d := dialog.NewCustom(i18n.T("Hosts 更新失敗"), i18n.T("關閉"), content, win)
 		d.Show()
 	})
 }

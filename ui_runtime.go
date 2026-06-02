@@ -13,6 +13,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"wincmp/internal/config"
+	"wincmp/internal/i18n"
 	"wincmp/internal/preset"
 	"wincmp/internal/process"
 	"wincmp/internal/scanner"
@@ -221,7 +222,7 @@ func createRuntimeTab(win fyne.Window) (fyne.CanvasObject, func()) {
 					logTabs.SelectIndex(5) // Runtime 是第 6 個 tab（index 5）
 				}
 			}
-			filterBtn.SetToolTip(fmt.Sprintf("切換 Terminal Logs 至 Runtime (%s)", proj.Name))
+			filterBtn.SetToolTip(i18n.Tfmt("切換 Terminal Logs 至 Runtime (%s)", proj.Name))
 
 			// 1. Project
 			projectNameHover := ttwidget.NewLabel(proj.Name)
@@ -280,8 +281,8 @@ func createRuntimeTab(win fyne.Window) (fyne.CanvasObject, func()) {
 
 			copyBtn := widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
 				if domainStr == "" || domainStr == "-" {
-					dialog.ShowInformation("複製失敗", "無效的 Domain，無法複製連結", win)
-					addLog("system", fmt.Sprintf("❌ 複製連結失敗 [%s]: 無效的 Domain", proj.Name))
+					dialog.ShowInformation(i18n.T("複製失敗"), i18n.T("無效的 Domain，無法複製連結"), win)
+					addLog("system", i18n.Tfmt("❌ 複製連結失敗 [%s]: 無效的 Domain", proj.Name))
 					return
 				}
 				urlPrefix := "http://"
@@ -289,7 +290,7 @@ func createRuntimeTab(win fyne.Window) (fyne.CanvasObject, func()) {
 					urlPrefix = "https://"
 				}
 				win.Clipboard().SetContent(urlPrefix + domainStr)
-				addLog("system", fmt.Sprintf("✅ 已複製連結 [%s]: %s%s", proj.Name, urlPrefix, domainStr))
+				addLog("system", i18n.Tfmt("✅ 已複製連結 [%s]: %s%s", proj.Name, urlPrefix, domainStr))
 			})
 			copyBtn.Importance = widget.LowImportance
 
@@ -440,7 +441,7 @@ func createRuntimeTab(win fyne.Window) (fyne.CanvasObject, func()) {
 								return
 							}
 							if ver != "" {
-								addLog("runtime", fmt.Sprintf("ℹ️ [%s] 偵測到 %s", proj.Name, ver))
+								addLog("runtime", i18n.Tfmt("ℹ️ [%s] 偵測到 %s", proj.Name, ver))
 							}
 						}
 
@@ -448,7 +449,7 @@ func createRuntimeTab(win fyne.Window) (fyne.CanvasObject, func()) {
 						if proj.RuntimeType != "custom" && proj.RuntimeType != "python" && proj.RuntimeType != "go_air" && proj.RuntimeType != "go_run" {
 							if proj.RuntimeVersion == "" || len(versionPathMap) == 0 {
 								runtimeLabel := GetRuntimeTypeLabel(proj.RuntimeType)
-								addErrorLog("runtime", fmt.Sprintf("[%s] 沒有可用的 %s 版本，請至 bin/ 檢查", proj.Name, runtimeLabel), nil)
+								addErrorLog("runtime", i18n.Tfmt("[%s] 沒有可用的 %s 版本，請至 bin/ 檢查", proj.Name, runtimeLabel), nil)
 								fyne.Do(func() {
 									startStopBtn.SetText("Start")
 									startStopBtn.SetIcon(theme.MediaPlayIcon())
@@ -461,9 +462,9 @@ func createRuntimeTab(win fyne.Window) (fyne.CanvasObject, func()) {
 
 						port := proj.RuntimePort
 						if port > 0 && !process.IsPortAvailable(port) {
-							addErrorLog("runtime", fmt.Sprintf("[%s] 啟動失敗當前端口 %d 不可用", proj.Name, port), nil)
+							addErrorLog("runtime", i18n.Tfmt("[%s] 啟動失敗當前端口 %d 不可用", proj.Name, port), nil)
 							fyne.Do(func() {
-								dialog.ShowInformation("啟動失敗", fmt.Sprintf("當前端口 %d 不可用", port), win)
+								dialog.ShowInformation(i18n.T("啟動失敗"), i18n.Tfmt("當前端口 %d 不可用", port), win)
 								startStopBtn.SetText("Start")
 								startStopBtn.SetIcon(theme.MediaPlayIcon())
 								startStopBtn.Enable()
