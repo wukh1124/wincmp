@@ -151,7 +151,7 @@ func getTruncatedMsg() string {
 	if appCfg != nil && appCfg.Global.MaxLogLines > 0 {
 		lines = appCfg.Global.MaxLogLines
 	}
-	return fmt.Sprintf("| 日誌已截斷，僅保留最後 %d 行 / 200KB |\n", lines)
+	return i18n.Tfmt("| 日誌已截斷，僅保留最後 %d 行 / 200KB |\n", lines)
 }
 
 // dynamicTooltipLabel 是一個自製的動態 Tooltip 標籤，支援在顯示期間即時刷新內容
@@ -2901,7 +2901,7 @@ func manualFetchDependencies(win fyne.Window) {
 				scroll := container.NewVScroll(errLabel)
 				scroll.SetMinSize(fyne.NewSize(380, 100))
 
-				errDialog := dialog.NewCustom("錯誤", "確定", scroll, win)
+				errDialog := dialog.NewCustom(i18n.T("錯誤"), i18n.T("確定"), scroll, win)
 				errDialog.Show()
 			}
 		})
@@ -4491,7 +4491,7 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 				if projectType == preset.TypeLaravel {
 					phpInfo := ""
 					if phpVersion != "" {
-						phpInfo = fmt.Sprintf(", 建議 PHP: %s", phpVersion)
+						phpInfo = i18n.Tfmt(", 建議 PHP: %s", phpVersion)
 					}
 					addLog("system", i18n.Tfmt("  ↳ 偵測為 Laravel%s (Confidence: %d, Reasons: %s)", phpInfo, detRes.Confidence, strings.Join(detRes.Reasons, ", ")))
 				} else if projectType != "" && projectType != preset.TypeStatic {
@@ -4849,14 +4849,14 @@ func createDatabaseExplorerTab() (fyne.CanvasObject, func()) {
 	}
 
 	// 頂部按鈕列
-	refreshBtn := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), func() {
-		notRunningMsg.SetText("請先至 Dashboard 頁面啟動 MariaDB 服務，\n再使用 Database Explorer。")
+	refreshBtn := widget.NewButtonWithIcon(i18n.T("重新整理"), theme.ViewRefreshIcon(), func() {
+		notRunningMsg.SetText(i18n.T("請先至 Dashboard 頁面啟動 MariaDB 服務，\n再使用 Database Explorer。"))
 		dbTabLock.Lock()
 		defer dbTabLock.Unlock()
 		refreshUI()
 	})
 
-	heidiSQLBtn := widget.NewButtonWithIcon("Open in HeidiSQL", theme.ComputerIcon(), func() {
+	heidiSQLBtn := widget.NewButtonWithIcon(i18n.T("使用 HeidiSQL 開啟"), theme.ComputerIcon(), func() {
 		if len(scanRes.HeidiSQLList) == 0 {
 			addLog("system", i18n.T("DB Explorer: 找不到 HeidiSQL 執行檔"))
 			return

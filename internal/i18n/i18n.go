@@ -451,6 +451,7 @@ var enTranslations = map[string]string{
 	"正在解壓縮: %s...": "Extracting: %s...",
 	"解壓縮 %s 失敗:\n%v": "Extraction failed for %s:\n%v",
 	"解壓縮 %s 失敗": "Extraction failed for %s",
+	"所有遺失的依賴都已下載並設定完成！": "All missing dependencies have been downloaded and configured!",
 	"%s 已安裝並設定完成！": "%s has been installed and configured!",
 	"%s 安裝完成，正在重新載入儀表板...": "Installation of %s completed, reloading dashboard...",
 	"開始下載: %s...": "Starting download for: %s...",
@@ -461,5 +462,27 @@ var enTranslations = map[string]string{
 	"重新掃描失敗": "Rescan failed",
 	"路徑含非法的目錄遍歷: %s": "Invalid directory traversal in path: %s",
 	"專案 %s 已存在": "Project %s already exists",
+
+	// 依賴管理器 UI 元件與狀態翻譯
+	"核心依賴": "Core Dependencies",
+	"Web 伺服器與資料庫": "Web server and database",
+	"PHP 執行環境": "PHP Runtimes",
+	"下載與管理 PHP 版本": "Download and manage PHP versions",
+	"其他依賴": "Other Dependencies",
+	"套件管理器、GUI 工具與執行環境系統": "Package managers, GUI tools and runtime systems",
+	"獲取": "Fetch",
+	"依賴管理器": "Dependency Manager",
+	"未安裝 (建議: %s)": "Not Installed (Recommended: %s)",
+	"已安裝: %s (有新版本 %s 可供更新)": "Installed: %s (Update available to %s)",
+	"已安裝: %s (已是最新版本)": "Installed: %s (Up to date)",
+	"下載": "Download",
+	"更新": "Update",
+	"重新安裝": "Reinstall",
+
+	// 漏網之魚及其他 UI 功能翻譯
+	"| 日誌已截斷，僅保留最後 %d 行 / 200KB |\n": "| Log truncated, retaining only the last %d lines / 200KB |\n",
+	", 建議 PHP: %s": ", Recommended PHP: %s",
+	"重新整理": "Refresh",
+	"使用 HeidiSQL 開啟": "Open in HeidiSQL",
 }
 
