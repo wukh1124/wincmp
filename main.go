@@ -4546,7 +4546,15 @@ func createProjectsTab(win fyne.Window) fyne.CanvasObject {
 	scanBtnWrap := container.NewHBox(scanBtn, addBtn)
 
 	topBar := container.NewBorder(nil, nil, nil, scanBtnWrap, title)
-	content := container.NewBorder(container.NewVBox(topBar, headerContainer), nil, nil, nil, list)
+	content := container.NewBorder(
+		container.NewVBox(
+			topBar,
+			widget.NewSeparator(),
+			headerContainer,
+			widget.NewSeparator(),
+		),
+		nil, nil, nil, list,
+	)
 	return content
 }
 
