@@ -39,6 +39,8 @@ type App struct {
 	dbPool    *sql.DB
 	dbPoolMu  sync.Mutex
 	dbPoolDSN string
+
+	saveStateMu sync.Mutex
 }
 
 // NewApp 建立一個新的 App 實例
@@ -119,10 +121,15 @@ func (a *App) startup(ctx context.Context) {
 
 	// 7. 啟動背景資源監控
 	a.startResourceMonitoring()
+
+	// 8. 恢復上次關閉前的服務狀態
+	go a.restoreLastState()
 }
 
 // shutdown 在應用程式關閉時由 Wails 自動呼叫，安全停止所有背景服務與子進程並關閉日誌
 func (a *App) shutdown(ctx context.Context) {
+	a.saveLastServiceState()
+
 	if a.procMgr != nil {
 		a.procMgr.StopAll()
 	}
@@ -312,3 +319,127 @@ func (a *App) closeDBPool() {
 		a.dbPoolDSN = ""
 	}
 }
+
+// saveLastServiceState 擷取當前所有服務狀態並寫入設定檔
+func (a *App) saveLastServiceState() {
+	a.saveStateMu.Lock()
+	defer a.saveStateMu.Unlock()
+
+	if a.appCfg == nil {
+		return
+	}
+
+	a.appCfg.Global.LastServiceState.Caddy = a.procMgr.IsRunning("caddy")
+
+	mariadbRunning := false
+	if a.scanRes != nil {
+		if a.appCfg.Global.MariaDBExternal {
+			mariadbRunning = a.procMgr.IsRunning(process.MariaDBExternalServiceKey)
+		} else {
+			for _, info := range a.scanRes.MariaDBList {
+				if a.procMgr.IsRunning(process.MariaDBServiceKey(info.Version)) {
+					mariadbRunning = true
+					break
+				}
+			}
+		}
+	}
+	a.appCfg.Global.LastServiceState.MariaDB = mariadbRunning
+
+	a.appCfg.Global.LastServiceState.Mailpit = a.procMgr.IsRunning(process.MailpitServiceKey())
+
+	if a.appCfg.Global.LastServiceState.PHP == nil {
+		a.appCfg.Global.LastServiceState.PHP = make(map[string]bool)
+	}
+	if a.scanRes != nil {
+		for _, p := range a.scanRes.PHPList {
+			a.appCfg.Global.LastServiceState.PHP[p.Version] = a.procMgr.IsRunning(process.PHPServiceKey(p.Version))
+		}
+	}
+
+	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
+	if err := a.appCfg.Save(cfgPath); err != nil {
+		a.handleErrorLog("system", i18n.T("無法儲存服務狀態至設定檔"), err)
+	}
+}
+
+// restoreLastState 根據上次關閉時的服務狀態進行恢復
+func (a *App) restoreLastState() {
+	if a.appCfg == nil || a.scanRes == nil || !a.appCfg.Global.RestoreLastState {
+		return
+	}
+
+	// 1. Caddy
+	if a.appCfg.Global.LastServiceState.Caddy && len(a.scanRes.CaddyList) > 0 {
+		info := a.scanRes.CaddyList[0]
+		a.handleLog("system", i18n.T("自動啟動上次執行的服務: Caddy"))
+		a.checkSSLCerts()
+		if err := a.generateCaddyfiles(); err == nil {
+			if err := a.procMgr.StartCaddy(info.Version, info.ExePath); err != nil {
+				a.handleErrorLog("caddy", "自動啟動 Caddy 失敗", err)
+			} else {
+				a.triggerHostsUpdate()
+			}
+		} else {
+			a.handleErrorLog("caddy", "自動啟動 Caddy 失敗（無法產生設定檔）", err)
+		}
+	}
+
+	// 2. MariaDB
+	if a.appCfg.Global.LastServiceState.MariaDB && len(a.scanRes.MariaDBList) > 0 {
+		info := a.scanRes.MariaDBList[0]
+		a.handleLog("system", i18n.T("自動啟動上次執行的服務: MariaDB"))
+		go func() {
+			done, errCh := a.procMgr.StartMariaDBAsync(
+				info.Version,
+				a.appCfg.Global.MariaDBExternal,
+				a.appCfg.Global.MariaDBBasedir,
+				a.appCfg.Global.MariaDBDatadir,
+				a.appCfg.Global.MariaDBType,
+				a.appCfg.Global.MariaDBPort,
+			)
+			<-done
+			if err := <-errCh; err != nil {
+				a.handleErrorLog("mariadb", "自動啟動 MariaDB 失敗", err)
+			}
+		}()
+	}
+
+	// 3. Mailpit
+	if a.appCfg.Global.LastServiceState.Mailpit && len(a.scanRes.MailpitList) > 0 {
+		mpInfo := a.scanRes.MailpitList[0]
+		mpSmtp := 1025
+		mpHttp := 8025
+		if a.appCfg.Global.MailpitSMTPPort > 0 {
+			mpSmtp = a.appCfg.Global.MailpitSMTPPort
+		}
+		if a.appCfg.Global.MailpitHTTPPort > 0 {
+			mpHttp = a.appCfg.Global.MailpitHTTPPort
+		}
+		a.handleLog("system", i18n.T("自動啟動上次執行的服務: Mailpit"))
+		if err := a.procMgr.StartMailpit(mpInfo.Version, mpInfo.ExePath, mpSmtp, mpHttp, a.appCfg.Global.MailpitUseDB); err != nil {
+			a.handleErrorLog("mailpit", "自動啟動 Mailpit 失敗", err)
+		}
+	}
+
+	// 4. PHP-CGI
+	if a.appCfg.Global.LastServiceState.PHP != nil {
+		for i := range a.scanRes.PHPList {
+			info := &a.scanRes.PHPList[i]
+			if a.appCfg.Global.LastServiceState.PHP[info.Version] {
+				a.handleLog("system", i18n.Tfmt("自動啟動上次執行的服務: PHP-CGI %s", info.Version))
+				// 套用進程數配置
+				count := a.appCfg.Global.PHP.ProcessesPerVersion
+				if c, ok := a.appCfg.Global.PHP.Processes[info.MajorMin]; ok {
+					count = c
+				}
+				info.PortCount = count
+
+				if err := a.procMgr.StartPHPCGI(*info); err != nil {
+					a.handleErrorLog("php", fmt.Sprintf("自動啟動 PHP-CGI %s 失敗", info.Version), err)
+				}
+			}
+		}
+	}
+}
+

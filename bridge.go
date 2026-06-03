@@ -187,6 +187,8 @@ func (a *App) StartCaddy(version string, exePath string) error {
 	// 4. 自動更新 Hosts 檔案
 	a.triggerHostsUpdate()
 
+	a.saveLastServiceState()
+
 	return nil
 }
 
@@ -196,6 +198,7 @@ func (a *App) StopCaddy() error {
 		return fmt.Errorf("進程管理器未初始化")
 	}
 	a.procMgr.StopCaddy()
+	a.saveLastServiceState()
 	return nil
 }
 
@@ -232,6 +235,8 @@ func (a *App) StartMariaDB(version string) error {
 		return fmt.Errorf("啟動 MariaDB 失敗: %w", err)
 	}
 
+	a.saveLastServiceState()
+
 	return nil
 }
 
@@ -256,6 +261,9 @@ func (a *App) StopMariaDB(version string) error {
 	if err != nil {
 		return fmt.Errorf("停止 MariaDB 失敗: %w", err)
 	}
+
+	a.saveLastServiceState()
+
 	return nil
 }
 
@@ -267,6 +275,9 @@ func (a *App) StartMailpit(version string, exePath string, smtpPort int, httpPor
 	if err := a.procMgr.StartMailpit(version, exePath, smtpPort, httpPort, useDB); err != nil {
 		return fmt.Errorf("啟動 Mailpit 失敗: %w", err)
 	}
+
+	a.saveLastServiceState()
+
 	return nil
 }
 
@@ -276,6 +287,7 @@ func (a *App) StopMailpit() error {
 		return fmt.Errorf("進程管理器未初始化")
 	}
 	a.procMgr.StopMailpit()
+	a.saveLastServiceState()
 	return nil
 }
 
@@ -308,6 +320,8 @@ func (a *App) StartPHP(version string) error {
 		return fmt.Errorf("啟動 PHP-CGI %s 失敗: %w", version, err)
 	}
 
+	a.saveLastServiceState()
+
 	return nil
 }
 
@@ -317,6 +331,7 @@ func (a *App) StopPHP(version string) error {
 		return fmt.Errorf("進程管理器未初始化")
 	}
 	a.procMgr.StopPHPCGI(version)
+	a.saveLastServiceState()
 	return nil
 }
 
