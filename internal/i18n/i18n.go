@@ -485,5 +485,18 @@ var enTranslations = map[string]string{
 	", 建議 PHP: %s": ", Recommended PHP: %s",
 	"重新整理": "Refresh",
 	"使用 HeidiSQL 開啟": "Open in HeidiSQL",
+
+	// 核心依賴缺失提示相關翻譯
+	"WinCMP 偵測到您尚未設定所需的關鍵核心依賴：\n\n": "WinCMP detected that you have not configured the required core dependencies:\n\n",
+	"  [缺失] Caddy   (找不到執行檔)\n": "  [Missing] Caddy   (Executable not found)\n",
+	"  [已偵測] Caddy   (已偵測)\n": "  [Detected] Caddy   (Detected)\n",
+	"  [缺失] PHP     (找不到執行檔)\n": "  [Missing] PHP     (Executable not found)\n",
+	"  [已偵測] PHP     (已偵測)\n": "  [Detected] PHP     (Detected)\n",
+	"  [缺失] MariaDB (找不到執行檔)\n": "  [Missing] MariaDB (Executable not found)\n",
+	"  [已偵測] MariaDB (已偵測)\n": "  [Detected] MariaDB (Detected)\n",
+	"\n您是否要立即開始自動下載與設定？": "\nWould you like to start the automatic download and configuration now?",
+	"核心依賴缺失": "Dependency Missing",
+	"自動下載 (推薦)": "Auto Download (Recommended)",
+	"稍後設定": "Configure Later",
 }
 

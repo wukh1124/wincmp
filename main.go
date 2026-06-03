@@ -2121,33 +2121,33 @@ func checkCoreDependencies(win fyne.Window) {
 	missingPHP := len(scanRes.PHPList) == 0
 	missingMariaDB := len(scanRes.MariaDBList) == 0
 
-	// 若無缺失任何核心元件則直接返回
-	if !missingCaddy && !missingPHP && !missingMariaDB {
+	// 若已安裝 Caddy 且已安裝 PHP（不論 MariaDB 是否缺失），則直接返回，不進行提示
+	if !missingCaddy && !missingPHP {
 		return
 	}
 
 	var msgBuilder strings.Builder
-	msgBuilder.WriteString("WinCMP detected that you have not configured the required core dependencies:\n\n")
+	msgBuilder.WriteString(i18n.T("WinCMP 偵測到您尚未設定所需的關鍵核心依賴：\n\n"))
 
 	if missingCaddy {
-		msgBuilder.WriteString("  [Missing] Caddy   (Executable not found)\n")
+		msgBuilder.WriteString(i18n.T("  [缺失] Caddy   (找不到執行檔)\n"))
 	} else {
-		msgBuilder.WriteString("  [Detected] Caddy   (Detected)\n")
+		msgBuilder.WriteString(i18n.T("  [已偵測] Caddy   (已偵測)\n"))
 	}
 
 	if missingPHP {
-		msgBuilder.WriteString("  [Missing] PHP     (Executable not found)\n")
+		msgBuilder.WriteString(i18n.T("  [缺失] PHP     (找不到執行檔)\n"))
 	} else {
-		msgBuilder.WriteString("  [Detected] PHP     (Detected)\n")
+		msgBuilder.WriteString(i18n.T("  [已偵測] PHP     (已偵測)\n"))
 	}
 
 	if missingMariaDB {
-		msgBuilder.WriteString("  [Missing] MariaDB (Executable not found)\n")
+		msgBuilder.WriteString(i18n.T("  [缺失] MariaDB (找不到執行檔)\n"))
 	} else {
-		msgBuilder.WriteString("  [Detected] MariaDB (Detected)\n")
+		msgBuilder.WriteString(i18n.T("  [已偵測] MariaDB (已偵測)\n"))
 	}
 
-	msgBuilder.WriteString("\nWould you like to start the automatic download and configuration now?")
+	msgBuilder.WriteString(i18n.T("\n您是否要立即開始自動下載與設定？"))
 
 	lbl := widget.NewLabel(msgBuilder.String())
 	lbl.Wrapping = fyne.TextWrapWord
@@ -2156,11 +2156,18 @@ func checkCoreDependencies(win fyne.Window) {
 	dialogContent.SetMinSize(fyne.NewSize(450, 200))
 
 	fyne.Do(func() {
-		dialog.NewCustomConfirm("Dependency Missing", "Auto Download (Recommended)", "Configure Later", dialogContent, func(confirm bool) {
-			if confirm {
-				fetchDependenciesForAutoDownload(win, missingCaddy, missingPHP, missingMariaDB)
-			}
-		}, win).Show()
+		dialog.NewCustomConfirm(
+			i18n.T("核心依賴缺失"),
+			i18n.T("自動下載 (推薦)"),
+			i18n.T("稍後設定"),
+			dialogContent,
+			func(confirm bool) {
+				if confirm {
+					fetchDependenciesForAutoDownload(win, missingCaddy, missingPHP, missingMariaDB)
+				}
+			},
+			win,
+		).Show()
 	})
 }
 
