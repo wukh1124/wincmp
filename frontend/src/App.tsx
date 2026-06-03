@@ -4,12 +4,13 @@ import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
 import Settings from './components/Settings';
+import ResourceMonitor from './components/ResourceMonitor';
 import TerminalLogs from './components/TerminalLogs';
 import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime';
 import logo from './assets/images/icon.svg';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'resources' | 'settings'>('dashboard');
   const [showLogs, setShowLogs] = useState(true);
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
   const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
@@ -48,6 +49,8 @@ export default function App() {
         return <Projects />;
       case 'db_explorer':
         return <DBExplorer />;
+      case 'resources':
+        return <ResourceMonitor />;
       case 'settings':
         return <Settings />;
       default:
@@ -59,6 +62,7 @@ export default function App() {
     { id: 'dashboard', label: '儀表板 (Dashboard)', icon: <Home size={15} /> },
     { id: 'projects', label: '專案管理 (Projects)', icon: <Folder size={15} /> },
     { id: 'db_explorer', label: '資料庫瀏覽 (Database)', icon: <Database size={15} /> },
+    { id: 'resources', label: '資源監控 (Resources)', icon: <Cpu size={15} /> },
     { id: 'settings', label: '系統設定 (Settings)', icon: <SettingsIcon size={15} /> }
   ] as const;
 

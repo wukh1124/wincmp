@@ -26,6 +26,10 @@ export function GetDependencyConfig() {
   return window['go']['main']['App']['GetDependencyConfig']();
 }
 
+export function GetDetailedResources() {
+  return window['go']['main']['App']['GetDetailedResources']();
+}
+
 export function GetScanResult() {
   return window['go']['main']['App']['GetScanResult']();
 }

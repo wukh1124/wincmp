@@ -21,12 +21,21 @@ import (
 	"wincmp/internal/hosts"
 	"wincmp/internal/preset"
 	"wincmp/internal/process"
+	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
 )
 
 // ==========================================
 // 1. 設定與服務掃描 API
 // ==========================================
+
+// GetDetailedResources 獲取詳細的 CPU & RAM 監控數據
+func (a *App) GetDetailedResources() (resource.DetailedResources, error) {
+	if a.resMonitor == nil {
+		return resource.DetailedResources{}, fmt.Errorf("資源監控器未初始化")
+	}
+	return a.resMonitor.GetDetailedResourceUsage()
+}
 
 // GetConfig 獲取當前記憶體中的全域設定檔
 func (a *App) GetConfig() *config.WincmpConfig {

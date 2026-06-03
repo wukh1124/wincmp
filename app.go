@@ -16,16 +16,18 @@ import (
 	"wincmp/internal/config"
 	"wincmp/internal/i18n"
 	"wincmp/internal/process"
+	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
 )
 
 // App struct
 type App struct {
-	ctx     context.Context
-	baseDir string
-	procMgr *process.Manager
-	appCfg  *config.WincmpConfig
-	scanRes *scanner.ScanResult
+	ctx        context.Context
+	baseDir    string
+	procMgr    *process.Manager
+	resMonitor *resource.Monitor
+	appCfg     *config.WincmpConfig
+	scanRes    *scanner.ScanResult
 
 	// 日誌寫入器相關
 	appLogWriter      *lumberjack.Logger
@@ -103,6 +105,9 @@ func (a *App) startup(ctx context.Context) {
 
 	// 5. 初始化程序管理器
 	a.procMgr = process.NewManager(a.baseDir, logFn, errLogFn)
+
+	// 5.5 初始化資源監控器
+	a.resMonitor = resource.NewAppResourceMonitor(a.procMgr)
 
 	// 6. 掃描已安裝的服務版本
 	a.scanRes, err = scanner.ScanBinDir(a.baseDir)
@@ -281,11 +286,16 @@ func (a *App) startResourceMonitoring() {
 				if a.ctx == nil {
 					return
 				}
-				// 這裡可以透過 a.procMgr 或是 wincmp/internal/resource 模組獲取 CPU 與 RAM 佔用
-				// 目前我們定時推送一個假的數據結構，待 Phase 4 完整移植資源監控模組
+				
+				var cpu float64 = 0.0
+				var mem uint64 = 0
+				if a.resMonitor != nil {
+					cpu, mem = a.resMonitor.GetCPUAndRAM()
+				}
+
 				runtime.EventsEmit(a.ctx, "resource_usage", map[string]interface{}{
-					"cpu":    1.5, // %
-					"memory": 45,  // MB
+					"cpu":    cpu,
+					"memory": mem,
 				})
 			}
 		}

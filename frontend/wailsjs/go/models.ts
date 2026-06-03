@@ -228,6 +228,80 @@ export namespace main {
 
 }
 
+export namespace resource {
+	
+	export class ServiceResource {
+	    name: string;
+	    cpu: number;
+	    ram: number;
+	    pids: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ServiceResource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.cpu = source["cpu"];
+	        this.ram = source["ram"];
+	        this.pids = source["pids"];
+	    }
+	}
+	export class ProcessResource {
+	    cpu: number;
+	    ram: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProcessResource(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.cpu = source["cpu"];
+	        this.ram = source["ram"];
+	    }
+	}
+	export class DetailedResources {
+	    systemCpu: number;
+	    core: ProcessResource;
+	    web: ProcessResource;
+	    services: Record<string, ServiceResource>;
+	
+	    static createFrom(source: any = {}) {
+	        return new DetailedResources(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.systemCpu = source["systemCpu"];
+	        this.core = this.convertValues(source["core"], ProcessResource);
+	        this.web = this.convertValues(source["web"], ProcessResource);
+	        this.services = this.convertValues(source["services"], ServiceResource, true);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+
+}
+
 export namespace scanner {
 	
 	export class PHPVersionInfo {
