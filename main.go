@@ -2098,6 +2098,12 @@ func checkPHPForProjects(win fyne.Window) {
 				return
 			}
 			for _, phpInfo := range toStart {
+				// 確保套用最新的進程數配置
+				if count, ok := appCfg.Global.PHP.Processes[phpInfo.MajorMin]; ok {
+					phpInfo.PortCount = count
+				} else {
+					phpInfo.PortCount = appCfg.Global.PHP.ProcessesPerVersion
+				}
 				if err := procMgr.StartPHPCGI(*phpInfo); err != nil {
 					addErrorLog("php", i18n.Tfmt("啟動 PHP %s 失敗", phpInfo.Version), err)
 				} else {
@@ -3702,6 +3708,13 @@ func createPHPRow(info scanner.PHPVersionInfo) fyne.CanvasObject {
 		appCfg.Global.PHP.Processes[info.MajorMin] = count
 		cfgPath := filepath.Join(baseDir, "conf", "wincmp.json")
 		appCfg.Save(cfgPath)
+
+		// 同步更新記憶體中的 scanRes.PHPList，以防彈窗啟動等流程讀到舊的進程數
+		for idx := range scanRes.PHPList {
+			if scanRes.PHPList[idx].MajorMin == info.MajorMin {
+				scanRes.PHPList[idx].PortCount = count
+			}
+		}
 
 		addLog("php", i18n.Tfmt("PHP %s 進程數變更為 %d (重啟後生效)", info.MajorMin, count))
 
