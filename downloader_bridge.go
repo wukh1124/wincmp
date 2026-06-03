@@ -72,7 +72,7 @@ func (a *App) FetchRemoteDependencies() (config.DependencyConfig, error) {
 	return newCfg, nil
 }
 
-// CheckMissingCoreDependencies 檢查核心依賴 (Caddy, PHP, MariaDB) 是否缺失
+// CheckMissingCoreDependencies 檢查核心依賴 (Caddy, PHP) 是否缺失
 func (a *App) CheckMissingCoreDependencies() (map[string]bool, error) {
 	res := make(map[string]bool)
 
@@ -83,7 +83,6 @@ func (a *App) CheckMissingCoreDependencies() (map[string]bool, error) {
 
 	res["caddy"] = len(a.scanRes.CaddyList) == 0
 	res["php"] = len(a.scanRes.PHPList) == 0
-	res["mariadb"] = len(a.scanRes.MariaDBList) == 0
 
 	return res, nil
 }

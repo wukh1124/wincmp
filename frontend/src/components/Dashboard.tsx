@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, RefreshCw, Layers, Cpu, Database, Server, CheckCircle, XCircle, AlertTriangle, Package, Folder, LayoutGrid, Terminal } from 'lucide-react';
+import { Play, Square, RefreshCw, Layers, Cpu, Database, Server, CheckCircle, XCircle, AlertTriangle, Package, Folder, LayoutGrid, Terminal, X } from 'lucide-react';
 import {
   GetConfig,
   SaveConfig,
@@ -28,10 +28,9 @@ export default function Dashboard() {
   const [loadingServices, setLoadingServices] = useState<Record<string, boolean>>({});
   const [isScanning, setIsScanning] = useState(false);
   const [showDepManager, setShowDepManager] = useState(false);
-  const [missingCore, setMissingCore] = useState<{ caddy: boolean; php: boolean; mariadb: boolean }>({
+  const [missingCore, setMissingCore] = useState<{ caddy: boolean; php: boolean }>({
     caddy: false,
-    php: false,
-    mariadb: false
+    php: false
   });
   const [dismissBanner, setDismissBanner] = useState(false);
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
@@ -50,8 +49,7 @@ export default function Dashboard() {
         const missing = await CheckMissingCoreDependencies();
         setMissingCore({
           caddy: !!missing?.caddy,
-          php: !!missing?.php,
-          mariadb: !!missing?.mariadb
+          php: !!missing?.php
         });
       } catch (err) {
         console.error("初始化資料失敗:", err);
@@ -101,8 +99,7 @@ export default function Dashboard() {
       const missing = await CheckMissingCoreDependencies();
       setMissingCore({
         caddy: !!missing?.caddy,
-        php: !!missing?.php,
-        mariadb: !!missing?.mariadb
+        php: !!missing?.php
       });
     } catch (err) {
       console.error("掃描二進位服務失敗:", err);
@@ -190,8 +187,8 @@ export default function Dashboard() {
     <div className="p-6 overflow-y-auto h-full space-y-6">
       
       {/* 核心依賴缺失警示橫幅 */}
-      {(missingCore.caddy || missingCore.php || missingCore.mariadb) && !dismissBanner && (
-        <div className="bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-red-950/5">
+      {(missingCore.caddy || missingCore.php) && !dismissBanner && (
+        <div className="relative bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-xl p-4 pr-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-red-950/5">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-red-500/20 text-red-400 rounded-lg">
               <AlertTriangle size={18} />
@@ -202,8 +199,7 @@ export default function Dashboard() {
                 本機未安裝：
                 {[
                   missingCore.caddy && "Caddy Web 伺服器",
-                  missingCore.php && "PHP 執行環境",
-                  missingCore.mariadb && "MariaDB 資料庫"
+                  missingCore.php && "PHP 執行環境"
                 ].filter(Boolean).join("、")}。請先完成依賴安裝以確保專案與服務正常運作。
               </span>
             </div>
@@ -215,13 +211,14 @@ export default function Dashboard() {
             >
               <Package size={14} /> 立即一鍵下載配置
             </button>
-            <button
-              onClick={() => setDismissBanner(true)}
-              className="px-3 py-2 border border-darkBorder hover:bg-darkBorder rounded-lg text-xs text-gray-400 hover:text-gray-200 transition"
-            >
-              關閉
-            </button>
           </div>
+          <button
+            onClick={() => setDismissBanner(true)}
+            className="absolute top-3 right-3 text-gray-400 hover:text-gray-200 p-1 hover:bg-white/5 rounded-lg transition"
+            title="關閉"
+          >
+            <X size={16} />
+          </button>
         </div>
       )}
 
