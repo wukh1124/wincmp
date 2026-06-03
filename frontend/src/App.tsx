@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -12,6 +12,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'settings'>('dashboard');
   const [showLogs, setShowLogs] = useState(true);
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
+  const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
+
+  const toggleSidebar = () => {
+    setIsCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   // 訂閱 Go 端推送的 CPU / RAM 資源佔用
   useEffect(() => {
@@ -57,76 +66,108 @@ export default function App() {
     <div className="flex h-screen w-screen bg-darkBg text-gray-200 overflow-hidden font-sans select-none">
       
       {/* 1. 左側導航 Sidebar */}
-      <aside className="w-64 bg-[#0c0c0e] border-r border-darkBorder flex flex-col justify-between select-none">
+      <aside className={`bg-[#0c0c0e] border-r border-darkBorder flex flex-col justify-between select-none transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-64'}`}>
         <div>
           {/* Logo & 標題 */}
-          <div className="px-6 py-5 border-b border-darkBorder flex items-center gap-3">
-            <img src={logo} alt="WinCMP Logo" className="w-8 h-8 rounded-lg shadow-md shadow-blue-500/10 object-contain" />
-            <div>
-              <span className="font-bold text-gray-100 tracking-wide block">WinCMP</span>
-              <span className="text-[10px] text-gray-500 block font-semibold uppercase tracking-wider">Local Dev Panel</span>
+          <div className={`py-5 border-b border-darkBorder flex items-center transition-all duration-300 ${isCollapsed ? 'px-4 flex-col gap-3 justify-center' : 'px-6 gap-3 justify-between'}`}>
+            <div className="flex items-center gap-3 overflow-hidden">
+              <img src={logo} alt="WinCMP Logo" className="w-8 h-8 rounded-lg shadow-md shadow-blue-500/10 object-contain flex-shrink-0" />
+              {!isCollapsed && (
+                <div className="transition-opacity duration-300 opacity-100 whitespace-nowrap">
+                  <span className="font-bold text-gray-100 tracking-wide block">WinCMP</span>
+                  <span className="text-[10px] text-gray-500 block font-semibold uppercase tracking-wider">Local Dev Panel</span>
+                </div>
+              )}
             </div>
+            <button
+              onClick={toggleSidebar}
+              className={`p-1.5 rounded-md text-gray-500 hover:text-gray-200 hover:bg-white/5 transition-colors ${isCollapsed ? 'w-8 h-8 flex items-center justify-center' : ''}`}
+              title={isCollapsed ? '展開側邊欄' : '收起側邊欄'}
+            >
+              {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+            </button>
           </div>
 
           {/* 選單列表 */}
-          <nav className="p-3 pt-4 space-y-1">
+          <nav className={`pt-4 space-y-1 transition-all duration-300 ${isCollapsed ? 'px-2' : 'p-3'}`}>
             {menuItems.map(item => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full text-left px-4 py-2.5 text-sm font-semibold flex items-center gap-3 transition duration-150 ${
+                title={isCollapsed ? item.label.split(' ')[0] : undefined}
+                className={`w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 ${
+                  isCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
+                } ${
                   activeTab === item.id
                     ? 'bg-blue-600/10 text-blue-400 border-l-[3px] border-blue-500 rounded-r-lg'
                     : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border-l-[3px] border-transparent rounded-r-lg'
                 }`}
               >
-                <span className={activeTab === item.id ? 'text-blue-400' : 'text-gray-400'}>
+                <span className={`flex-shrink-0 ${activeTab === item.id ? 'text-blue-400' : 'text-gray-400'}`}>
                   {item.icon}
                 </span>
-                <span>{item.label}</span>
+                {!isCollapsed && <span className="whitespace-nowrap transition-opacity duration-300">{item.label}</span>}
               </button>
             ))}
           </nav>
         </div>
 
         {/* 底部系統監控狀態 */}
-        <div className="p-4 border-t border-darkBorder bg-black bg-opacity-20 space-y-3">
-          <div className="font-semibold text-[10px] text-gray-500 select-none uppercase tracking-wider">
-            系統監控 (WinCMP Core)
-          </div>
-          <div className="space-y-2.5 text-xs">
-            {/* CPU */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400 flex items-center gap-1.5">
-                  <Cpu size={12} className="text-blue-400" /> CPU 佔用
-                </span>
-                <span className="font-semibold text-gray-300">{systemResources.cpu.toFixed(1)}%</span>
+        <div className={`border-t border-darkBorder bg-black bg-opacity-20 transition-all duration-300 ${isCollapsed ? 'p-2 py-4 flex flex-col items-center gap-4' : 'p-4 space-y-3'}`}>
+          {!isCollapsed ? (
+            <>
+              <div className="font-semibold text-[10px] text-gray-500 select-none uppercase tracking-wider">
+                系統監控 (WinCMP Core)
               </div>
-              <div className="w-full h-1 bg-darkInput rounded-full overflow-hidden">
-                <div
-                  style={{ width: `${Math.min(systemResources.cpu * 5, 100)}%` }}
-                  className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                />
-              </div>
-            </div>
+              <div className="space-y-2.5 text-xs">
+                {/* CPU */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400 flex items-center gap-1.5">
+                      <Cpu size={12} className="text-blue-400" /> CPU 佔用
+                    </span>
+                    <span className="font-semibold text-gray-300">{systemResources.cpu.toFixed(1)}%</span>
+                  </div>
+                  <div className="w-full h-1 bg-darkInput rounded-full overflow-hidden">
+                    <div
+                      style={{ width: `${Math.min(systemResources.cpu * 5, 100)}%` }}
+                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                    />
+                  </div>
+                </div>
 
-            {/* RAM */}
-            <div className="space-y-1 pt-0.5">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400 flex items-center gap-1.5">
-                  <HardDrive size={12} className="text-indigo-400" /> 記憶體 (RAM)
-                </span>
-                <span className="font-semibold text-gray-300">{systemResources.memory} MB</span>
+                {/* RAM */}
+                <div className="space-y-1 pt-0.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400 flex items-center gap-1.5">
+                      <HardDrive size={12} className="text-indigo-400" /> 記憶體 (RAM)
+                    </span>
+                    <span className="font-semibold text-gray-300">{systemResources.memory} MB</span>
+                  </div>
+                  <div className="w-full h-1 bg-darkInput rounded-full overflow-hidden">
+                    <div
+                      style={{ width: `${Math.min(systemResources.memory / 2, 100)}%` }}
+                      className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="w-full h-1 bg-darkInput rounded-full overflow-hidden">
-                <div
-                  style={{ width: `${Math.min(systemResources.memory / 2, 100)}%` }}
-                  className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                />
+            </>
+          ) : (
+            <div className="space-y-3 text-center w-full">
+              {/* CPU collapsed */}
+              <div className="flex flex-col items-center gap-1 cursor-help" title={`CPU 佔用: ${systemResources.cpu.toFixed(1)}%`}>
+                <Cpu size={14} className="text-blue-400 animate-pulse" style={{ animationDuration: '3s' }} />
+                <span className="text-[9px] font-semibold text-gray-400">{systemResources.cpu.toFixed(0)}%</span>
+              </div>
+
+              {/* RAM collapsed */}
+              <div className="flex flex-col items-center gap-1 cursor-help" title={`記憶體 (RAM): ${systemResources.memory} MB`}>
+                <HardDrive size={14} className="text-indigo-400" />
+                <span className="text-[9px] font-semibold text-gray-400">{systemResources.memory}M</span>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </aside>
 
