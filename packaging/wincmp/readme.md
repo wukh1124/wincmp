@@ -1,21 +1,22 @@
 # WinCMP 🚀
 
 ![Go Version](https://img.shields.io/badge/Go-1.26.2+-00ADD8?style=for-the-badge&logo=go)
-![Fyne Version](https://img.shields.io/badge/Fyne-v2.7.3-blue?style=for-the-badge)
+![Wails Version](https://img.shields.io/badge/Wails-v2.12.0-red?style=for-the-badge&logo=wails)
+![React Version](https://img.shields.io/badge/React-v18-blue?style=for-the-badge&logo=react)
 ![Platform](https://img.shields.io/badge/Platform-Windows_11-0078D6?style=for-the-badge&logo=windows)
 ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
 
 **WinCMP** 是一個專為 Windows 設計的現代化、可攜式本機開發環境控制面板。
 名稱取自 **Win**dows + **C**addy + **M**ariaDB + **P**HP。
 
-受到 XAMPP 和 Laragon 的啟發，WinCMP 提供一個更輕量、**免安裝 (Portable)**、且 **不需要管理員權限** 的開發環境解決方案。
+受到 XAMPP 和 Laragon 的啟發，WinCMP 提供一個更輕量、**免安裝 (Portable)**、且 **不需要管理員權限** 的開發環境解決方案。基於 Go 語言核心與 Wails v2 框架打造，前端使用 React 18 技術棧，具備極佳的視覺美感、極低的資源佔用與極快的啟動速度。
 
 ---
 
 ## ✨ 核心特色
 
-- 🪶 **極致輕量**：採用 Go 語言開發，無須 Electron，啟動快速，資源佔用低。
-- 🛡️ **免管理員權限**：無需系統管理員權限即可運行，不修改系統環境變數，不寫入登錄檔。
+- 🪶 **極致輕量**：採用 Go 核心編譯，使用系統自帶的 Web 渲染引擎 (WebView2)，無須 Electron 依賴，啟動快速，資源佔用低。
+- 🛡️ **免管理員權限**：無需系統管理員權限即可運行，不修改系統環境變數，不寫入登錄檔。*（註：自動修改 Windows `hosts` 檔為選用功能，啟用時需要 UAC 權限）*
 - 🎨 **現代化 UI/UX**：內建深色/淺色模式，直覺的圖形化界面，即時監控服務狀態。
 - 🔄 **PHP 多版本支援**：同時管理多個 PHP 版本，自動負載均衡提升效能。
 - 🚀 **Runtime 多環境運行**：支援 Node.js、Bun、Python、Go (Air/Run)、Custom 等多種開發環境。

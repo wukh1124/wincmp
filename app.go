@@ -66,6 +66,11 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}
 
+	// 在載入設定檔前，自動檢測並釋放預設設定檔到 conf/
+	if err := config.RestoreDefaultConf(a.baseDir); err != nil {
+		a.handleErrorLog("system", "釋放預設設定檔失敗", err)
+	}
+
 	// 2. 載入設定檔以套用語言與全域設定
 	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
 	a.appCfg, err = config.Load(cfgPath)

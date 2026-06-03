@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -110,5 +111,47 @@ func TestConfig_MigrateLegacyNodeFields(t *testing.T) {
 	}
 	if p.NodePort != 0 || p.NodeMode != "" || p.NodeVersion != "" || p.UseEnvBin {
 		t.Error("遷移後應清除 legacy 欄位")
+	}
+}
+
+func TestRestoreDefaultConf(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "wincmp-test-*")
+	if err != nil {
+		t.Fatalf("無法建立暫時目錄: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// 1. 第一次執行，確認是否順利釋放檔案
+	if err := RestoreDefaultConf(tempDir); err != nil {
+		t.Fatalf("RestoreDefaultConf 失敗: %v", err)
+	}
+
+	caddyfilePath := filepath.Join(tempDir, "conf", "Caddyfile")
+	if _, err := os.Stat(caddyfilePath); err != nil {
+		t.Errorf("Caddyfile 釋放失敗: %v", err)
+	}
+
+	gitkeepPath := filepath.Join(tempDir, "conf", "sites", ".gitkeep")
+	if _, err := os.Stat(gitkeepPath); err == nil {
+		t.Error(".gitkeep 檔案不應該被釋放建立，但它居然存在了！")
+	}
+
+	// 2. 測試防覆蓋機制
+	originalContent := "custom caddyfile configuration"
+	if err := os.WriteFile(caddyfilePath, []byte(originalContent), 0644); err != nil {
+		t.Fatalf("寫入自訂 Caddyfile 失敗: %v", err)
+	}
+
+	if err := RestoreDefaultConf(tempDir); err != nil {
+		t.Fatalf("第二次 RestoreDefaultConf 失敗: %v", err)
+	}
+
+	data, err := os.ReadFile(caddyfilePath)
+	if err != nil {
+		t.Fatalf("讀取 Caddyfile 失敗: %v", err)
+	}
+
+	if string(data) != originalContent {
+		t.Errorf("防覆蓋機制失效，檔案被重新覆蓋！預期為 %q, 實際為 %q", originalContent, string(data))
 	}
 }

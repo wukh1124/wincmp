@@ -283,7 +283,7 @@ export default function Projects() {
               <tbody className="divide-y divide-darkBorder/40">
                 {config.projects.map((proj: Project, idx: number) => {
                   const hasRuntime = isRuntimeProject(proj.type);
-                  const runtimeKey = `runtime-${proj.name}`;
+                  const runtimeKey = `runtime_${proj.name}`;
                   const running = hasRuntime && !!servicesStatus[runtimeKey];
                   const loading = loadingProjects[proj.name];
 

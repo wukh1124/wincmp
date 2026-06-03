@@ -1,0 +1,34 @@
+{
+  "global": {
+    "default_www": "\\www",
+    "default_ssl": "\\conf\\ssl",
+    "log_file": "",
+    "restore_last_state": true,
+    "minimize_to_tray": false,
+    "run_on_boot": false,
+    "theme": "Dark Gray",
+    "language": "en-US",
+    "last_service_state": {
+      "caddy": false,
+      "mariadb": false,
+      "php": {
+        "7.3.33": false,
+        "8.2.30": false,
+        "8.3.28": false
+      }
+    },
+    "log_level": "All",
+    "log_to_console": true,
+    "max_log_retention": 7,
+    "auto_update_hosts": true,
+    "php": {
+      "processes_per_version": 3,
+      "processes": {
+        "7.3": 3,
+        "8.2": 10,
+        "8.3": 3
+      }
+    }
+  },
+  "projects": []
+}

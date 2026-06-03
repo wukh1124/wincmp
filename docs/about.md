@@ -1,6 +1,6 @@
 # 🚀 WinCMP - 極簡 Windows 開發環境
 
-WinCMP (**Win**dows + **C**addy + **M**ariaDB + **P**HP) 是一個基於 Go 與 Fyne 開發的「綠色免安裝」開發環境控制面板。旨在提供比 XAMPP 更現代、更輕量、且完全可控的 Windows 本機開發體驗。
+WinCMP (**Win**dows + **C**addy + **M**ariaDB + **P**HP) 是一個基於 Go 與 Wails (React + TypeScript) 開發的「綠色免安裝」開發環境控制面板。旨在提供比 XAMPP 更現代、更輕量、且完全可控的 Windows 本機開發體驗。
 
 ---
 
@@ -21,4 +21,3 @@ WinCMP (**Win**dows + **C**addy + **M**ariaDB + **P**HP) 是一個基於 Go 與 
 ---
 > [!TIP]
 > **為什麼選擇 WinCMP？** 因為開發環境應該是「解壓即用，關閉即走」的，而不應該成為系統的負擔。
-
