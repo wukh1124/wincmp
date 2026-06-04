@@ -18,6 +18,8 @@ import (
 	"wincmp/internal/process"
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
+	"fyne.io/systray"
+
 	"wincmp/internal/terminal"
 )
 
@@ -43,6 +45,11 @@ type App struct {
 	dbPoolDSN string
 
 	saveStateMu sync.Mutex
+
+	quitting     bool
+	quittingMu   sync.RWMutex
+	trayShowItem *systray.MenuItem
+	trayQuitItem *systray.MenuItem
 }
 
 // NewApp 建立一個新的 App 實例
@@ -129,6 +136,9 @@ func (a *App) startup(ctx context.Context) {
 
 	// 8. 恢復上次關閉前的服務狀態
 	go a.restoreLastState()
+
+	// 9. 初始化系統托盤
+	a.setupSystray()
 }
 
 // shutdown 在應用程式關閉時由 Wails 自動呼叫，安全停止所有背景服務與子進程並關閉日誌
@@ -152,6 +162,26 @@ func (a *App) shutdown(ctx context.Context) {
 	if a.appLogWriter != nil {
 		a.appLogWriter.Close()
 	}
+}
+
+// beforeClose 在視窗關閉前由 Wails 呼叫。如果設定為「最小化到托盤」，則隱藏視窗並阻止退出。
+func (a *App) beforeClose(ctx context.Context) (prevent bool) {
+	a.quittingMu.RLock()
+	quitting := a.quitting
+	a.quittingMu.RUnlock()
+
+	// 如果正在完全退出，就讓它正常關閉
+	if quitting {
+		return false
+	}
+
+	// 檢查是否設定了「點擊關閉視窗時縮小至系統托盤」
+	if a.appCfg != nil && a.appCfg.Global.MinimizeToTray {
+		runtime.WindowHide(ctx)
+		return true // 阻止應用程式關閉
+	}
+
+	return false
 }
 
 // ==========================================

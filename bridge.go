@@ -101,6 +101,10 @@ func (a *App) SaveConfig(newCfg *config.WincmpConfig) error {
 		return fmt.Errorf("無法儲存設定檔: %w", err)
 	}
 
+	// 更新後端語系並同步刷新系統托盤選單
+	i18n.SetLanguage(a.appCfg.Global.Language)
+	a.updateTrayMenu()
+
 	return nil
 }
 
