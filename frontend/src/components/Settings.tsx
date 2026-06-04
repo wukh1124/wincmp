@@ -328,6 +328,21 @@ export default function Settings() {
             </select>
           </div>
 
+          {/* 預設終端 Shell */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] text-gray-500 font-bold uppercase select-none">預設專案終端 (Terminal Shell)</label>
+            <select
+              value={config.global.terminal_shell || 'powershell.exe'}
+              onChange={(e) => handleGlobalFieldChange('terminal_shell', e.target.value)}
+              className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 transition cursor-pointer font-semibold"
+            >
+              <option value="powershell.exe">PowerShell (powershell.exe)</option>
+              <option value="cmd.exe">Command Prompt (cmd.exe)</option>
+              <option value="C:\Program Files\Git\bin\bash.exe">Git Bash (bash.exe)</option>
+              <option value="wsl.exe">WSL (wsl.exe)</option>
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             {/* 日誌天數 */}
             <div className="space-y-1.5">

@@ -48,6 +48,7 @@ export namespace config {
 	    max_log_retention: number;
 	    max_log_lines: number;
 	    auto_update_hosts: boolean;
+	    terminal_shell: string;
 	    php?: PHPSettings;
 	    mariadb_external: boolean;
 	    mariadb_basedir: string;
@@ -81,6 +82,7 @@ export namespace config {
 	        this.max_log_retention = source["max_log_retention"];
 	        this.max_log_lines = source["max_log_lines"];
 	        this.auto_update_hosts = source["auto_update_hosts"];
+	        this.terminal_shell = source["terminal_shell"];
 	        this.php = this.convertValues(source["php"], PHPSettings);
 	        this.mariadb_external = source["mariadb_external"];
 	        this.mariadb_basedir = source["mariadb_basedir"];

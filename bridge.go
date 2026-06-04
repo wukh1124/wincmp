@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -1028,5 +1029,92 @@ func (a *App) validatePHPMajorVersion(majorVersion string) string {
 		}
 	}
 	return ""
+}
+
+// StartTerminalSession 啟動一個新終端會話，並回傳會話 ID
+func (a *App) StartTerminalSession(projName string, cols int, rows int) (string, error) {
+	if a.termMgr == nil {
+		return "", fmt.Errorf("終端管理器未初始化")
+	}
+
+	var proj *config.ProjectConfig
+	for i := range a.appCfg.Projects {
+		if a.appCfg.Projects[i].Name == projName {
+			proj = &a.appCfg.Projects[i]
+			break
+		}
+	}
+
+	var cwd string
+	if proj != nil {
+		cwd = a.appCfg.GetProjectRoot(*proj, a.baseDir)
+	} else {
+		cwd = filepath.Join(a.baseDir, "www")
+	}
+
+	shellPath := a.appCfg.Global.TerminalShell
+	if shellPath == "" {
+		shellPath = "powershell.exe"
+	}
+
+	var sessionID string
+	var sessionIDMu sync.RWMutex
+
+	realOnOutput := func(data string) {
+		if a.ctx != nil {
+			sessionIDMu.RLock()
+			sID := sessionID
+			sessionIDMu.RUnlock()
+			runtime.EventsEmit(a.ctx, "terminal_output", map[string]string{
+				"sessionId": sID,
+				"data":      data,
+			})
+		}
+	}
+
+	realOnExit := func() {
+		if a.ctx != nil {
+			sessionIDMu.RLock()
+			sID := sessionID
+			sessionIDMu.RUnlock()
+			runtime.EventsEmit(a.ctx, "terminal_exit", map[string]string{
+				"sessionId": sID,
+			})
+		}
+	}
+
+	sID, err := a.termMgr.StartTerminal(projName, shellPath, cwd, cols, rows, realOnOutput, realOnExit)
+	if err != nil {
+		return "", err
+	}
+
+	sessionIDMu.Lock()
+	sessionID = sID
+	sessionIDMu.Unlock()
+
+	return sID, nil
+}
+
+// SendTerminalInput 傳送輸入字元或指令到終端會話
+func (a *App) SendTerminalInput(sessionID string, data string) error {
+	if a.termMgr == nil {
+		return fmt.Errorf("終端管理器未初始化")
+	}
+	return a.termMgr.Write(sessionID, data)
+}
+
+// ResizeTerminal 調整指定終端會話的視窗大小
+func (a *App) ResizeTerminal(sessionID string, cols int, rows int) error {
+	if a.termMgr == nil {
+		return fmt.Errorf("終端管理器未初始化")
+	}
+	return a.termMgr.Resize(sessionID, cols, rows)
+}
+
+// StopTerminalSession 主動停止並銷毀指定終端會話
+func (a *App) StopTerminalSession(sessionID string) {
+	if a.termMgr != nil {
+		a.termMgr.Stop(sessionID)
+	}
 }
 

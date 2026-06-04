@@ -70,6 +70,10 @@ export function ReloadCaddy() {
   return window['go']['main']['App']['ReloadCaddy']();
 }
 
+export function ResizeTerminal(arg1, arg2, arg3) {
+  return window['go']['main']['App']['ResizeTerminal'](arg1, arg2, arg3);
+}
+
 export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
 }
@@ -80,6 +84,10 @@ export function ScanServices() {
 
 export function SelectFolder() {
   return window['go']['main']['App']['SelectFolder']();
+}
+
+export function SendTerminalInput(arg1, arg2) {
+  return window['go']['main']['App']['SendTerminalInput'](arg1, arg2);
 }
 
 export function StartCaddy(arg1, arg2) {
@@ -102,6 +110,10 @@ export function StartProjectRuntime(arg1) {
   return window['go']['main']['App']['StartProjectRuntime'](arg1);
 }
 
+export function StartTerminalSession(arg1, arg2, arg3) {
+  return window['go']['main']['App']['StartTerminalSession'](arg1, arg2, arg3);
+}
+
 export function StopCaddy() {
   return window['go']['main']['App']['StopCaddy']();
 }
@@ -120,4 +132,8 @@ export function StopPHP(arg1) {
 
 export function StopProjectRuntime(arg1) {
   return window['go']['main']['App']['StopProjectRuntime'](arg1);
+}
+
+export function StopTerminalSession(arg1) {
+  return window['go']['main']['App']['StopTerminalSession'](arg1);
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal } from 'lucide-react';
+import ProjectTerminal from './ProjectTerminal';
 import {
   GetConfig,
   SaveConfig,
@@ -41,6 +42,7 @@ export default function Projects() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetecting, setIsDetecting] = useState(false);
   const [detected, setDetected] = useState(false);
+  const [terminalProject, setTerminalProject] = useState<string | null>(null);
 
   // 初始化專案類型與 Runtime 類型對照表
   const projectTypes = [
@@ -420,6 +422,13 @@ export default function Projects() {
                         )}
                         {/* 常規按鈕 */}
                         <button
+                          onClick={() => setTerminalProject(proj.name)}
+                          className="p-1.5 bg-darkInput border border-darkBorder hover:border-blue-500 rounded-lg text-blue-400 transition"
+                          title="開啟專案終端"
+                        >
+                          <Terminal size={11} />
+                        </button>
+                        <button
                           onClick={() => handleOpenFolder(proj.root_path)}
                           className="p-1.5 bg-darkInput border border-darkBorder hover:border-gray-500 rounded-lg text-gray-300 transition"
                           title="開啟專案資料夾"
@@ -757,6 +766,13 @@ export default function Projects() {
           </div>
         </div>
       )}
+
+      {/* 專案終端 Drawer */}
+      <ProjectTerminal
+        projectName={terminalProject || ''}
+        isOpen={terminalProject !== null}
+        onClose={() => setTerminalProject(null)}
+      />
     </div>
   );
 

@@ -18,6 +18,7 @@ import (
 	"wincmp/internal/process"
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
+	"wincmp/internal/terminal"
 )
 
 // App struct
@@ -28,6 +29,7 @@ type App struct {
 	resMonitor *resource.Monitor
 	appCfg     *config.WincmpConfig
 	scanRes    *scanner.ScanResult
+	termMgr    *terminal.Manager
 
 	// 日誌寫入器相關
 	appLogWriter      *lumberjack.Logger
@@ -111,6 +113,9 @@ func (a *App) startup(ctx context.Context) {
 	// 5.5 初始化資源監控器
 	a.resMonitor = resource.NewAppResourceMonitor(a.procMgr)
 
+	// 5.6 初始化終端管理器
+	a.termMgr = terminal.NewManager()
+
 	// 6. 掃描已安裝的服務版本
 	a.scanRes, err = scanner.ScanBinDir(a.baseDir)
 	if err != nil {
@@ -132,6 +137,9 @@ func (a *App) shutdown(ctx context.Context) {
 
 	if a.procMgr != nil {
 		a.procMgr.StopAll()
+	}
+	if a.termMgr != nil {
+		a.termMgr.StopAll()
 	}
 	a.closeDBPool()
 

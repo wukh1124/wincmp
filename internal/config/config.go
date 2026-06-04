@@ -39,6 +39,7 @@ type GlobalConfig struct {
 	MaxLogLines     int    `json:"max_log_lines"`     // UI 顯示行數限制
 
 	AutoUpdateHosts bool `json:"auto_update_hosts"` // 自動更新 Hosts
+	TerminalShell   string `json:"terminal_shell"`   // 終端 Shell 設定: "powershell.exe", "cmd.exe" 等
 
 	PHP PHPSettings `json:"php,omitempty"`
 
@@ -202,6 +203,11 @@ func Load(path string) (*WincmpConfig, error) {
 	// 預設語言為繁體中文
 	if cfg.Global.Language == "" {
 		cfg.Global.Language = "zh-TW"
+	}
+
+	// 預設終端為 powershell.exe
+	if cfg.Global.TerminalShell == "" {
+		cfg.Global.TerminalShell = "powershell.exe"
 	}
 
 	return &cfg, nil

@@ -21,6 +21,7 @@
 - 🔄 **PHP 多進程負載均衡**：利用 Caddy 的 Upstream 機制，每個 PHP 版本啟動多個 FastCGI 進程進行分流。
 - 📂 **自動化專案管理**：可視化管理 Laravel、Next.js、Nuxt、Astro、Vite、Python、Go 等專案，自動偵測框架並生成配置。
 - 🚀 **Runtime 多環境運行**：支援 Node.js、Bun、Python、Go (Air/Run)、Custom 等多種開發環境，可選 Background 或 Terminal 模式啟動。
+- 💻 **內建專案互動終端**：結合 Windows ConPTY 與 `xterm.js` 實作 Drawer 側邊抽屜終端，預設路徑為專案根目錄，支援 PowerShell、CMD、Git Bash、WSL 切換與互動指令。
 - 📜 **隔離環境 (Isolation)**：啟動子進程時動態注入 `PATH`，確保 PHP 及其擴展運行在正確的 binaries 環境中。
 
 ---
@@ -145,6 +146,7 @@ wails build -clean -ldflags "-s -w"
 - [x] **Runtime 雙模式啟動** (Background / Terminal)。
 - [x] **舊版 Node.js 專案自動遷移** (node_port → runtime_port 等)。
 - [x] **Mailpit 郵件測試服務整合** (Dashboard 啟停管理與設定對話框)。
+- [x] **專案內建互動式終端** (結合 Windows ConPTY 與 `xterm.js`，實作點擊滑出 Drawer 互動終端，支援多種 Shell 設定)。
 
 ### ⏳ 計畫中 (Planned)
 > **💡 關於詳細的開發規劃、技術分析與實作順序，請參閱完整的 [開發任務清單 (Develop Task List)](doc/develop_task_list.md)。**

@@ -6,6 +6,7 @@ require (
 	fyne.io/fyne/v2 v2.7.3
 	fyne.io/systray v1.12.0
 	github.com/BurntSushi/toml v1.5.0
+	github.com/UserExistsError/conpty v0.1.4
 	github.com/dweymouth/fyne-tooltip v0.4.0
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/ncruces/zenity v0.10.14

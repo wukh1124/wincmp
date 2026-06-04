@@ -27,6 +27,7 @@ Inspired by XAMPP and Laragon, WinCMP aims to provide a more lightweight, **port
 - 🔄 **PHP Multi-Process Load Balancing**: Leverages Caddy's upstream mechanism to run multiple FastCGI processes for each PHP version.
 - 📂 **Automated Project Management**: Visually manage Laravel, Next.js, Nuxt, Astro, Vite, Python, Go, and other projects. Automatically detects frameworks and generates configurations.
 - 🚀 **Runtime Multi-Environment Execution**: Supports Node.js, Bun, Python, Go (Air/Run), and Custom development environments, with options to start in Background or Terminal mode.
+- 💻 **Project Integrated Interactive Terminal**: Spawns a beautiful drawer-based Terminal (PowerShell, CMD, Git Bash, WSL) at the project root using Windows ConPTY and `xterm.js` with interactive CLI and auto-completion support.
 - 📜 **Isolated Environments**: Dynamically injects `PATH` when launching subprocesses to ensure PHP and its extensions run in the correct binary environments.
 
 ---
@@ -151,6 +152,7 @@ wails build -clean -ldflags "-s -w"
 - [x] **Double Launch Mode for Runtimes** (Background / Terminal).
 - [x] **Legacy Project Auto-Migration** (node_port → runtime_port, etc.).
 - [x] **Mailpit Integration** (start/stop toggle on Dashboard and configuration dialog).
+- [x] **Project Integrated Interactive Terminal** (integrated Windows ConPTY with `xterm.js` to support interactive CLI, auto-completion, and customization in Settings).
 
 ### ⏳ Planned
 > **💡 For a detailed roadmap, technical analysis, and prioritization, please refer to the complete [Develop Task List](doc/develop_task_list.md).**
