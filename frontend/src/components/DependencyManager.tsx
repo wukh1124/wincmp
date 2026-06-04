@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, RefreshCw, Download, ArrowUpCircle, CheckCircle2, 
+import {
+  X, RefreshCw, Download, ArrowUpCircle, CheckCircle2,
   Loader2, AlertTriangle, Cpu, Database, Settings as SettingsIcon,
   HelpCircle, Server, Terminal, HardDrive
 } from 'lucide-react';
-import { 
-  GetDependencyConfig, 
-  FetchRemoteDependencies, 
-  DownloadDependency, 
-  ScanServices, 
-  GetScanResult 
+import {
+  GetDependencyConfig,
+  FetchRemoteDependencies,
+  DownloadDependency,
+  ScanServices,
+  GetScanResult
 } from '../../wailsjs/go/main/App';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 import { t, useLanguage } from '../i18n';
@@ -172,7 +172,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     if (key === 'heidisql') return scanResult.HeidiSQLList?.[0]?.Version || '';
     if (key === 'node') return scanResult.NodeList?.[0]?.Version || '';
     if (key === 'mailpit') return scanResult.MailpitList?.[0]?.Version || '';
-    
+
     if (key.startsWith('php')) {
       // php82 -> 8.2
       const majorMin = key.replace('php', '').replace(/(\d)(\d)/, '$1.$2');
@@ -186,14 +186,14 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
   if (!isOpen) return null;
 
   // 過濾並排序 PHP 版本
-  const phpKeys = depConfig 
+  const phpKeys = depConfig
     ? Object.keys(depConfig)
-        .filter(k => k.startsWith('php') && k !== 'php')
-        .sort((a, b) => {
-          const vA = depConfig[a].version;
-          const vB = depConfig[b].version;
-          return compareVersions(vB, vA); // 降序
-        })
+      .filter(k => k.startsWith('php') && k !== 'php')
+      .sort((a, b) => {
+        const vA = depConfig[a].version;
+        const vB = depConfig[b].version;
+        return compareVersions(vB, vA); // 降序
+      })
     : [];
 
   const renderDependencyRow = (key: string, label: string, icon: React.ReactNode) => {
@@ -339,10 +339,10 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* 遮罩背景 */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      
+
       {/* 彈出視窗主體 */}
       <div className="relative w-full max-w-2xl max-h-[90vh] bg-[#1a1a26] border border-darkBorder rounded-2xl flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-gray-200 select-none">
-        
+
         {/* 標頭 */}
         <div className="px-6 py-4 border-b border-darkBorder flex items-center justify-between bg-darkCard select-none">
           <div className="flex items-center gap-2.5">
@@ -350,8 +350,8 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               <HardDrive size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-wide">📦 {t("WinCMP 依賴庫管理中心")}</h2>
-              <p className="text-xs text-gray-400 mt-0.5">{t("下載或升級本機 Web 開發核心依賴與實用工具")}</p>
+              <h2 className="text-lg font-bold tracking-wide">📦 {t("WinCMP 依賴庫管理")}</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{t("下載或升級本機 Web 開發依賴")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -385,7 +385,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               {/* 1. 核心依賴 */}
               <div className="bg-darkCard bg-opacity-40 border border-darkBorder rounded-xl p-4 space-y-3">
                 <h3 className="text-xs text-blue-400 font-bold uppercase tracking-wider flex items-center gap-1.5 select-none border-b border-darkBorder border-opacity-60 pb-2">
-                  <Cpu size={13} /> {t("核心執行環境 (Core Runtimes)")}
+                  <Cpu size={13} /> {t("核心執行環境")}
                 </h3>
                 <div className="divide-y divide-darkBorder divide-opacity-30">
                   {renderDependencyRow('caddy', 'Caddy Web 伺服器', <Server size={16} />)}
@@ -396,7 +396,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               {/* 2. PHP 多版本環境 */}
               <div className="bg-darkCard bg-opacity-40 border border-darkBorder rounded-xl p-4 space-y-3">
                 <h3 className="text-xs text-green-400 font-bold uppercase tracking-wider flex items-center gap-1.5 select-none border-b border-darkBorder border-opacity-60 pb-2">
-                  <Server size={13} /> {t("PHP FastCGI 環境 (PHP Runtimes)")}
+                  <Server size={13} /> {t("PHP FastCGI 環境")}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {phpKeys.map(key => {
@@ -413,7 +413,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               {/* 3. 其他常用工具 */}
               <div className="bg-darkCard bg-opacity-40 border border-darkBorder rounded-xl p-4 space-y-3">
                 <h3 className="text-xs text-purple-400 font-bold uppercase tracking-wider flex items-center gap-1.5 select-none border-b border-darkBorder border-opacity-60 pb-2">
-                  <SettingsIcon size={13} /> {t("開發輔助工具與實用工具 (Utilities)")}
+                  <SettingsIcon size={13} /> {t("開發輔助工具與實用工具")}
                 </h3>
                 <div className="divide-y divide-darkBorder divide-opacity-30">
                   {renderDependencyRow('composer', 'Composer (PHP 包管理器)', <Terminal size={16} />)}
@@ -428,8 +428,8 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
         {/* 底部說明 */}
         <div className="px-6 py-4 border-t border-darkBorder bg-darkCard text-[11px] text-gray-500 flex justify-between items-center select-none">
-          <span>{t("提示：安裝完成後系統會自動重新掃描環境並更新 Dashboard。")}</span>
-          <span className="font-mono">WinCMP Downloader Pipeline</span>
+          <span>{t("提示：安裝完成後系統會自動重新掃描環境。")}</span>
+          <span className="font-mono">Downloader Pipeline</span>
         </div>
 
       </div>

@@ -187,12 +187,12 @@ export default function Dashboard() {
 
       {/* 核心依賴缺失警示橫幅 */}
       {(missingCore.caddy || missingCore.php) && !dismissBanner && (
-        <div className="relative bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-xl p-4 pr-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-red-950/5">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-red-500/20 text-red-400 rounded-lg">
+        <div className="relative bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-xl p-4 pr-10 md:pr-14 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-lg shadow-red-950/5">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="p-2.5 bg-red-500/20 text-red-400 rounded-lg shrink-0">
               <AlertTriangle size={18} />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <span className="font-bold text-red-200 block text-sm">⚠️ {t("偵測到核心依賴元件缺失")}</span>
               <span className="text-xs text-red-300/80 mt-0.5 block">
                 {t("本機未安裝：")}
@@ -203,12 +203,12 @@ export default function Dashboard() {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
             <button
               onClick={() => setShowDepManager(true)}
-              className="flex-1 md:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition"
+              className="flex-1 md:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition whitespace-nowrap"
             >
-              <Package size={14} /> {t("立即一鍵下載配置")}
+              <Package size={14} /> {t("立即下載")}
             </button>
           </div>
           <button
