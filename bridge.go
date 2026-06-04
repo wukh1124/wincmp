@@ -1064,7 +1064,7 @@ func (a *App) StartTerminalSession(projName string, cols int, rows int) (string,
 
 	var cwd string
 	if proj != nil {
-		cwd = a.appCfg.GetProjectRoot(*proj, a.baseDir)
+		cwd = a.appCfg.GetProjectPhysicalRoot(*proj, a.baseDir)
 	} else {
 		cwd = filepath.Join(a.baseDir, "www")
 	}

@@ -1,8 +1,8 @@
 ## Database
-1. 在 資料庫瀏覽 -> Database -> DB Explorer 中, 如果 Databases 內沒有任何表格, 會出現黑畫面當機(要關掉重啟wincmp才可以正常使用)
+1. [x] 在 資料庫瀏覽 -> Database -> DB Explorer 中, 如果 Databases 內沒有任何表格, 會出現黑畫面當機(要關掉重啟wincmp才可以正常使用)
 
 ## 專案管理面板
-1. 操作 -> 開啟專案終端 -> 如果是larvael 專案, 需自動返回正確根目錄, 目前出現的問題是打開laravel專案終端後會預設進入了 \public 目錄
+1. [x] 操作 -> 開啟專案終端 -> 如果是larvael 專案, 需自動返回正確根目錄, 目前出現的問題是打開laravel專案終端後會預設進入了 \public 目錄
 
 ## Logs 控制台
 1. 有關 Logs 控制台, 每次從 終端日誌(Terminal Logs) 分頁 切換到其他分頁時, Logs 記錄都被清空, 在同一啟動情況下 Logs 需要保留

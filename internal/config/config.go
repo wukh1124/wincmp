@@ -290,6 +290,19 @@ func (c *WincmpConfig) GetProjectRoot(project ProjectConfig, baseDir string) str
 	return root
 }
 
+// GetProjectPhysicalRoot 取得專案的物理根目錄。若有自訂路徑則使用，否則使用預設 www 路徑，且不進行 Laravel 的 public 路徑轉換。
+func (c *WincmpConfig) GetProjectPhysicalRoot(project ProjectConfig, baseDir string) string {
+	root := project.RootPath
+	if root == "" {
+		wwwDir := c.Global.DefaultWWW
+		if !filepath.IsAbs(wwwDir) {
+			wwwDir = filepath.Join(baseDir, wwwDir)
+		}
+		root = filepath.Join(wwwDir, project.Name)
+	}
+	return root
+}
+
 // GetSSLCertPath 取得 SSL 憑證路徑
 func (c *WincmpConfig) GetSSLCertPath(project ProjectConfig, baseDir string) string {
 	if project.SSLCrt != "" {

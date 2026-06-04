@@ -77,6 +77,51 @@ func TestConfig_GetProjectRoot(t *testing.T) {
 	}
 }
 
+func TestConfig_GetProjectPhysicalRoot(t *testing.T) {
+	cfg := &WincmpConfig{
+		Global: GlobalConfig{
+			DefaultWWW: "C:/www",
+		},
+	}
+
+	// 1. 自訂路徑
+	p1 := ProjectConfig{
+		Name:     "proj1",
+		RootPath: "D:/custom/path",
+	}
+	root1 := cfg.GetProjectPhysicalRoot(p1, "C:/app")
+	if root1 != "D:/custom/path" {
+		t.Errorf("預期為 D:/custom/path, 實際為 %s", root1)
+	}
+
+	// 2. 預設路徑 (相對路徑)
+	cfg2 := &WincmpConfig{
+		Global: GlobalConfig{
+			DefaultWWW: "www",
+		},
+	}
+	p2 := ProjectConfig{
+		Name: "proj2",
+	}
+	root2 := cfg2.GetProjectPhysicalRoot(p2, "C:/app")
+	expected2 := filepath.Clean("C:/app/www/proj2")
+	if filepath.Clean(root2) != expected2 {
+		t.Errorf("相對路徑解析錯誤: 預期 %s, 實際 %s", expected2, root2)
+	}
+
+	// 3. Laravel 專案不補上 public
+	p3 := ProjectConfig{
+		Name:     "proj3",
+		RootPath: "C:/www/proj3",
+		Type:     "laravel",
+	}
+	root3 := cfg.GetProjectPhysicalRoot(p3, "C:/app")
+	expected3 := filepath.Clean("C:/www/proj3")
+	if filepath.Clean(root3) != expected3 {
+		t.Errorf("Laravel 專案物理路徑解析錯誤: 預期 %s, 實際 %s", expected3, root3)
+	}
+}
+
 func TestConfig_MigrateLegacyNodeFields(t *testing.T) {
 	cfg := &WincmpConfig{
 		Projects: []ProjectConfig{
