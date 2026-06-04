@@ -1,4 +1,5 @@
 import { EventsOn } from '../../wailsjs/runtime/runtime';
+import { GetConfig } from '../../wailsjs/go/main/App';
 
 export interface LogLine {
   text: string;
@@ -30,9 +31,49 @@ class LogStore {
 
   private listeners: Set<LogListener> = new Set();
   private initialized = false;
+  private maxLogLines = 500; // 預設保留 500 行，後續會從設定檔動態載入
 
   constructor() {
     this.init();
+  }
+
+  private async loadMaxLogLines() {
+    try {
+      const cfg = await GetConfig();
+      if (cfg && cfg.global && cfg.global.max_log_lines > 0) {
+        this.maxLogLines = cfg.global.max_log_lines;
+        this.applyMaxLogLines();
+      }
+    } catch (err) {
+      console.error('[logStore] 載入 max_log_lines 失敗:', err);
+    }
+  }
+
+  public setMaxLogLines(lines: number) {
+    if (lines > 0 && lines !== this.maxLogLines) {
+      this.maxLogLines = lines;
+      this.applyMaxLogLines();
+      this.notify();
+    }
+  }
+
+  private applyMaxLogLines() {
+    const max = this.maxLogLines;
+    
+    // 裁切系統分類日誌
+    const categories: Array<keyof Omit<LogData, 'runtime'>> = ['system', 'caddy', 'mariadb', 'mailpit', 'php'];
+    for (const cat of categories) {
+      if (this.logs[cat].length > max) {
+        this.logs[cat] = this.logs[cat].slice(-max);
+      }
+    }
+
+    // 裁切專案 Runtime 日誌
+    for (const proj in this.logs.runtime) {
+      if (this.logs.runtime[proj].length > max) {
+        this.logs.runtime[proj] = this.logs.runtime[proj].slice(-max);
+      }
+    }
   }
 
   public init() {
@@ -46,6 +87,9 @@ class LogStore {
 
     this.initialized = true;
     console.log('[logStore] window.runtime detected. Binding log listener...');
+    
+    // 異步載入最大保留行數設定
+    this.loadMaxLogLines();
 
     EventsOn('log', (data: any) => {
       console.log('[logStore] Received log payload:', data);
@@ -63,13 +107,13 @@ class LogStore {
             this.logs.runtime[proj] = [];
           }
           this.logs.runtime[proj].push({ text, time });
-          if (this.logs.runtime[proj].length > 1000) {
+          if (this.logs.runtime[proj].length > this.maxLogLines) {
             this.logs.runtime[proj].shift();
           }
         } else {
           const cat = category as keyof Omit<LogData, 'runtime'>;
           this.logs[cat].push({ text, time });
-          if (this.logs[cat].length > 1000) {
+          if (this.logs[cat].length > this.maxLogLines) {
             this.logs[cat].shift();
           }
         }

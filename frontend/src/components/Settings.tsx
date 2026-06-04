@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Save, FolderOpen, Shield, Database, Mail, Languages, Info, FileText, Package } from 'lucide-react';
 import { GetConfig, SaveConfig, SelectFolder, OpenFolder } from '../../wailsjs/go/main/App';
 import DependencyManager from './DependencyManager';
+import { logStore } from './logStore';
 
 export default function Settings() {
   const [config, setConfig] = useState<any>(null);
@@ -50,6 +51,7 @@ export default function Settings() {
       newCfg.global.max_log_lines = parseInt(newCfg.global.max_log_lines || "500");
 
       await SaveConfig(newCfg);
+      logStore.setMaxLogLines(newCfg.global.max_log_lines);
       setConfig(newCfg);
       alert("設定儲存成功！部分設定 (如語言) 可能需要重新啟動以完全套用。");
     } catch (err) {
