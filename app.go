@@ -106,6 +106,9 @@ func (a *App) startup(ctx context.Context) {
 	// 3. 初始化 Lumberjack 檔案日誌寫入器
 	a.initLogWriters()
 
+	// 自動清理過期日誌檔案
+	go a.cleanExpiredLogs()
+
 	// 4. 定義並連接日誌推送函式到進程管理器
 	logFn := func(category string, msg string) {
 		a.handleLog(category, msg)
@@ -226,6 +229,10 @@ func (a *App) getRuntimeLogWriter(projectName string) *lumberjack.Logger {
 	a.runtimeLogMu.Lock()
 	defer a.runtimeLogMu.Unlock()
 
+	if a.runtimeLogWriters == nil {
+		a.runtimeLogWriters = make(map[string]*lumberjack.Logger)
+	}
+
 	if w, ok := a.runtimeLogWriters[projectName]; ok {
 		return w
 	}
@@ -247,6 +254,93 @@ func (a *App) getRuntimeLogWriter(projectName string) *lumberjack.Logger {
 	}
 	a.runtimeLogWriters[projectName] = w
 	return w
+}
+
+// getCategoryLogWriter 取得（或建立）指定分類的系統日誌寫入器
+func (a *App) getCategoryLogWriter(category string) *lumberjack.Logger {
+	catKey := strings.ToLower(category)
+	if catKey == "" {
+		return nil
+	}
+
+	a.runtimeLogMu.Lock()
+	defer a.runtimeLogMu.Unlock()
+
+	if a.runtimeLogWriters == nil {
+		a.runtimeLogWriters = make(map[string]*lumberjack.Logger)
+	}
+
+	// 檔名格式為 wincmp-分類-日期.log，例如 wincmp-caddy-2026-06-04.log
+	logKey := "wincmp-" + catKey
+
+	if w, ok := a.runtimeLogWriters[logKey]; ok {
+		return w
+	}
+
+	logDir := filepath.Join(a.baseDir, "logs")
+	os.MkdirAll(logDir, 0700)
+
+	retention := 30
+	if a.appCfg != nil && a.appCfg.Global.MaxLogRetention > 0 {
+		retention = a.appCfg.Global.MaxLogRetention
+	}
+
+	w := &lumberjack.Logger{
+		Filename:   filepath.Join(logDir, fmt.Sprintf("wincmp-%s-%s.log", catKey, time.Now().Format("2006-01-02"))),
+		MaxSize:    10,
+		MaxBackups: 0,
+		MaxAge:     retention,
+		Compress:   true,
+	}
+	a.runtimeLogWriters[logKey] = w
+	return w
+}
+
+// cleanExpiredLogs 清除超出保存期限的歷史日誌檔案
+func (a *App) cleanExpiredLogs() {
+	retention := 30
+	if a.appCfg != nil && a.appCfg.Global.MaxLogRetention > 0 {
+		retention = a.appCfg.Global.MaxLogRetention
+	}
+
+	logDir := filepath.Join(a.baseDir, "logs")
+	files, err := os.ReadDir(logDir)
+	if err != nil {
+		return
+	}
+
+	now := time.Now()
+	cutoffDate := now.AddDate(0, 0, -retention)
+
+	// 清理格式為 *-[YYYY-MM-DD].log 的日誌檔案
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		name := file.Name()
+		if !strings.HasSuffix(name, ".log") {
+			continue
+		}
+
+		dotLog := strings.LastIndex(name, ".log")
+		// 確保檔名長度足夠，且日期前一個字元必須為 "-"
+		if dotLog < 11 || name[dotLog-11] != '-' {
+			continue
+		}
+
+		dateStr := name[dotLog-10 : dotLog]
+		fileDate, err := time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			continue
+		}
+
+		// 如果檔案的日期在截止日期之前，則刪除它
+		if fileDate.Before(cutoffDate) {
+			filePath := filepath.Join(logDir, name)
+			_ = os.Remove(filePath)
+			a.handleLog("system", fmt.Sprintf("ℹ️ 已自動刪除過期日誌檔: %s", name))
+		}
+	}
 }
 
 // parseProjectFromRuntimeMsg 從 runtime log 訊息中解析專案名稱
@@ -275,12 +369,18 @@ func (a *App) handleLog(category string, msg string) {
 
 	catKey := strings.ToLower(category)
 
+	var projectName string
+	if catKey == "node" || catKey == "runtime" {
+		projectName = parseProjectFromRuntimeMsg(msg)
+	}
+
 	// 1. 推送到 Wails 前端 (前端 React 會監聽 "log" 事件)
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, "log", map[string]interface{}{
-			"category": catKey,
-			"message":  newText,
-			"time":     timeStr,
+			"category":    catKey,
+			"message":     newText,
+			"time":        timeStr,
+			"projectName": projectName,
 		})
 	}
 
@@ -292,8 +392,14 @@ func (a *App) handleLog(category string, msg string) {
 				w.Write([]byte(newText))
 			}
 		}
-	} else if a.appLogWriter != nil {
-		a.appLogWriter.Write([]byte(newText))
+	} else {
+		// 按系統分類分別寫入對應的 wincmp-分類-日期.log 檔案
+		if w := a.getCategoryLogWriter(catKey); w != nil {
+			w.Write([]byte(newText))
+		} else if a.appLogWriter != nil {
+			// 兜底降級寫入通用 wincmp-日期.log
+			a.appLogWriter.Write([]byte(newText))
+		}
 	}
 }
 

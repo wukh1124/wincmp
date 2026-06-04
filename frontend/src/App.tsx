@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -225,7 +225,13 @@ export default function App() {
               <Terminal size={11} className="text-blue-400" />
               <span>{showLogs ? '收起 Logs 控制台' : '打開 Logs 控制台'}</span>
             </button>
-            <span className="text-[9px] text-gray-500 font-mono"></span>
+            <button
+              onClick={() => setShowLogs(!showLogs)}
+              className="p-1 rounded-md text-gray-400 hover:text-gray-200 hover:bg-white/5 transition flex items-center justify-center"
+              title={showLogs ? '收起 Logs 控制台' : '打開 Logs 控制台'}
+            >
+              {showLogs ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+            </button>
           </div>
         )}
 
