@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -25,6 +26,7 @@ import (
 	"wincmp/internal/process"
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
+	"wincmp/internal/singleinstance"
 )
 
 // ==========================================
@@ -1131,5 +1133,35 @@ func (a *App) StopTerminalSession(sessionID string) {
 	if a.termMgr != nil {
 		a.termMgr.Stop(sessionID)
 	}
+}
+
+// RestartApp 儲存目前服務狀態，安全釋放鎖，並重啟 WinCMP
+func (a *App) RestartApp() error {
+	a.quittingMu.Lock()
+	a.quitting = true
+	a.quittingMu.Unlock()
+
+	a.handleLog("system", i18n.T("正在準備重啟 WinCMP..."))
+
+	// 提前釋放單實例鎖，讓新啟動的行程順利取得鎖
+	singleinstance.Release()
+
+	execPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("無法取得執行檔路徑: %w", err)
+	}
+
+	cmd := exec.Command(execPath, "--restart")
+	cmd.Dir = a.baseDir
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: 0x01000000, // CREATE_BREAKAWAY_FROM_JOB
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("自動重啟失敗: %w", err)
+	}
+
+	runtime.Quit(a.ctx)
+	return nil
 }
 

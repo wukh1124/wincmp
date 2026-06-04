@@ -18,6 +18,7 @@ import (
 	"wincmp/internal/process"
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
+	"wincmp/internal/singleinstance"
 	"fyne.io/systray"
 
 	"wincmp/internal/terminal"
@@ -139,6 +140,15 @@ func (a *App) startup(ctx context.Context) {
 
 	// 9. 初始化系統托盤
 	a.setupSystray()
+
+	// 10. 啟動啟動訊號監聽（用於單一實例喚回）
+	singleinstance.ListenForActivation(func() {
+		if a.ctx != nil {
+			runtime.WindowShow(a.ctx)
+			runtime.WindowUnminimise(a.ctx)
+		}
+		singleinstance.ActivateWindow("WinCMP Control Panel")
+	})
 }
 
 // shutdown 在應用程式關閉時由 Wails 自動呼叫，安全停止所有背景服務與子進程並關閉日誌

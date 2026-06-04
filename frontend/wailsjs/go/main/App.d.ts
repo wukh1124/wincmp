@@ -41,6 +41,8 @@ export function ReloadCaddy():Promise<void>;
 
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
 
+export function RestartApp():Promise<void>;
+
 export function SaveConfig(arg1:config.WincmpConfig):Promise<void>;
 
 export function ScanServices():Promise<scanner.ScanResult>;
