@@ -20,6 +20,7 @@ import (
 	"wincmp/internal/config"
 	"wincmp/internal/detect"
 	"wincmp/internal/hosts"
+	"wincmp/internal/i18n"
 	"wincmp/internal/preset"
 	"wincmp/internal/process"
 	"wincmp/internal/resource"
@@ -623,7 +624,7 @@ func (a *App) triggerHostsUpdate() {
 
 	missing, err := hosts.CheckHosts(allDomains)
 	if err != nil {
-		fmt.Printf("檢查 Hosts 失敗: %v\n", err)
+		a.handleErrorLog("system", i18n.T("檢查 Hosts 失敗"), err)
 		return
 	}
 
@@ -631,7 +632,7 @@ func (a *App) triggerHostsUpdate() {
 		return
 	}
 
-	fmt.Printf("🔍 偵測到 %d 個網域不在系統 Hosts 中: %s\n", len(missing), strings.Join(missing, ", "))
+	a.handleLog("system", i18n.Tfmt("🔍 偵測到 %d 個網域不在系統 Hosts 中: %s", len(missing), strings.Join(missing, ", ")))
 
 	var invalidDomains []string
 	var validMissing []string
@@ -644,7 +645,7 @@ func (a *App) triggerHostsUpdate() {
 	}
 
 	if len(invalidDomains) > 0 {
-		fmt.Printf("⚠️ 以下網域含非法字元，已跳過: %v\n", invalidDomains)
+		a.handleLog("system", i18n.Tfmt("⚠️ 以下網域含非法字元(含底線)，已跳過: %v", invalidDomains))
 	}
 
 	if len(validMissing) == 0 {
@@ -654,20 +655,30 @@ func (a *App) triggerHostsUpdate() {
 	// 備份 Hosts
 	backupPath, err := hosts.BackupHosts(a.baseDir)
 	if err != nil {
-		fmt.Printf("備份 Hosts 失敗 (將停止更新): %v\n", err)
+		a.handleErrorLog("system", i18n.T("備份 Hosts 失敗 (將停止更新)"), err)
 		return
 	}
-	fmt.Printf("✅ 已備份現有 Hosts 到: %s\n", backupPath)
+	a.handleLog("system", i18n.Tfmt("✅ 已備份現有 Hosts 到: %s", backupPath))
 
 	// 更新 Hosts
 	err = hosts.UpdateHosts(validMissing)
 	if err != nil {
-		fmt.Printf("更新系統 Hosts 失敗: %v\n", err)
-		// TODO: 在 Phase 4 處理 Hosts 權限對話框提示
+		errMsg := i18n.T("更新系統 Hosts 失敗 (可能需要管理員權限)")
+		a.handleErrorLog("system", errMsg, err)
+		
+		// 彈出 Wails 對話框提示用戶
+		go func() {
+			_, _ = runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+				Type:          runtime.WarningDialog,
+				Title:         i18n.T("Hosts 更新失敗"),
+				Message:       i18n.T("無法寫入 Hosts 檔案。這通常是因為權限不足。\n請嘗試以「系統管理員身分」執行 WinCMP，或者手動將網域新增至 Hosts 檔案中。") + "\n\n" + fmt.Sprintf("Error: %v", err),
+				Buttons:       []string{i18n.T("確定")},
+			})
+		}()
 		return
 	}
 
-	fmt.Printf("🚀 已成功將 %d 個網域寫入系統 Hosts 檔\n", len(validMissing))
+	a.handleLog("system", i18n.Tfmt("🚀 已成功將 %d 個網域寫入系統 Hosts 檔", len(validMissing)))
 }
 
 // OpenFolder 用系統預設檔案瀏覽器開啟指定的本機資料夾

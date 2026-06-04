@@ -119,6 +119,9 @@ var enTranslations = map[string]string{
 	"🚀 已成功將 %d 個網域寫入系統 Hosts 檔": "Successfully wrote %d domains to system Hosts file",
 	"備份 Hosts 失敗 (將停止更新)":       "Failed to backup Hosts (update stopped)",
 	"✅ 已備份現有 Hosts 到: %s":       "Backup existing Hosts to: %s",
+	"更新系統 Hosts 失敗 (可能需要管理員權限)": "Failed to update system Hosts (may require administrator privileges)",
+	"無法寫入 Hosts 檔案。這通常是因為權限不足。\n請嘗試以「系統管理員身分」執行 WinCMP，或者手動將網域新增至 Hosts 檔案中。": "Cannot write to the Hosts file. This is usually due to insufficient privileges.\nPlease try running WinCMP 'As Administrator', or manually add the domains to your Hosts file.",
+
 
 	// Dashboard & Project actions
 	"啟動資料庫中，請稍候...": "Starting database, please wait...",
