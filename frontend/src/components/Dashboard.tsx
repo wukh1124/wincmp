@@ -144,7 +144,7 @@ export default function Dashboard() {
       }
       await updateStatus();
     } catch (err: any) {
-      alert(`操作失敗: ${err}`);
+      (window as any).customAlert(`操作失敗: ${err}`);
     } finally {
       setLoadingServices(prev => ({ ...prev, [key]: false }));
     }
@@ -161,7 +161,7 @@ export default function Dashboard() {
       await SaveConfig(newCfg);
       setConfig(newCfg);
     } catch (err) {
-      alert(`保存設定失敗: ${err}`);
+      (window as any).customAlert(`保存設定失敗: ${err}`);
     }
   };
 

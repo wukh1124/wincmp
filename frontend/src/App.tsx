@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -7,6 +7,7 @@ import Settings from './components/Settings';
 import ResourceMonitor from './components/ResourceMonitor';
 import TerminalLogs from './components/TerminalLogs';
 import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime';
+import { GetAppVersion, IsAdmin, GetConfig } from '../wailsjs/go/main/App';
 import logo from './assets/images/icon.svg';
 
 export default function App() {
@@ -14,12 +15,92 @@ export default function App() {
   const [showLogs, setShowLogs] = useState(true);
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
   const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
-  const [customAlert, setCustomAlert] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
+  const [customAlert, setCustomAlert] = useState<{ isOpen: boolean; message: string; resolve?: () => void }>({ isOpen: false, message: '' });
+  const [customConfirm, setCustomConfirm] = useState<{ isOpen: boolean; message: string; resolve?: (value: boolean) => void }>({ isOpen: false, message: '' });
 
-  // 覆寫原生的 window.alert 以提供漂亮的自訂彈窗，避免 wails.localhost 標題
+  // 新增版本號、管理員狀態與搜尋專案相關的 state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [appVersion, setAppVersion] = useState('v3.0.0');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [config, setConfig] = useState<any>(null);
+  const [highlightedProjectName, setHighlightedProjectName] = useState<string | null>(null);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // 1. 初始化讀取版本與管理員權限
   useEffect(() => {
+    GetAppVersion().then(setAppVersion).catch((err: any) => console.error("獲取版本失敗:", err));
+    IsAdmin().then(setIsAdmin).catch((err: any) => console.error("獲取管理員權限失敗:", err));
+  }, []);
+
+  // 2. 監聽 Ctrl+K 快速鍵聚焦搜尋框
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // 3. 獲取專案清單 (搜尋使用)
+  const refreshProjectsList = async () => {
+    try {
+      const cfg = await GetConfig();
+      setConfig(cfg);
+    } catch (err) {
+      console.error("搜尋讀取設定失敗:", err);
+    }
+  };
+
+  // 4. Tab 切換阻斷 (設定頁未儲存防禦機制)
+  const handleTabChange = async (tabId: typeof activeTab) => {
+    if (activeTab === 'settings' && tabId !== 'settings') {
+      if ((window as any).isSettingsDirty) {
+        const confirmLeave = await (window as any).customConfirm("您有尚未儲存的設定變更，確定要離開此頁面嗎？");
+        if (!confirmLeave) {
+          return;
+        }
+      }
+    }
+    // 離開設定頁面時確保重置 dirty state
+    (window as any).isSettingsDirty = false;
+    setActiveTab(tabId);
+  };
+
+  // 覆寫與註冊漂亮的自訂彈窗，避免 wails.localhost 標題
+  useEffect(() => {
+    (window as any).customAlert = (message: any) => {
+      return new Promise<void>((resolve) => {
+        setCustomAlert({
+          isOpen: true,
+          message: String(message),
+          resolve: () => {
+            setCustomAlert({ isOpen: false, message: '', resolve: undefined });
+            resolve();
+          }
+        });
+      });
+    };
+
+    (window as any).customConfirm = (message: any) => {
+      return new Promise<boolean>((resolve) => {
+        setCustomConfirm({
+          isOpen: true,
+          message: String(message),
+          resolve: (val: boolean) => {
+            setCustomConfirm({ isOpen: false, message: '', resolve: undefined });
+            resolve(val);
+          }
+        });
+      });
+    };
+
     window.alert = (message: any) => {
-      setCustomAlert({ isOpen: true, message: String(message) });
+      (window as any).customAlert(message);
     };
   }, []);
 
@@ -54,7 +135,7 @@ export default function App() {
       case 'dashboard':
         return <Dashboard />;
       case 'projects':
-        return <Projects />;
+        return <Projects highlightedProjectName={highlightedProjectName} clearHighlight={() => setHighlightedProjectName(null)} />;
       case 'db_explorer':
         return <DBExplorer />;
       case 'resources':
@@ -108,7 +189,7 @@ export default function App() {
             {menuItems.map(item => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleTabChange(item.id)}
                 title={isCollapsed ? item.label.split(' ')[0] : undefined}
                 className={`w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 ${isCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
                   } ${activeTab === item.id
@@ -188,23 +269,87 @@ export default function App() {
       <main className="flex-1 flex flex-col overflow-hidden">
 
         {/* Topbar 搜尋與連線狀態列 */}
-        <header className="h-14 border-b border-darkBorder bg-darkCard/25 backdrop-blur-md px-6 flex items-center justify-between select-none">
+        <header className="relative z-30 h-14 border-b border-darkBorder bg-darkCard/25 backdrop-blur-md px-6 flex items-center justify-between select-none">
           <div className="flex items-center gap-3 w-64">
             <div className="relative w-full">
               <input
+                ref={searchInputRef}
                 type="text"
-                placeholder="搜尋專案或設定... (Ctrl+K)"
-                disabled
-                className="w-full bg-darkInput/40 border border-darkBorder rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-400 placeholder-gray-500 outline-none cursor-not-allowed"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => {
+                  setIsSearchFocused(true);
+                  refreshProjectsList();
+                }}
+                onBlur={() => {
+                  // 延遲關閉，好讓 onMouseDown 能被優先觸發
+                  setTimeout(() => setIsSearchFocused(false), 200);
+                }}
+                placeholder="搜尋專案名稱、網域或路徑... (Ctrl+K)"
+                className="w-full bg-darkInput/40 border border-darkBorder rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 outline-none focus:border-blue-500 transition duration-150"
               />
               <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
+
+              {/* 搜尋結果下拉選單 */}
+              {isSearchFocused && searchQuery && (
+                <div className="absolute z-[9999] left-0 right-0 mt-1 bg-[#0c0c0e] border border-darkBorder rounded-lg shadow-2xl max-h-60 overflow-y-auto divide-y divide-darkBorder/40">
+                  {(() => {
+                    const q = searchQuery.toLowerCase();
+                    const filtered = config?.projects?.filter((proj: any) => {
+                      return (
+                        proj.name?.toLowerCase().includes(q) ||
+                        proj.root_path?.toLowerCase().includes(q) ||
+                        proj.domains?.some((d: string) => d.toLowerCase().includes(q))
+                      );
+                    }) || [];
+
+                    if (filtered.length > 0) {
+                      return filtered.map((proj: any) => (
+                        <div
+                          key={proj.name}
+                          onMouseDown={() => {
+                            handleTabChange('projects');
+                            setHighlightedProjectName(proj.name);
+                            setSearchQuery('');
+                          }}
+                          className="p-2.5 hover:bg-blue-600/10 cursor-pointer flex flex-col gap-0.5 text-left"
+                        >
+                          <div className="text-xs font-bold text-gray-200">{proj.name}</div>
+                          <div className="text-[10px] text-gray-500 font-mono truncate">{proj.root_path}</div>
+                          <div className="text-[10px] text-blue-400 font-mono truncate">{proj.domains?.join(', ')}</div>
+                        </div>
+                      ));
+                    } else {
+                      return (
+                        <div className="p-3 text-[11px] text-gray-500 text-center">找不到匹配的專案 😭</div>
+                      );
+                    }
+                  })()}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {/* 管理員權限指示徽章 */}
+            <div
+              className={`flex items-center gap-1.5 text-xs font-semibold cursor-help select-none ${
+                isAdmin ? 'text-blue-400' : 'text-amber-500'
+              }`}
+              title={
+                isAdmin
+                  ? '已取得系統管理員權限，可自動配置 Hosts 網域別名'
+                  : '無管理員權限：可能無法自動修改 Hosts 檔，需手動管理網域別名'
+              }
+            >
+              <Shield size={12} className={isAdmin ? 'text-blue-400' : 'text-amber-500'} />
+              <span>{isAdmin ? '管理員模式' : '限制模式'}</span>
+            </div>
+            <div className="h-3 w-[1px] bg-darkBorder" />
+            
             {/* 連線狀態指示燈 */}
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <span className="relative flex h-1.5 w-1.5">
@@ -214,7 +359,7 @@ export default function App() {
               <span>Go 核心已連線</span>
             </div>
             <div className="h-3 w-[1px] bg-darkBorder" />
-            <span className="text-[10px] text-gray-500 font-semibold tracking-wide">v3.0.0</span>
+            <span className="text-[10px] text-gray-500 font-semibold tracking-wide">{appVersion}</span>
           </div>
         </header>
 
@@ -262,7 +407,43 @@ export default function App() {
             <p className="text-xs text-gray-300 leading-relaxed break-all whitespace-pre-line">{customAlert.message}</p>
             <div className="flex justify-end pt-1">
               <button
-                onClick={() => setCustomAlert({ isOpen: false, message: '' })}
+                onClick={() => {
+                  if (customAlert.resolve) customAlert.resolve();
+                  else setCustomAlert({ isOpen: false, message: '' });
+                }}
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-500/10 active:scale-[0.98] transition duration-150"
+              >
+                確定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 全域自訂 Confirm Modal */}
+      {customConfirm.isOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200 select-none">
+          <div className="w-full max-w-sm bg-darkCard border border-darkBorder rounded-xl shadow-2xl overflow-hidden p-5 flex flex-col space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-2.5 text-blue-400 font-bold text-sm">
+              <span className="text-base">❓</span>
+              <span>系統確認</span>
+            </div>
+            <p className="text-xs text-gray-300 leading-relaxed break-all whitespace-pre-line">{customConfirm.message}</p>
+            <div className="flex justify-end gap-2.5 pt-1">
+              <button
+                onClick={() => {
+                  if (customConfirm.resolve) customConfirm.resolve(false);
+                  else setCustomConfirm({ isOpen: false, message: '' });
+                }}
+                className="px-4 py-1.5 bg-darkInput border border-darkBorder hover:bg-darkBorder text-gray-300 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  if (customConfirm.resolve) customConfirm.resolve(true);
+                  else setCustomConfirm({ isOpen: false, message: '' });
+                }}
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-500/10 active:scale-[0.98] transition duration-150"
               >
                 確定

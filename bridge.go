@@ -1165,3 +1165,22 @@ func (a *App) RestartApp() error {
 	return nil
 }
 
+// ─── 系統版本與權限 API ──────────────────────────────
+
+var (
+	shell32           = syscall.NewLazyDLL("shell32.dll")
+	procIsUserAnAdmin = shell32.NewProc("IsUserAnAdmin")
+)
+
+// GetAppVersion 獲取當前應用程式版本號
+func (a *App) GetAppVersion() string {
+	return AppVersion
+}
+
+// IsAdmin 檢查當前進程是否以系統管理員權限啟動
+func (a *App) IsAdmin() bool {
+	ret, _, _ := procIsUserAnAdmin.Call()
+	return ret != 0
+}
+
+

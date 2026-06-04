@@ -134,6 +134,12 @@ wincmp/
 * **PHP 連接埠**：由 `calcPHPPortBase()` 計算（預設公式：`3` + `主版本` + `次版本` + `00` 起始，例如 PHP 8.2 為 `38200` 開始的連續端口），每版本預設啟動 3 個 `php-cgi` 進程。
 * **網域 Hosts 同步**：本機自訂網域同步寫入 `C:\Windows\System32\drivers\etc\hosts` 前，必須檢測是否有新增，並在寫入前進行 Hosts 檔案備份。
 
+### 4.4 全域自訂彈出視窗規範 (Alert/Confirm)
+* **禁止原生 WebView 視窗**：為避免在 Windows 上出現帶有 `wails.localhost 說` 標題的原生對話框影響美觀，本專案**全面禁止**直接使用瀏覽器原生的 `window.alert()`、`window.confirm()` 以及 `confirm()`。
+* **自訂方法呼叫**：
+  * **Alert 提示**：必須使用全域掛載的 `(window as any).customAlert("提示訊息")`，這會以 Promise 非同步彈出自訂的 React 彈出視窗。
+  * **Confirm 確認**：必須使用 `await (window as any).customConfirm("確認訊息")` 進行非同步等待，並依據回傳的 `boolean` (確定為 `true`，取消為 `false`) 執行後續邏輯。
+
 ---
 
 ## 5. 注意事項與禁止行為

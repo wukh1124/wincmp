@@ -123,6 +123,9 @@ wails build -clean
 
 # 壓縮並移除 symbols 的正式發布 (適用於極致體積優化)
 wails build -clean -ldflags "-s -w"
+
+# 自動化打包建置：透過 Go 的 -ldflags 動態注入版本號 (例如 v3.1.0)
+wails build -ldflags "-X main.AppVersion=v3.1.0"
 ```
 
 ---

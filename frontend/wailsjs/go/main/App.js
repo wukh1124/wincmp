@@ -22,6 +22,10 @@ export function FetchRemoteDependencies() {
   return window['go']['main']['App']['FetchRemoteDependencies']();
 }
 
+export function GetAppVersion() {
+  return window['go']['main']['App']['GetAppVersion']();
+}
+
 export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
@@ -40,6 +44,10 @@ export function GetScanResult() {
 
 export function GetServicesStatus() {
   return window['go']['main']['App']['GetServicesStatus']();
+}
+
+export function IsAdmin() {
+  return window['go']['main']['App']['IsAdmin']();
 }
 
 export function IsMariaDBRunning() {

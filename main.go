@@ -15,6 +15,9 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// AppVersion 定義應用程式版本，可在 build 時透過 -ldflags "-X main.AppVersion=vX.Y.Z" 動態注入
+var AppVersion = "v3.0.0"
+
 func main() {
 	isRestart := false
 	for _, arg := range os.Args {

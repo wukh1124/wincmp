@@ -108,9 +108,9 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     try {
       const cfg = await FetchRemoteDependencies();
       setDepConfig(cfg);
-      alert("成功從遠端獲取最新的建議依賴配置！");
+      (window as any).customAlert("成功從遠端獲取最新的建議依賴配置！");
     } catch (err) {
-      alert(`獲取遠端依賴配置失敗: ${err}`);
+      (window as any).customAlert(`獲取遠端依賴配置失敗: ${err}`);
     } finally {
       setIsFetchingRemote(false);
     }

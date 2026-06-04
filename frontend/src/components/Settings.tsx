@@ -6,6 +6,7 @@ import { logStore } from './logStore';
 
 export default function Settings() {
   const [config, setConfig] = useState<any>(null);
+  const [originalConfig, setOriginalConfig] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showDepManager, setShowDepManager] = useState(false);
 
@@ -14,11 +15,31 @@ export default function Settings() {
       try {
         const cfg = await GetConfig();
         setConfig(cfg);
+        // 深度複製設定作為比對基準線
+        setOriginalConfig(JSON.parse(JSON.stringify(cfg)));
+        (window as any).isSettingsDirty = false;
       } catch (err) {
         console.error("載入設定檔失敗:", err);
       }
     }
     loadConfig();
+  }, []);
+
+  // 監聽設定變更，判斷是否與原始設定不同
+  useEffect(() => {
+    if (config && originalConfig) {
+      const isDirty = JSON.stringify(config.global) !== JSON.stringify(originalConfig.global);
+      (window as any).isSettingsDirty = isDirty;
+    } else {
+      (window as any).isSettingsDirty = false;
+    }
+  }, [config, originalConfig]);
+
+  // 元件卸載時，自動清理髒狀態標記
+  useEffect(() => {
+    return () => {
+      (window as any).isSettingsDirty = false;
+    };
   }, []);
 
   const handleSelectFolder = async (field: 'default_www' | 'default_ssl' | 'mariadb_basedir' | 'mariadb_datadir') => {
@@ -53,9 +74,11 @@ export default function Settings() {
       await SaveConfig(newCfg);
       logStore.setMaxLogLines(newCfg.global.max_log_lines);
       setConfig(newCfg);
-      alert("設定儲存成功！部分設定 (如語言) 可能需要重新啟動以完全套用。");
+      setOriginalConfig(JSON.parse(JSON.stringify(newCfg)));
+      (window as any).isSettingsDirty = false;
+      (window as any).customAlert("設定儲存成功！部分設定 (如語言) 可能需要重新啟動以完全套用。");
     } catch (err) {
-      alert(`儲存設定失敗: ${err}`);
+      (window as any).customAlert(`儲存設定失敗: ${err}`);
     } finally {
       setIsSaving(false);
     }
@@ -72,7 +95,7 @@ export default function Settings() {
         await OpenFolder('./conf/wincmp.json');
       }
     } catch (err) {
-      alert(`無法開啟設定檔: ${err}`);
+      (window as any).customAlert(`無法開啟設定檔: ${err}`);
     }
   };
 

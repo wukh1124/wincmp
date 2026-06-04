@@ -32,7 +32,7 @@ interface Project {
   use_wincmp_bin?: boolean;
 }
 
-export default function Projects() {
+export default function Projects({ highlightedProjectName, clearHighlight }: { highlightedProjectName?: string | null; clearHighlight?: () => void }) {
   const [config, setConfig] = useState<any>(null);
   const [scanResult, setScanResult] = useState<any>(null);
   const [servicesStatus, setServicesStatus] = useState<Record<string, boolean>>({});
@@ -43,6 +43,29 @@ export default function Projects() {
   const [isDetecting, setIsDetecting] = useState(false);
   const [detected, setDetected] = useState(false);
   const [terminalProject, setTerminalProject] = useState<string | null>(null);
+
+  // 用於記錄當前高亮閃爍的專案行
+  const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
+
+  // 監聽來自 Topbar 的搜尋跳轉高亮滾動需求
+  useEffect(() => {
+    if (highlightedProjectName && config?.projects) {
+      // 確保 DOM 渲染完畢
+      setTimeout(() => {
+        const element = document.getElementById(`project-row-${highlightedProjectName}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setHighlightedRow(highlightedProjectName);
+          const timer = setTimeout(() => {
+            setHighlightedRow(null);
+            if (clearHighlight) clearHighlight();
+          }, 2000);
+        } else {
+          if (clearHighlight) clearHighlight();
+        }
+      }, 100);
+    }
+  }, [highlightedProjectName, config]);
 
   // 初始化專案類型與 Runtime 類型對照表
   const projectTypes = [
@@ -136,7 +159,7 @@ export default function Projects() {
       await ReloadCaddy();
       await updateStatus();
     } catch (err) {
-      alert(`儲存設定失敗: ${err}`);
+      (window as any).customAlert(`儲存設定失敗: ${err}`);
     }
   };
 
@@ -146,7 +169,7 @@ export default function Projects() {
       await StartProjectRuntime(name);
       await updateStatus();
     } catch (err) {
-      alert(`啟動 Runtime 失敗: ${err}`);
+      (window as any).customAlert(`啟動 Runtime 失敗: ${err}`);
     } finally {
       setLoadingProjects(prev => ({ ...prev, [name]: false }));
     }
@@ -158,7 +181,7 @@ export default function Projects() {
       await StopProjectRuntime(name);
       await updateStatus();
     } catch (err) {
-      alert(`停止 Runtime 失敗: ${err}`);
+      (window as any).customAlert(`停止 Runtime 失敗: ${err}`);
     } finally {
       setLoadingProjects(prev => ({ ...prev, [name]: false }));
     }
@@ -168,14 +191,14 @@ export default function Projects() {
     try {
       await OpenFolder(path);
     } catch (err) {
-      alert(`無法開啟目錄: ${err}`);
+      (window as any).customAlert(`無法開啟目錄: ${err}`);
     }
   };
 
   const handleCopyLink = (domain: string, useSSL: boolean) => {
     const link = `${useSSL ? 'https' : 'http'}://${domain}`;
     navigator.clipboard.writeText(link);
-    alert(`連結已複製: ${link}`);
+    (window as any).customAlert(`連結已複製: ${link}`);
   };
 
   const handleOpenEditModal = (proj: Project | null, idx: number | null) => {
@@ -235,7 +258,7 @@ export default function Projects() {
       }
     } catch (err) {
       console.error("自動偵測專案失敗:", err);
-      alert(`自動偵測專案失敗: ${err}`);
+      (window as any).customAlert(`自動偵測專案失敗: ${err}`);
     } finally {
       setIsDetecting(false);
     }
@@ -259,12 +282,12 @@ export default function Projects() {
   const handleSaveProject = async () => {
     if (!editingProject || !config) return;
     if (!editingProject.name.trim()) {
-      alert("專案名稱不能為空");
+      (window as any).customAlert("專案名稱不能為空");
       return;
     }
 
     if (editingProject.use_wincmp_bin && !hasBundledRuntime(editingProject.runtime_type)) {
-      alert("儲存失敗：您勾選了使用 WinCMP 內建執行檔，但系統未在 ./bin/ 下偵測到可用的 Node.js 或 Bun 執行檔。請先下載並放置於對應目錄，或取消勾選此選項以使用系統全域執行檔。");
+      (window as any).customAlert("儲存失敗：您勾選了使用 WinCMP 內建執行檔，但系統未在 ./bin/ 下偵測到可用的 Node.js 或 Bun 執行檔。請先下載並放置於對應目錄，或取消勾選此選項以使用系統全域執行檔。");
       return;
     }
 
@@ -292,12 +315,12 @@ export default function Projects() {
       await ReloadCaddy(); // 自動重載 Caddyfile 與 Hosts 檔
       await updateStatus();
     } catch (err) {
-      alert(`保存專案設定失敗: ${err}`);
+      (window as any).customAlert(`保存專案設定失敗: ${err}`);
     }
   };
 
   const handleDeleteProject = async (idx: number) => {
-    if (!confirm("確定要刪除此專案嗎？這只會從 WinCMP 面板移除，不會刪除硬碟上的專案代碼喔！")) {
+    if (!await (window as any).customConfirm("確定要刪除此專案嗎？這只會從 WinCMP 面板移除，不會刪除硬碟上的專案代碼喔！")) {
       return;
     }
 
@@ -310,7 +333,7 @@ export default function Projects() {
       await ReloadCaddy();
       await updateStatus();
     } catch (err) {
-      alert(`刪除專案失敗: ${err}`);
+      (window as any).customAlert(`刪除專案失敗: ${err}`);
     }
   };
 
@@ -350,9 +373,14 @@ export default function Projects() {
                 const runtimeKey = `runtime_${proj.name}`;
                 const running = hasRuntime && !!servicesStatus[runtimeKey];
                 const loading = loadingProjects[proj.name];
+                const isHighlighted = proj.name === highlightedRow;
 
                 return (
-                  <tr key={idx} className={`hover:bg-white/[0.015] transition duration-150 ${proj.enabled ? '' : 'opacity-50'}`}>
+                  <tr
+                    key={idx}
+                    id={`project-row-${proj.name}`}
+                    className={`hover:bg-white/[0.015] transition-all duration-300 ${proj.enabled ? '' : 'opacity-50'} ${isHighlighted ? 'animate-highlight bg-blue-600/10' : ''}`}
+                  >
                     <td className="px-4 py-2.5">
                       <div className="space-y-0.5">
                         <div className="text-sm font-bold text-gray-100">{proj.name}</div>

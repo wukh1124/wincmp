@@ -48,7 +48,7 @@ export default function DBExplorer() {
     try {
       await OpenInHeidiSQL();
     } catch (err) {
-      alert(`開啟 HeidiSQL 失敗: ${err}`);
+      (window as any).customAlert(`開啟 HeidiSQL 失敗: ${err}`);
     }
   };
 

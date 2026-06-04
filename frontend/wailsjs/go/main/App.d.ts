@@ -15,6 +15,8 @@ export function DownloadDependency(arg1:string):Promise<void>;
 
 export function FetchRemoteDependencies():Promise<config.DependencyConfig>;
 
+export function GetAppVersion():Promise<string>;
+
 export function GetConfig():Promise<config.WincmpConfig>;
 
 export function GetDependencyConfig():Promise<config.DependencyConfig>;
@@ -24,6 +26,8 @@ export function GetDetailedResources():Promise<resource.DetailedResources>;
 export function GetScanResult():Promise<scanner.ScanResult>;
 
 export function GetServicesStatus():Promise<Record<string, boolean>>;
+
+export function IsAdmin():Promise<boolean>;
 
 export function IsMariaDBRunning():Promise<boolean>;
 
