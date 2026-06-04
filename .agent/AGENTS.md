@@ -119,12 +119,29 @@ wincmp/
 ## 4. 核心業務邏輯與注意事項
 
 ### 4.1 多國語言 (i18n) 本地化
-* **日誌與彈出訊息**：所有需要呈現在 UI 介面給用戶看的字串（包括 `m.log` 的日誌以及傳遞給 `fmt.Errorf` 的錯誤訊息），**必須**使用 `i18n.T` 或 `i18n.Tfmt` 進行包裹。
-* **Go 端包裹語法**：
-  ```go
-  m.log("php", "%s", i18n.Tfmt("🚀 啟動 PHP-CGI %s...", version))
-  ```
-* **字典維護**：在程式碼中新增 `i18n.T("中文訊息")` 後，務必在 `internal/i18n/i18n.go` 的 `enTranslations` 字典中補上對應的英文對照。
+* **核心規範**：前後端統一採用 **繁體中文 (zh-TW)** 作為翻譯字典的 Key，未命中翻譯時預設直接顯示 Key 實現優雅降級。
+* **後端 Go 規範**：
+  * 所有呈現給使用者的字串、錯誤訊息與日誌，**必須**使用 `i18n.T` 或是 `i18n.Tfmt` 包裹。
+  * **Go 端語法**：
+    ```go
+    i18n.T("釋放預設設定檔失敗")
+    i18n.Tfmt("ℹ️ 已自動刪除過期日誌檔: %s", name)
+    ```
+  * **字典維護**：在程式碼中新增 `i18n.T("中文 Key")` 後，務必於 `internal/i18n/i18n.go` 的 `enTranslations` 字典中補上英文對照。
+* **前端 React 規範**：
+  * 所有 UI 上的可見文字、Placeholder 提示字串與全域彈窗訊息，**必須**使用 `useLanguage` hook 取出 `t` 函數進行包裹。
+  * **React 端語法**：
+    ```tsx
+    import { useLanguage } from '../i18n';
+    
+    const { t } = useLanguage();
+    return (
+      <button title={t("刪除專案")}>
+        {t("快速新增首個專案")}
+      </button>
+    );
+    ```
+  * **字典維護**：在前端程式碼中新增 `t("中文 Key")` 後，務必於 `frontend/src/i18n.ts` 的 `enTranslations` 字典中補上英文對照。
 
 ### 4.2 Windows 路徑與環境變數隔離
 * **正斜線統一**：傳遞給 Caddyfile 的本機路徑，請使用 `strings.ReplaceAll(path, "\\", "/")`，避免 Caddy 讀取反斜線時發生轉義錯誤。

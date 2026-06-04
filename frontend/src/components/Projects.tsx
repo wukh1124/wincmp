@@ -13,6 +13,7 @@ import {
   SelectFolder,
   DetectProjectPath
 } from '../../wailsjs/go/main/App';
+import { t, useLanguage } from '../i18n';
 
 interface Project {
   name: string;
@@ -33,6 +34,7 @@ interface Project {
 }
 
 export default function Projects({ highlightedProjectName, clearHighlight }: { highlightedProjectName?: string | null; clearHighlight?: () => void }) {
+  useLanguage(); // 訂閱語系變更
   const [config, setConfig] = useState<any>(null);
   const [scanResult, setScanResult] = useState<any>(null);
   const [servicesStatus, setServicesStatus] = useState<Record<string, boolean>>({});
@@ -69,29 +71,29 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
   // 初始化專案類型與 Runtime 類型對照表
   const projectTypes = [
-    { value: 'static', label: 'Static HTML' },
-    { value: 'laravel', label: 'Laravel PHP' },
-    { value: 'vite', label: 'Vite React/Vue' },
-    { value: 'next', label: 'Next.js' },
-    { value: 'nuxt', label: 'Nuxt' },
-    { value: 'astro', label: 'Astro' },
-    { value: 'python_fastapi', label: 'Python FastAPI' },
-    { value: 'python_django', label: 'Python Django' },
-    { value: 'python_flask', label: 'Python Flask' },
-    { value: 'go_api', label: 'Go Web API' },
-    { value: 'pocketbase', label: 'PocketBase' },
-    { value: 'custom', label: 'Custom Command' }
+    { value: 'static', label: t('Static HTML') },
+    { value: 'laravel', label: t('Laravel PHP') },
+    { value: 'vite', label: t('Vite React/Vue') },
+    { value: 'next', label: t('Next.js') },
+    { value: 'nuxt', label: t('Nuxt') },
+    { value: 'astro', label: t('Astro') },
+    { value: 'python_fastapi', label: t('Python FastAPI') },
+    { value: 'python_django', label: t('Python Django') },
+    { value: 'python_flask', label: t('Python Flask') },
+    { value: 'go_api', label: t('Go Web API') },
+    { value: 'pocketbase', label: t('PocketBase') },
+    { value: 'custom', label: t('Custom Command') }
   ];
 
   const runtimeTypes = [
-    { value: 'none', label: '無 Runtime (由 Caddy/PHP 直接託管)' },
-    { value: 'auto', label: 'Auto (自動偵測 Node/Bun)' },
-    { value: 'node', label: 'Node.js' },
-    { value: 'bun', label: 'Bun' },
-    { value: 'python', label: 'Python' },
-    { value: 'go_air', label: 'Go + Air (Hot Reload)' },
-    { value: 'go_run', label: 'Go Run' },
-    { value: 'custom', label: 'Custom Command' }
+    { value: 'none', label: t('無 Runtime') },
+    { value: 'auto', label: t('Auto (自動偵測 Node/Bun)') },
+    { value: 'node', label: t('Node.js') },
+    { value: 'bun', label: t('Bun') },
+    { value: 'python', label: t('Python') },
+    { value: 'go_air', label: t('Go + Air (Hot Reload)') },
+    { value: 'go_run', label: t('Go Run') },
+    { value: 'custom', label: t('Custom Command') }
   ];
 
   const hasBundledRuntime = (rt?: string) => {
@@ -159,7 +161,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       await ReloadCaddy();
       await updateStatus();
     } catch (err) {
-      (window as any).customAlert(`儲存設定失敗: ${err}`);
+      (window as any).customAlert(`${t("儲存設定失敗")}: ${err}`);
     }
   };
 
@@ -169,7 +171,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       await StartProjectRuntime(name);
       await updateStatus();
     } catch (err) {
-      (window as any).customAlert(`啟動 Runtime 失敗: ${err}`);
+      (window as any).customAlert(`${t("啟動 Runtime 失敗")}: ${err}`);
     } finally {
       setLoadingProjects(prev => ({ ...prev, [name]: false }));
     }
@@ -181,7 +183,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       await StopProjectRuntime(name);
       await updateStatus();
     } catch (err) {
-      (window as any).customAlert(`停止 Runtime 失敗: ${err}`);
+      (window as any).customAlert(`${t("停止 Runtime 失敗")}: ${err}`);
     } finally {
       setLoadingProjects(prev => ({ ...prev, [name]: false }));
     }
@@ -191,14 +193,14 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     try {
       await OpenFolder(path);
     } catch (err) {
-      (window as any).customAlert(`無法開啟目錄: ${err}`);
+      (window as any).customAlert(`${t("無法開啟目錄")}: ${err}`);
     }
   };
 
   const handleCopyLink = (domain: string, useSSL: boolean) => {
     const link = `${useSSL ? 'https' : 'http'}://${domain}`;
     navigator.clipboard.writeText(link);
-    (window as any).customAlert(`連結已複製: ${link}`);
+    (window as any).customAlert(`${t("已複製連結")}: ${link}`);
   };
 
   const handleOpenEditModal = (proj: Project | null, idx: number | null) => {
@@ -258,7 +260,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       }
     } catch (err) {
       console.error("自動偵測專案失敗:", err);
-      (window as any).customAlert(`自動偵測專案失敗: ${err}`);
+      (window as any).customAlert(`${t("自動偵測專案失敗")}: ${err}`);
     } finally {
       setIsDetecting(false);
     }
@@ -282,18 +284,18 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const handleSaveProject = async () => {
     if (!editingProject || !config) return;
     if (!editingProject.name.trim()) {
-      (window as any).customAlert("專案名稱不能為空");
+      (window as any).customAlert(t("專案名稱不能為空"));
       return;
     }
 
     if (editingProject.use_wincmp_bin && !hasBundledRuntime(editingProject.runtime_type)) {
-      (window as any).customAlert("儲存失敗：您勾選了使用 WinCMP 內建執行檔，但系統未在 ./bin/ 下偵測到可用的 Node.js 或 Bun 執行檔。請先下載並放置於對應目錄，或取消勾選此選項以使用系統全域執行檔。");
+      (window as any).customAlert(t("儲存失敗：您勾選了使用 WinCMP 內建執行檔，但系統未在 ./bin/ 下偵測到可用的 Node.js 或 Bun 執行檔。請先下載並放置於對應目錄，或取消勾選此選項以使用系統全域執行檔。"));
       return;
     }
 
     const newCfg = { ...config };
     const cleanProj = { ...editingProject };
-    
+
     // 清理 domains 空白
     cleanProj.domains = cleanProj.domains.filter(d => d.trim() !== "");
     if (cleanProj.domains.length === 0) {
@@ -315,12 +317,12 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       await ReloadCaddy(); // 自動重載 Caddyfile 與 Hosts 檔
       await updateStatus();
     } catch (err) {
-      (window as any).customAlert(`保存專案設定失敗: ${err}`);
+      (window as any).customAlert(`${t("保存專案設定失敗")}: ${err}`);
     }
   };
 
   const handleDeleteProject = async (idx: number) => {
-    if (!await (window as any).customConfirm("確定要刪除此專案嗎？這只會從 WinCMP 面板移除，不會刪除硬碟上的專案代碼喔！")) {
+    if (!await (window as any).customConfirm(t("確定要刪除此專案嗎？這只會從 WinCMP 面板移除，不會刪除硬碟上的專案代碼喔！"))) {
       return;
     }
 
@@ -333,7 +335,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       await ReloadCaddy();
       await updateStatus();
     } catch (err) {
-      (window as any).customAlert(`刪除專案失敗: ${err}`);
+      (window as any).customAlert(`${t("刪除專案失敗")}: ${err}`);
     }
   };
 
@@ -342,14 +344,14 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       {/* 標頭 */}
       <div className="flex justify-between items-center select-none px-4 py-2.5 border-b border-darkBorder bg-[#0b0b0e] shrink-0">
         <div className="flex items-center gap-2">
-          <h1 className="text-xs font-bold text-gray-200">📁 專案管理面板 (Projects)</h1>
-          <span className="text-[10px] text-gray-500 hidden sm:inline">| 建立與設定本機開發站點，支援 Laravel, Vite 等 Web 專案</span>
+          <h1 className="text-xs font-bold text-gray-200">📁 {t("專案管理面板")}</h1>
+          <span className="text-[10px] text-gray-500 hidden sm:inline">| {t("管理與運行網頁專案，支援靜態、PHP 及 Node/Python/Go 自訂專案")}</span>
         </div>
         <button
           onClick={() => handleOpenEditModal(null, null)}
           className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition duration-200"
         >
-          <Plus size={12} /> 新增開發專案
+          <Plus size={12} /> {t("新增專案")}
         </button>
       </div>
 
@@ -359,12 +361,12 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
           <table className="w-full text-left text-xs table-auto">
             <thead className="bg-[#0f0f12] text-gray-400 uppercase text-[10px] tracking-wider border-b border-darkBorder select-none sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-2.5 font-bold">專案名稱 & 根路徑</th>
-                <th className="px-4 py-2.5 font-bold">框架 / Runtime</th>
-                <th className="px-4 py-2.5 font-bold">開發網域 (Domains)</th>
-                <th className="px-4 py-2.5 font-bold">執行狀態</th>
-                <th className="px-4 py-2.5 font-bold">服務啟用</th>
-                <th className="px-4 py-2.5 text-center font-bold">操作</th>
+                <th className="px-4 py-2.5 font-bold">{t("專案名稱")}</th>
+                <th className="px-4 py-2.5 font-bold">{t("類型 / 框架")}</th>
+                <th className="px-4 py-2.5 font-bold">{t("本機網域")}</th>
+                <th className="px-4 py-2.5 font-bold">{t("可用性")}</th>
+                <th className="px-4 py-2.5 font-bold">{t("可用性")}</th>
+                <th className="px-4 py-2.5 text-center font-bold">{t("操作")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-darkBorder/40">
@@ -429,16 +431,16 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                             </span>
-                            <span>Running</span>
+                            <span>{t("運行中")}</span>
                           </span>
                         ) : (
                           <span className="flex items-center gap-1.5 text-gray-500 font-semibold text-xs">
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-gray-600"></span>
-                            <span>Stopped</span>
+                            <span>{t("已停止")}</span>
                           </span>
                         )
                       ) : (
-                        <span className="text-[10px] text-gray-500 font-medium">Caddy/PHP 靜態託管</span>
+                        <span className="text-[10px] text-gray-500 font-medium">{t("Caddy/PHP 靜態託管")}</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5 select-none">
@@ -459,7 +461,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                                 onClick={() => handleStartRuntime(proj.name)}
                                 disabled={loading}
                                 className="p-1.5 bg-green-600/90 hover:bg-green-600 text-white rounded-lg transition"
-                                title="啟動專案 Runtime"
+                                title={t("啟動專案 Runtime")}
                               >
                                 <Play size={11} />
                               </button>
@@ -468,7 +470,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                                 onClick={() => handleStopRuntime(proj.name)}
                                 disabled={loading}
                                 className="p-1.5 bg-red-600/90 hover:bg-red-700 text-white rounded-lg transition"
-                                title="停止專案 Runtime"
+                                title={t("停止專案 Runtime")}
                               >
                                 <Square size={11} />
                               </button>
@@ -479,28 +481,28 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         <button
                           onClick={() => setTerminalProject(proj.name)}
                           className="p-1.5 bg-darkInput border border-darkBorder hover:border-blue-500 rounded-lg text-blue-400 transition"
-                          title="開啟專案終端"
+                          title={t("開啟專案終端")}
                         >
                           <Terminal size={11} />
                         </button>
                         <button
                           onClick={() => handleOpenFolder(proj.root_path)}
                           className="p-1.5 bg-darkInput border border-darkBorder hover:border-gray-500 rounded-lg text-gray-300 transition"
-                          title="開啟專案資料夾"
+                          title={t("開啟專案資料夾")}
                         >
                           <FolderOpen size={11} />
                         </button>
                         <button
                           onClick={() => handleOpenEditModal(proj, idx)}
                           className="p-1.5 bg-darkInput border border-darkBorder hover:border-blue-500 rounded-lg text-blue-400 transition"
-                          title="編輯專案設定"
+                          title={t("編輯專案設定")}
                         >
                           <Edit size={11} />
                         </button>
                         <button
                           onClick={() => handleDeleteProject(idx)}
                           className="p-1.5 bg-darkInput border border-darkBorder hover:border-red-500 rounded-lg text-red-500 transition"
-                          title="刪除專案"
+                          title={t("刪除專案")}
                         >
                           <Trash2 size={11} />
                         </button>
@@ -513,12 +515,12 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
           </table>
         ) : (
           <div className="p-12 text-center text-gray-500 space-y-3 select-none">
-            <div className="text-xs">目前尚未加入任何開發專案喔！</div>
+            <div className="text-xs">{t("目前尚未加入任何開發專案喔！")}</div>
             <button
               onClick={() => handleOpenEditModal(null, null)}
               className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
             >
-              快速新增首個專案
+              {t("快速新增首個專案")}
             </button>
           </div>
         )}
@@ -528,7 +530,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       {isModalOpen && editingProject && (
         <div className="fixed inset-0 z-50 overflow-hidden select-none">
           {/* 半透明遮罩背景 */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/45 backdrop-blur-[1px] transition-opacity duration-300"
             onClick={() => setIsModalOpen(false)}
           />
@@ -536,12 +538,12 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
           <div className="absolute inset-y-0 right-0 pl-10 max-w-full flex">
             {/* Drawer 容器 */}
             <div className="w-screen max-w-md bg-darkCard border-l border-darkBorder shadow-2xl flex flex-col h-full overflow-hidden animate-slide-in">
-              
+
               {/* Header */}
               <div className="px-6 py-5 border-b border-darkBorder flex justify-between items-center bg-[#0d0d10]">
                 <div>
                   <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400">
-                    {editIndex === null ? '✨ 新增開發專案' : '⚙️ 編輯專案屬性'}
+                    {editIndex === null ? t('✨ 新增開發專案') : t('⚙️ 編輯專案屬性')}
                   </h3>
                   {editIndex !== null && <p className="text-[11px] text-gray-500 font-mono mt-0.5">{editingProject.name}</p>}
                 </div>
@@ -554,11 +556,11 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
               <div className="flex-1 p-6 space-y-5 overflow-y-auto text-xs text-gray-300">
                 {/* 1. 基本設定 */}
                 <div className="space-y-4">
-                  <h4 className="text-[11px] font-bold text-blue-400 uppercase tracking-wider select-none">基本設定 (General)</h4>
+                  <h4 className="text-[11px] font-bold text-blue-400 uppercase tracking-wider select-none">{t("基本設定 (General)")}</h4>
 
                   {/* 專案目錄 */}
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">專案物理根目錄</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">{t("專案物理根目錄")}</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -574,28 +576,28 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                             runAutoDetection((e.target as HTMLInputElement).value.trim());
                           }
                         }}
-                        placeholder="請選擇或填寫完整目錄路徑..."
+                        placeholder={t("請選擇或填寫完整目錄路徑...")}
                         className="flex-1 bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-2 outline-none focus:border-blue-500 transition font-mono"
                       />
                       <button
                         onClick={handleRootPathSelect}
                         className="px-3 py-2 bg-darkInput border border-darkBorder hover:border-gray-500 rounded-lg transition font-semibold"
                       >
-                        選擇
+                        {t("選擇")}
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* 專案名稱 */}
                   {(editIndex !== null || detected) && (
                     <div className="space-y-1.5 animate-fade-in">
-                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">專案名稱</label>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">{t("專案名稱")}</label>
                       <input
                         type="text"
                         disabled={editIndex !== null}
                         value={editingProject.name}
                         onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
-                        placeholder="例如: my-laravel-app"
+                        placeholder={t("例如: my-laravel-app")}
                         className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-2 outline-none focus:border-blue-500 disabled:opacity-50 transition"
                       />
                     </div>
@@ -606,14 +608,14 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                 {isDetecting && (
                   <div className="p-4 bg-darkInput border border-darkBorder rounded-xl flex items-center justify-center gap-3">
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
-                    <span className="text-[11px] text-gray-400 font-medium">🔄 正在偵測專案結構與配置，請稍候...</span>
+                    <span className="text-[11px] text-gray-400 font-medium">{t("🔄 正在偵測專案結構與配置，請稍候...")}</span>
                   </div>
                 )}
 
                 {/* 新增專案時，若尚未偵測，顯示引導文字 */}
                 {editIndex === null && !detected && !isDetecting && (
                   <div className="p-4 border border-dashed border-darkBorder rounded-xl bg-white/[0.01] text-center text-gray-500 py-8 select-none">
-                    <span className="text-[11px]">💡 請選擇專案根目錄，系統將自動偵測並帶入配置。</span>
+                    <span className="text-[11px]">{t("💡 請選擇專案根目錄，系統將自動偵測並帶入配置。")}</span>
                   </div>
                 )}
 
@@ -622,11 +624,11 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                   <div className="space-y-5 animate-fade-in">
                     {/* 2. 類型與執行環境 */}
                     <div className="space-y-4 border-t border-darkBorder/40 pt-4">
-                      <h4 className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider select-none">執行環境 (Runtime)</h4>
+                      <h4 className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider select-none">{t("執行環境 (Runtime)")}</h4>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">專案框架 / 類型</label>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">{t("專案框架 / 類型")}</label>
                           <select
                             value={editingProject.type}
                             onChange={(e) => handleTypeChange(e.target.value)}
@@ -638,7 +640,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                           </select>
                         </div>
                         <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">執行器 (Runtime)</label>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">{t("執行器 (Runtime)")}</label>
                           <select
                             value={editingProject.runtime_type}
                             onChange={(e) => {
@@ -662,15 +664,15 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       {/* PHP 版本 */}
                       {editingProject.type === 'laravel' && (
                         <div className="space-y-1.5">
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">PHP 執行版本</label>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">{t("PHP 執行版本")}</label>
                           <select
                             value={editingProject.php_version}
                             onChange={(e) => setEditingProject({ ...editingProject, php_version: e.target.value })}
                             className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-2 outline-none focus:border-blue-500 transition cursor-pointer font-semibold"
                           >
-                            <option value="">請選擇對應 PHP 版本...</option>
+                            <option value="">{t("請選擇對應 PHP 版本...")}</option>
                             {scanResult?.PHPList?.map((p: any) => (
-                              <option key={p.MajorMin} value={p.MajorMin}>PHP {p.MajorMin} (偵測到 {p.Version})</option>
+                              <option key={p.MajorMin} value={p.MajorMin}>PHP {p.MajorMin} ({t("偵測到")} {p.Version})</option>
                             ))}
                           </select>
                         </div>
@@ -680,12 +682,12 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       {isRuntimeProject(editingProject.type) && (
                         <div className="border border-darkBorder rounded-xl p-4 bg-[#0a0a0c]/40 space-y-4">
                           <div className="font-semibold text-gray-200 text-xs flex items-center gap-1.5 border-b border-darkBorder pb-2">
-                            <Settings size={12} className="text-blue-400" /> Runtime 運行細節設定
+                            <Settings size={12} className="text-blue-400" /> {t("Runtime 運行細節設定")}
                           </div>
 
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label className="block text-[10px] text-gray-500 font-bold uppercase">執行 Port</label>
+                              <label className="block text-[10px] text-gray-500 font-bold uppercase">{t("執行 Port")}</label>
                               <input
                                 type="number"
                                 value={editingProject.runtime_port || 3000}
@@ -694,14 +696,14 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="block text-[10px] text-gray-500 font-bold uppercase">運行模式</label>
+                              <label className="block text-[10px] text-gray-500 font-bold uppercase">{t("運行模式")}</label>
                               <select
                                 value={editingProject.runtime_mode || 'Background'}
                                 onChange={(e) => setEditingProject({ ...editingProject, runtime_mode: e.target.value })}
                                 className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-500 transition cursor-pointer font-semibold"
                               >
-                                <option value="Background">背景執行 (Background)</option>
-                                <option value="Terminal">終端執行 (Terminal)</option>
+                                <option value="Background">{t("背景執行 (Background)")}</option>
+                                <option value="Terminal">{t("終端執行 (Terminal)")}</option>
                               </select>
                             </div>
                           </div>
@@ -717,12 +719,12 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                                   onChange={(e) => setEditingProject({ ...editingProject, use_wincmp_bin: e.target.checked })}
                                   className="w-3.5 h-3.5 bg-darkInput border-darkBorder rounded text-blue-500 accent-blue-500 cursor-pointer"
                                 />
-                                <label htmlFor="useWinCMPBin" className="text-[11px] text-gray-400 cursor-pointer font-medium">使用 WinCMP 內建執行檔 (Bundled Runtime)</label>
+                                <label htmlFor="useWinCMPBin" className="text-[11px] text-gray-400 cursor-pointer font-medium">{t("使用 WinCMP 內建執行檔 (Bundled Runtime)")}</label>
                               </div>
-                              
+
                               {editingProject.use_wincmp_bin && (
                                 <div className="space-y-1">
-                                  <label className="block text-[10px] text-gray-500 font-bold uppercase">選擇內建版本</label>
+                                  <label className="block text-[10px] text-gray-500 font-bold uppercase">{t("選擇內建版本")}</label>
                                   <select
                                     value={editingProject.runtime_version || ''}
                                     onChange={(e) => setEditingProject({ ...editingProject, runtime_version: e.target.value })}
@@ -732,7 +734,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                                       <option key={r.Version} value={r.Version}>{r.Version}</option>
                                     ))}
                                     {!(editingProject.runtime_type === 'bun' ? scanResult?.BunList : scanResult?.NodeList)?.length && (
-                                      <option value="">無可用版本 (請確認 ./bin/)</option>
+                                      <option value="">{t("無可用版本 (請確認 ./bin/)")}</option>
                                     )}
                                   </select>
                                 </div>
@@ -742,12 +744,12 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
                           {/* 自訂啟動命令 */}
                           <div className="space-y-1.5">
-                            <label className="block text-[10px] text-gray-500 font-bold uppercase">自訂啟動指令 (可選，空白將使用預設)</label>
+                            <label className="block text-[10px] text-gray-500 font-bold uppercase">{t("自訂啟動指令 (可選，空白將使用預設)")}</label>
                             <input
                               type="text"
                               value={editingProject.command || ''}
                               onChange={(e) => setEditingProject({ ...editingProject, command: e.target.value })}
-                              placeholder="例如: npm run dev -- --port 3000"
+                              placeholder={t("例如: npm run dev -- --port 3000")}
                               className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-2.5 py-1.5 outline-none focus:border-blue-500 transition font-mono"
                             />
                           </div>
@@ -757,8 +759,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
                     {/* 3. 網域別名設定 */}
                     <div className="space-y-4 border-t border-darkBorder/40 pt-4">
-                      <h4 className="text-[11px] font-bold text-teal-400 uppercase tracking-wider select-none">網域別名 (Domains)</h4>
-                      
+                      <h4 className="text-[11px] font-bold text-teal-400 uppercase tracking-wider select-none">{t("網域別名 (Domains)")}</h4>
+
                       <div className="space-y-2">
                         {editingProject.domains.map((dom, dIdx) => (
                           <div key={dIdx} className="flex gap-2">
@@ -766,7 +768,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                               type="text"
                               value={dom}
                               onChange={(e) => handleDomainChange(dIdx, e.target.value)}
-                              placeholder="例如: my-site.test"
+                              placeholder={t("例如: my-site.test")}
                               className="flex-1 bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-2 outline-none focus:border-blue-500 transition font-mono"
                             />
                             {editingProject.domains.length > 1 && (
@@ -774,7 +776,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                                 onClick={() => handleRemoveDomain(dIdx)}
                                 className="px-3 py-2 bg-red-900 bg-opacity-25 hover:bg-opacity-50 text-red-400 border border-red-900 border-opacity-40 rounded-lg transition font-semibold"
                               >
-                                移除
+                                {t("移除")}
                               </button>
                             )}
                           </div>
@@ -783,7 +785,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                           onClick={handleAddDomain}
                           className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 transition"
                         >
-                          + 新增別名網域
+                          {t("+ 新增別名網域")}
                         </button>
                       </div>
                     </div>
@@ -793,8 +795,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       <div className="flex items-center gap-3">
                         <Shield size={16} className="text-blue-500" />
                         <div>
-                          <div className="font-semibold text-gray-200 text-[11px]">啟用 HTTPS 安全憑證</div>
-                          <div className="text-[10px] text-gray-500 mt-0.5">自動套用 Caddy 內部自簽憑證</div>
+                          <div className="font-semibold text-gray-200 text-[11px]">{t("啟用 HTTPS 安全憑證")}</div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">{t("自動套用 Caddy 內部自簽憑證")}</div>
                         </div>
                       </div>
                       <input
@@ -814,14 +816,14 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 border border-darkBorder rounded-lg text-xs font-semibold text-gray-300 hover:bg-darkBorder transition"
                 >
-                  取消
+                  {t("取消")}
                 </button>
                 {(editIndex !== null || detected) && (
                   <button
                     onClick={handleSaveProject}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition"
                   >
-                    儲存設定
+                    {t("儲存設定")}
                   </button>
                 )}
               </div>
@@ -867,7 +869,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     if (!editingProject) return;
     let rt = 'none';
     let port = 0;
-    
+
     if (['next', 'nuxt', 'astro', 'vite'].includes(type)) {
       rt = 'auto';
       port = 3000;

@@ -2,17 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Trash2, ArrowDown } from 'lucide-react';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 import { logStore, LogData, LogLine } from './logStore';
+import { t, useLanguage } from '../i18n';
 
 const CATEGORIES = [
-  { id: 'system', label: 'System' },
+  { id: 'system', label: '系統' },
   { id: 'caddy', label: 'Caddy' },
   { id: 'mariadb', label: 'MariaDB' },
   { id: 'mailpit', label: 'Mailpit' },
   { id: 'php', label: 'PHP' },
-  { id: 'runtime', label: 'Runtime (Node/Bun)' }
+  { id: 'runtime', label: '運行環境 (Node/Bun)' }
 ];
 
 export default function TerminalLogs() {
+  useLanguage(); // 訂閱語系變更
   const [activeTab, setActiveTab] = useState('system');
   const [activeRuntimeProject, setActiveRuntimeProject] = useState('System');
   const [logs, setLogs] = useState<LogData>(logStore.getLogs());
@@ -177,7 +179,7 @@ export default function TerminalLogs() {
                   : 'border-transparent text-gray-400 hover:text-gray-200'
               }`}
             >
-              {tab.label}
+              {t(tab.label)}
             </button>
           ))}
         </div>
@@ -186,7 +188,7 @@ export default function TerminalLogs() {
           {/* Runtime 專案下拉選單 */}
           {activeTab === 'runtime' && (
             <div className="flex items-center gap-1.5 mr-2">
-              <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">專案:</span>
+              <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">{t("專案:")}</span>
               <select
                 value={activeRuntimeProject}
                 onChange={(e) => setActiveRuntimeProject(e.target.value)}
@@ -213,14 +215,14 @@ export default function TerminalLogs() {
               }}
               className="px-2.5 py-1 text-[10px] border border-darkBorder rounded-lg bg-darkInput text-blue-400 hover:border-blue-500/50 flex items-center gap-1 transition font-bold"
             >
-              <ArrowDown size={11} /> 自動滾動
+              <ArrowDown size={11} /> {t("自動滾動")}
             </button>
           )}
           <button
             onClick={handleClearLogs}
             className="px-2.5 py-1 text-[10px] border border-darkBorder rounded-lg bg-darkInput text-red-400 hover:border-red-500/50 flex items-center gap-1 transition font-bold"
           >
-            <Trash2 size={11} /> 清空日誌
+            <Trash2 size={11} /> {t("清空日誌")}
           </button>
         </div>
       </div>
@@ -243,7 +245,7 @@ export default function TerminalLogs() {
           </div>
         ) : (
           <div className="h-full flex items-center justify-center text-gray-600 select-none italic text-xs font-semibold">
-            暫時沒有日誌輸出
+            {t("暫時沒有日誌輸出")}
           </div>
         )}
       </div>

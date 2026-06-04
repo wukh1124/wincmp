@@ -12,6 +12,7 @@ import {
   GetScanResult 
 } from '../../wailsjs/go/main/App';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { t, useLanguage } from '../i18n';
 
 interface DependencyItem {
   version: string;
@@ -35,6 +36,7 @@ interface DependencyManagerProps {
 }
 
 export default function DependencyManager({ isOpen, onClose, onInstalled }: DependencyManagerProps) {
+  useLanguage(); // 訂閱語系變更
   const [depConfig, setDepConfig] = useState<DependencyConfig | null>(null);
   const [scanResult, setScanResult] = useState<any>(null);
   const [isLoadingConfig, setIsLoadingConfig] = useState(false);
@@ -108,9 +110,9 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     try {
       const cfg = await FetchRemoteDependencies();
       setDepConfig(cfg);
-      (window as any).customAlert("成功從遠端獲取最新的建議依賴配置！");
+      (window as any).customAlert(t("成功從遠端獲取最新的建議依賴配置！"));
     } catch (err) {
-      (window as any).customAlert(`獲取遠端依賴配置失敗: ${err}`);
+      (window as any).customAlert(`${t("獲取遠端依賴配置失敗")}: ${err}`);
     } finally {
       setIsFetchingRemote(false);
     }
@@ -206,27 +208,27 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     let statusText = '';
     let statusColor = 'text-gray-400';
     let showBtn = true;
-    let btnText = '下載安裝';
+    let btnText = t('下載安裝');
     let btnTheme = 'bg-blue-600 hover:bg-blue-700 text-white';
     let btnIcon = <Download size={13} />;
 
     if (localVer === '') {
-      statusText = `未安裝 (建議: v${recVer})`;
+      statusText = `${t("未安裝")} (${t("建議")}: v${recVer})`;
       statusColor = 'text-red-400';
-      btnText = '下載';
+      btnText = t('下載');
       btnTheme = 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/10';
     } else {
       const cmp = compareVersions(localVer, recVer);
       if (cmp < 0) {
-        statusText = `已安裝: v${localVer} (有新版: v${recVer})`;
+        statusText = `${t("已安裝")}: v${localVer} (${t("有新版")}: v${recVer})`;
         statusColor = 'text-amber-400';
-        btnText = '更新';
+        btnText = t('更新');
         btnTheme = 'bg-amber-600 hover:bg-amber-700 text-white';
         btnIcon = <ArrowUpCircle size={13} />;
       } else {
-        statusText = `已安裝: v${localVer} (最新)`;
+        statusText = `${t("已安裝")}: v${localVer} (${t("最新")})`;
         statusColor = 'text-green-400';
-        btnText = '重裝';
+        btnText = t('重裝');
         btnTheme = 'bg-darkBorder hover:bg-opacity-80 text-gray-300';
       }
     }
@@ -239,10 +241,10 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           <div className="flex flex-col gap-2 p-3 bg-darkBg bg-opacity-30 rounded-lg border border-darkBorder">
             <div className="flex justify-between items-center text-xs">
               <span className="font-semibold text-gray-200 flex items-center gap-2">
-                {icon} {label}
+                {icon} {t(label)}
               </span>
               <span className="text-blue-400 flex items-center gap-1.5 animate-pulse">
-                <Loader2 size={12} className="animate-spin" /> 準備下載環境...
+                <Loader2 size={12} className="animate-spin" /> {t("準備下載環境...")}
               </span>
             </div>
           </div>
@@ -254,10 +256,10 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           <div className="flex flex-col gap-2 p-3 bg-darkBg bg-opacity-30 rounded-lg border border-blue-500/20">
             <div className="flex justify-between items-center text-xs">
               <span className="font-semibold text-gray-200 flex items-center gap-2">
-                {icon} {label}
+                {icon} {t(label)}
               </span>
               <span className="text-blue-400 flex items-center gap-1">
-                下載中... {currentMB.toFixed(1)}MB / {totalMB > 0 ? `${totalMB.toFixed(1)}MB` : '--'} ({pct}%)
+                {t("下載中")}... {currentMB.toFixed(1)}MB / {totalMB > 0 ? `${totalMB.toFixed(1)}MB` : '--'} ({pct}%)
               </span>
             </div>
             <div className="w-full h-1.5 bg-darkInput rounded-full overflow-hidden">
@@ -271,10 +273,10 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           <div className="flex flex-col gap-2 p-3 bg-darkBg bg-opacity-30 rounded-lg border border-teal-500/20">
             <div className="flex justify-between items-center text-xs">
               <span className="font-semibold text-gray-200 flex items-center gap-2">
-                {icon} {label}
+                {icon} {t(label)}
               </span>
               <span className="text-teal-400 flex items-center gap-1.5 animate-pulse">
-                <Loader2 size={12} className="animate-spin" /> 正在解壓縮並配置...
+                <Loader2 size={12} className="animate-spin" /> {t("正在解壓縮並配置...")}
               </span>
             </div>
             <div className="w-full h-1.5 bg-darkInput rounded-full overflow-hidden">
@@ -284,7 +286,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
         );
       }
       if (status === 'completed') {
-        statusText = `安裝成功: v${recVer}`;
+        statusText = `${t("安裝成功")}: v${recVer}`;
         statusColor = 'text-green-400';
         showBtn = false;
       }
@@ -293,10 +295,10 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           <div className="flex flex-col gap-2 p-3 bg-red-950/20 border border-red-500/30 rounded-lg">
             <div className="flex justify-between items-center text-xs">
               <span className="font-semibold text-red-300 flex items-center gap-2">
-                {icon} {label}
+                {icon} {t(label)}
               </span>
               <span className="text-red-400 flex items-center gap-1">
-                <AlertTriangle size={12} /> 安裝失敗
+                <AlertTriangle size={12} /> {t("安裝失敗")}
               </span>
             </div>
             <p className="text-[11px] text-red-300/80 font-mono mt-1 break-all bg-red-950/40 p-1.5 rounded">{error}</p>
@@ -304,7 +306,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               onClick={() => handleDownload(key)}
               className="mt-1 text-center py-1 bg-red-900/40 hover:bg-red-900/60 text-red-300 rounded text-xs transition"
             >
-              重試安裝
+              {t("重試安裝")}
             </button>
           </div>
         );
@@ -316,7 +318,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
         <div className="flex items-center gap-3">
           <span className="text-gray-400">{icon}</span>
           <div>
-            <span className="text-sm font-semibold text-gray-200 block">{label}</span>
+            <span className="text-sm font-semibold text-gray-200 block">{t(label)}</span>
             <span className={`text-xs ${statusColor} mt-0.5 block font-medium`}>{statusText}</span>
           </div>
         </div>
@@ -348,8 +350,8 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               <HardDrive size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-wide">📦 WinCMP 依賴庫管理中心</h2>
-              <p className="text-xs text-gray-400 mt-0.5">下載或升級本機 Web 開發核心依賴與實用工具</p>
+              <h2 className="text-lg font-bold tracking-wide">📦 {t("WinCMP 依賴庫管理中心")}</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{t("下載或升級本機 Web 開發核心依賴與實用工具")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -357,10 +359,10 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               onClick={handleFetchRemote}
               disabled={isFetchingRemote}
               className="p-2 hover:bg-darkBorder rounded-lg transition text-gray-400 hover:text-gray-200 flex items-center gap-1 text-xs font-semibold"
-              title="從遠端獲取最新版本"
+              title={t("從遠端獲取最新版本")}
             >
               <RefreshCw size={14} className={isFetchingRemote ? 'animate-spin' : ''} />
-              <span>{isFetchingRemote ? '獲取中...' : '獲取最新'}</span>
+              <span>{isFetchingRemote ? t('獲取中...') : t('獲取最新')}</span>
             </button>
             <button
               onClick={onClose}
@@ -376,14 +378,14 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           {isLoadingConfig ? (
             <div className="py-20 flex flex-col items-center justify-center text-gray-400 gap-3">
               <Loader2 size={32} className="animate-spin text-blue-500" />
-              <span className="text-sm font-semibold">正在讀取依賴設定...</span>
+              <span className="text-sm font-semibold">{t("正在讀取依賴設定...")}</span>
             </div>
           ) : (
             <>
               {/* 1. 核心依賴 */}
               <div className="bg-darkCard bg-opacity-40 border border-darkBorder rounded-xl p-4 space-y-3">
                 <h3 className="text-xs text-blue-400 font-bold uppercase tracking-wider flex items-center gap-1.5 select-none border-b border-darkBorder border-opacity-60 pb-2">
-                  <Cpu size={13} /> 核心執行環境 (Core Runtimes)
+                  <Cpu size={13} /> {t("核心執行環境 (Core Runtimes)")}
                 </h3>
                 <div className="divide-y divide-darkBorder divide-opacity-30">
                   {renderDependencyRow('caddy', 'Caddy Web 伺服器', <Server size={16} />)}
@@ -394,7 +396,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               {/* 2. PHP 多版本環境 */}
               <div className="bg-darkCard bg-opacity-40 border border-darkBorder rounded-xl p-4 space-y-3">
                 <h3 className="text-xs text-green-400 font-bold uppercase tracking-wider flex items-center gap-1.5 select-none border-b border-darkBorder border-opacity-60 pb-2">
-                  <Server size={13} /> PHP FastCGI 環境 (PHP Runtimes)
+                  <Server size={13} /> {t("PHP FastCGI 環境 (PHP Runtimes)")}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {phpKeys.map(key => {
@@ -411,7 +413,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               {/* 3. 其他常用工具 */}
               <div className="bg-darkCard bg-opacity-40 border border-darkBorder rounded-xl p-4 space-y-3">
                 <h3 className="text-xs text-purple-400 font-bold uppercase tracking-wider flex items-center gap-1.5 select-none border-b border-darkBorder border-opacity-60 pb-2">
-                  <SettingsIcon size={13} /> 開發輔助工具與實用工具 (Utilities)
+                  <SettingsIcon size={13} /> {t("開發輔助工具與實用工具 (Utilities)")}
                 </h3>
                 <div className="divide-y divide-darkBorder divide-opacity-30">
                   {renderDependencyRow('composer', 'Composer (PHP 包管理器)', <Terminal size={16} />)}
@@ -426,7 +428,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
         {/* 底部說明 */}
         <div className="px-6 py-4 border-t border-darkBorder bg-darkCard text-[11px] text-gray-500 flex justify-between items-center select-none">
-          <span>提示：安裝完成後系統會自動重新掃描環境並更新 Dashboard。</span>
+          <span>{t("提示：安裝完成後系統會自動重新掃描環境並更新 Dashboard。")}</span>
           <span className="font-mono">WinCMP Downloader Pipeline</span>
         </div>
 

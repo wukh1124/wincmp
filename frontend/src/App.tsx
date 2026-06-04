@@ -9,8 +9,11 @@ import TerminalLogs from './components/TerminalLogs';
 import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime';
 import { GetAppVersion, IsAdmin, GetConfig } from '../wailsjs/go/main/App';
 import logo from './assets/images/icon.svg';
+import { t, setLanguage, useLanguage } from './i18n';
 
 export default function App() {
+  useLanguage(); // 訂閱語系變更
+
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'resources' | 'settings' | 'logs'>('dashboard');
   const [showLogs, setShowLogs] = useState(true);
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
@@ -28,10 +31,15 @@ export default function App() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. 初始化讀取版本與管理員權限
+  // 1. 初始化讀取版本與管理員權限及語系
   useEffect(() => {
     GetAppVersion().then(setAppVersion).catch((err: any) => console.error("獲取版本失敗:", err));
     IsAdmin().then(setIsAdmin).catch((err: any) => console.error("獲取管理員權限失敗:", err));
+    GetConfig().then((cfg: any) => {
+      if (cfg && cfg.global && cfg.global.language) {
+        setLanguage(cfg.global.language);
+      }
+    }).catch((err: any) => console.error("獲取語系失敗:", err));
   }, []);
 
   // 2. 監聽 Ctrl+K 快速鍵聚焦搜尋框
@@ -60,7 +68,7 @@ export default function App() {
   const handleTabChange = async (tabId: typeof activeTab) => {
     if (activeTab === 'settings' && tabId !== 'settings') {
       if ((window as any).isSettingsDirty) {
-        const confirmLeave = await (window as any).customConfirm("您有尚未儲存的設定變更，確定要離開此頁面嗎？");
+        const confirmLeave = await (window as any).customConfirm(t("您有尚未儲存的設定變更，確定要離開此頁面嗎？"));
         if (!confirmLeave) {
           return;
         }
@@ -70,7 +78,7 @@ export default function App() {
     (window as any).isSettingsDirty = false;
     setActiveTab(tabId);
   };
-
+ 
   // 覆寫與註冊漂亮的自訂彈窗，避免 wails.localhost 標題
   useEffect(() => {
     (window as any).customAlert = (message: any) => {
@@ -85,7 +93,7 @@ export default function App() {
         });
       });
     };
-
+ 
     (window as any).customConfirm = (message: any) => {
       return new Promise<boolean>((resolve) => {
         setCustomConfirm({
@@ -98,12 +106,12 @@ export default function App() {
         });
       });
     };
-
+ 
     window.alert = (message: any) => {
       (window as any).customAlert(message);
     };
   }, []);
-
+ 
   const toggleSidebar = () => {
     setIsCollapsed(prev => {
       const next = !prev;
@@ -111,7 +119,7 @@ export default function App() {
       return next;
     });
   };
-
+ 
   // 訂閱 Go 端推送的 CPU / RAM 資源佔用
   useEffect(() => {
     const handleResourceUpdate = (data: any) => {
@@ -122,14 +130,14 @@ export default function App() {
         });
       }
     };
-
+ 
     EventsOn('resource_usage', handleResourceUpdate);
-
+ 
     return () => {
       EventsOff('resource_usage');
     };
   }, []);
-
+ 
   const renderActiveComponent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -148,14 +156,14 @@ export default function App() {
         return <Dashboard />;
     }
   };
-
+ 
   const menuItems = [
-    { id: 'dashboard', label: '儀表板 (Dashboard)', icon: <Home size={15} /> },
-    { id: 'projects', label: '專案管理 (Projects)', icon: <Folder size={15} /> },
-    { id: 'db_explorer', label: '資料庫瀏覽 (Database)', icon: <Database size={15} /> },
-    { id: 'resources', label: '資源監控 (Resources)', icon: <Cpu size={15} /> },
-    { id: 'settings', label: '系統設定 (Settings)', icon: <SettingsIcon size={15} /> },
-    { id: 'logs', label: '終端日誌 (Terminal Logs)', icon: <Terminal size={15} /> }
+    { id: 'dashboard', label: t('儀表板'), icon: <Home size={15} /> },
+    { id: 'projects', label: t('專案管理'), icon: <Folder size={15} /> },
+    { id: 'db_explorer', label: t('資料庫瀏覽'), icon: <Database size={15} /> },
+    { id: 'resources', label: t('資源監控'), icon: <Cpu size={15} /> },
+    { id: 'settings', label: t('系統設定'), icon: <SettingsIcon size={15} /> },
+    { id: 'logs', label: t('終端日誌'), icon: <Terminal size={15} /> }
   ] as const;
 
   return (
@@ -178,7 +186,7 @@ export default function App() {
             <button
               onClick={toggleSidebar}
               className={`p-1.5 rounded-md text-gray-500 hover:text-gray-200 hover:bg-white/5 transition-colors ${isCollapsed ? 'w-8 h-8 flex items-center justify-center' : ''}`}
-              title={isCollapsed ? '展開側邊欄' : '收起側邊欄'}
+              title={isCollapsed ? t('展開側邊欄') : t('收起側邊欄')}
             >
               {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
             </button>
@@ -211,14 +219,14 @@ export default function App() {
           {!isCollapsed ? (
             <>
               <div className="font-semibold text-[10px] text-gray-500 select-none uppercase tracking-wider">
-                系統監控 (WinCMP Core)
+                {t("系統監控 (WinCMP Core)")}
               </div>
               <div className="space-y-2.5 text-xs">
                 {/* CPU */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-400 flex items-center gap-1.5">
-                      <Cpu size={12} className="text-blue-400" /> CPU 佔用
+                      <Cpu size={12} className="text-blue-400" /> {t("CPU 佔用")}
                     </span>
                     <span className="font-semibold text-gray-300">{systemResources.cpu.toFixed(1)}%</span>
                   </div>
@@ -234,7 +242,7 @@ export default function App() {
                 <div className="space-y-1 pt-0.5">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-400 flex items-center gap-1.5">
-                      <HardDrive size={12} className="text-indigo-400" /> 記憶體 (RAM)
+                      <HardDrive size={12} className="text-indigo-400" /> {t("記憶體 (RAM)")}
                     </span>
                     <span className="font-semibold text-gray-300">{systemResources.memory} MB</span>
                   </div>
@@ -250,13 +258,13 @@ export default function App() {
           ) : (
             <div className="space-y-3 text-center w-full">
               {/* CPU collapsed */}
-              <div className="flex flex-col items-center gap-1 cursor-help" title={`CPU 佔用: ${systemResources.cpu.toFixed(1)}%`}>
+              <div className="flex flex-col items-center gap-1 cursor-help" title={`${t("CPU 佔用")}: ${systemResources.cpu.toFixed(1)}%`}>
                 <Cpu size={14} className="text-blue-400 animate-pulse" style={{ animationDuration: '3s' }} />
                 <span className="text-[9px] font-semibold text-gray-400">{systemResources.cpu.toFixed(0)}%</span>
               </div>
 
               {/* RAM collapsed */}
-              <div className="flex flex-col items-center gap-1 cursor-help" title={`記憶體 (RAM): ${systemResources.memory} MB`}>
+              <div className="flex flex-col items-center gap-1 cursor-help" title={`${t("記憶體 (RAM)")}: ${systemResources.memory} MB`}>
                 <HardDrive size={14} className="text-indigo-400" />
                 <span className="text-[9px] font-semibold text-gray-400">{systemResources.memory}M</span>
               </div>
@@ -285,7 +293,7 @@ export default function App() {
                   // 延遲關閉，好讓 onMouseDown 能被優先觸發
                   setTimeout(() => setIsSearchFocused(false), 200);
                 }}
-                placeholder="搜尋專案名稱、網域或路徑... (Ctrl+K)"
+                placeholder={t("搜尋專案名稱、網域或路徑... (Ctrl+K)")}
                 className="w-full bg-darkInput/40 border border-darkBorder rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 outline-none focus:border-blue-500 transition duration-150"
               />
               <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500">
@@ -325,7 +333,7 @@ export default function App() {
                       ));
                     } else {
                       return (
-                        <div className="p-3 text-[11px] text-gray-500 text-center">找不到匹配的專案 😭</div>
+                        <div className="p-3 text-[11px] text-gray-500 text-center">{t("找不到匹配的專案 😭")}</div>
                       );
                     }
                   })()}
@@ -341,12 +349,12 @@ export default function App() {
               }`}
               title={
                 isAdmin
-                  ? '已取得系統管理員權限，可自動配置 Hosts 網域別名'
-                  : '無管理員權限：可能無法自動修改 Hosts 檔，需手動管理網域別名'
+                  ? t('已取得系統管理員權限，可自動配置 Hosts 網域別名')
+                  : t('無管理員權限：可能無法自動修改 Hosts 檔，需手動管理網域別名')
               }
             >
               <Shield size={12} className={isAdmin ? 'text-blue-400' : 'text-amber-500'} />
-              <span>{isAdmin ? '管理員模式' : '限制模式'}</span>
+              <span>{isAdmin ? t('管理員模式') : t('限制模式')}</span>
             </div>
             <div className="h-3 w-[1px] bg-darkBorder" />
             
@@ -356,7 +364,7 @@ export default function App() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
               </span>
-              <span>Go 核心已連線</span>
+              <span>{t("Go 核心已連線")}</span>
             </div>
             <div className="h-3 w-[1px] bg-darkBorder" />
             <span className="text-[10px] text-gray-500 font-semibold tracking-wide">{appVersion}</span>
@@ -376,12 +384,12 @@ export default function App() {
               className="flex items-center gap-1.5 font-semibold text-gray-400 hover:text-gray-200 transition"
             >
               <Terminal size={11} className="text-blue-400" />
-              <span>{showLogs ? '收起 Logs 控制台' : '打開 Logs 控制台'}</span>
+              <span>{showLogs ? t('收起 Logs 控制台') : t('打開 Logs 控制台')}</span>
             </button>
             <button
               onClick={() => setShowLogs(!showLogs)}
               className="p-1 rounded-md text-gray-400 hover:text-gray-200 hover:bg-white/5 transition flex items-center justify-center"
-              title={showLogs ? '收起 Logs 控制台' : '打開 Logs 控制台'}
+              title={showLogs ? t('收起 Logs 控制台') : t('打開 Logs 控制台')}
             >
               {showLogs ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
             </button>
@@ -402,7 +410,7 @@ export default function App() {
           <div className="w-full max-w-sm bg-darkCard border border-darkBorder rounded-xl shadow-2xl overflow-hidden p-5 flex flex-col space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-2.5 text-blue-400 font-bold text-sm">
               <span className="text-base">🔔</span>
-              <span>系統提示</span>
+              <span>{t("系統提示")}</span>
             </div>
             <p className="text-xs text-gray-300 leading-relaxed break-all whitespace-pre-line">{customAlert.message}</p>
             <div className="flex justify-end pt-1">
@@ -413,7 +421,7 @@ export default function App() {
                 }}
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-500/10 active:scale-[0.98] transition duration-150"
               >
-                確定
+                {t("確定")}
               </button>
             </div>
           </div>
@@ -426,7 +434,7 @@ export default function App() {
           <div className="w-full max-w-sm bg-darkCard border border-darkBorder rounded-xl shadow-2xl overflow-hidden p-5 flex flex-col space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-2.5 text-blue-400 font-bold text-sm">
               <span className="text-base">❓</span>
-              <span>系統確認</span>
+              <span>{t("系統確認")}</span>
             </div>
             <p className="text-xs text-gray-300 leading-relaxed break-all whitespace-pre-line">{customConfirm.message}</p>
             <div className="flex justify-end gap-2.5 pt-1">
@@ -437,7 +445,7 @@ export default function App() {
                 }}
                 className="px-4 py-1.5 bg-darkInput border border-darkBorder hover:bg-darkBorder text-gray-300 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
               >
-                取消
+                {t("取消")}
               </button>
               <button
                 onClick={() => {
@@ -446,7 +454,7 @@ export default function App() {
                 }}
                 className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-500/10 active:scale-[0.98] transition duration-150"
               >
-                確定
+                {t("確定")}
               </button>
             </div>
           </div>

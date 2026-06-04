@@ -36,7 +36,7 @@ import (
 // GetDetailedResources 獲取詳細的 CPU & RAM 監控數據
 func (a *App) GetDetailedResources() (resource.DetailedResources, error) {
 	if a.resMonitor == nil {
-		return resource.DetailedResources{}, fmt.Errorf("資源監控器未初始化")
+		return resource.DetailedResources{}, fmt.Errorf("%s", i18n.T("資源監控器未初始化"))
 	}
 	return a.resMonitor.GetDetailedResourceUsage()
 }
@@ -93,14 +93,14 @@ func (a *App) GetConfig() *config.WincmpConfig {
 // SaveConfig 將新的設定檔寫入記憶體並持久化保存到 conf/wincmp.json
 func (a *App) SaveConfig(newCfg *config.WincmpConfig) error {
 	if newCfg == nil {
-		return fmt.Errorf("設定檔為空，無法儲存")
+		return fmt.Errorf("%s", i18n.T("設定檔為空，無法儲存"))
 	}
 
 	a.appCfg = newCfg
 	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
 	
 	if err := a.appCfg.Save(cfgPath); err != nil {
-		return fmt.Errorf("無法儲存設定檔: %w", err)
+		return fmt.Errorf(i18n.T("無法儲存設定檔: %w"), err)
 	}
 
 	// 更新後端語系並同步刷新系統托盤選單
@@ -114,7 +114,7 @@ func (a *App) SaveConfig(newCfg *config.WincmpConfig) error {
 func (a *App) ScanServices() (*scanner.ScanResult, error) {
 	res, err := scanner.ScanBinDir(a.baseDir)
 	if err != nil {
-		return nil, fmt.Errorf("服務掃描失敗: %w", err)
+		return nil, fmt.Errorf(i18n.T("服務掃描失敗: %w"), err)
 	}
 	a.scanRes = res
 	return a.scanRes, nil
@@ -176,7 +176,7 @@ func (a *App) GetServicesStatus() map[string]bool {
 // StartCaddy 啟動 Caddy 反向代理服務
 func (a *App) StartCaddy(version string, exePath string) error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 
 	// 1. 檢查並更新憑證
@@ -184,12 +184,12 @@ func (a *App) StartCaddy(version string, exePath string) error {
 
 	// 2. 生成 Caddy 配置文件
 	if err := a.generateCaddyfiles(); err != nil {
-		return fmt.Errorf("產生 Caddy 配置文件失敗: %w", err)
+		return fmt.Errorf(i18n.T("產生 Caddy 配置文件失敗: %w"), err)
 	}
 
 	// 3. 啟動進程
 	if err := a.procMgr.StartCaddy(version, exePath); err != nil {
-		return fmt.Errorf("啟動 Caddy 失敗: %w", err)
+		return fmt.Errorf(i18n.T("啟動 Caddy 失敗: %w"), err)
 	}
 
 	// 4. 自動更新 Hosts 檔案
@@ -203,7 +203,7 @@ func (a *App) StartCaddy(version string, exePath string) error {
 // StopCaddy 停止 Caddy 服務
 func (a *App) StopCaddy() error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 	a.procMgr.StopCaddy()
 	a.saveLastServiceState()
@@ -213,10 +213,10 @@ func (a *App) StopCaddy() error {
 // ReloadCaddy 重新載入 Caddy 設定檔，並觸發 Hosts 檔案檢查
 func (a *App) ReloadCaddy() error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 	if err := a.regenerateCaddyAndReload(); err != nil {
-		return fmt.Errorf("重新載入 Caddy 失敗: %w", err)
+		return fmt.Errorf(i18n.T("重新載入 Caddy 失敗: %w"), err)
 	}
 	return nil
 }
@@ -224,7 +224,7 @@ func (a *App) ReloadCaddy() error {
 // StartMariaDB 啟動 MariaDB 資料庫服務 (同步等待啟動完成)
 func (a *App) StartMariaDB(version string) error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 
 	// 異步啟動
@@ -240,7 +240,7 @@ func (a *App) StartMariaDB(version string) error {
 	// 等待 Go routine 完成並回傳錯誤狀態
 	<-done
 	if err := <-errCh; err != nil {
-		return fmt.Errorf("啟動 MariaDB 失敗: %w", err)
+		return fmt.Errorf(i18n.T("啟動 MariaDB 失敗: %w"), err)
 	}
 
 	a.saveLastServiceState()
@@ -251,7 +251,7 @@ func (a *App) StartMariaDB(version string) error {
 // StopMariaDB 停止 MariaDB 服務
 func (a *App) StopMariaDB(version string) error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 
 	portVal := a.appCfg.Global.MariaDBPort
@@ -267,7 +267,7 @@ func (a *App) StopMariaDB(version string) error {
 		portVal,
 	)
 	if err != nil {
-		return fmt.Errorf("停止 MariaDB 失敗: %w", err)
+		return fmt.Errorf(i18n.T("停止 MariaDB 失敗: %w"), err)
 	}
 
 	a.saveLastServiceState()
@@ -278,10 +278,10 @@ func (a *App) StopMariaDB(version string) error {
 // StartMailpit 啟動 Mailpit 郵件測試服務
 func (a *App) StartMailpit(version string, exePath string, smtpPort int, httpPort int, useDB bool) error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 	if err := a.procMgr.StartMailpit(version, exePath, smtpPort, httpPort, useDB); err != nil {
-		return fmt.Errorf("啟動 Mailpit 失敗: %w", err)
+		return fmt.Errorf(i18n.T("啟動 Mailpit 失敗: %w"), err)
 	}
 
 	a.saveLastServiceState()
@@ -292,7 +292,7 @@ func (a *App) StartMailpit(version string, exePath string, smtpPort int, httpPor
 // StopMailpit 停止 Mailpit 服務
 func (a *App) StopMailpit() error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 	a.procMgr.StopMailpit()
 	a.saveLastServiceState()
@@ -302,7 +302,7 @@ func (a *App) StopMailpit() error {
 // StartPHP 啟動特定版本的 PHP-CGI 多行程服務
 func (a *App) StartPHP(version string) error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 
 	var targetPHP *scanner.PHPVersionInfo
@@ -314,7 +314,7 @@ func (a *App) StartPHP(version string) error {
 	}
 
 	if targetPHP == nil {
-		return fmt.Errorf("找不到指定版本 %s 的 PHP-CGI", version)
+		return fmt.Errorf(i18n.T("找不到指定版本 %s 的 PHP-CGI"), version)
 	}
 
 	// 套用進程數配置
@@ -325,7 +325,7 @@ func (a *App) StartPHP(version string) error {
 	targetPHP.PortCount = count
 
 	if err := a.procMgr.StartPHPCGI(*targetPHP); err != nil {
-		return fmt.Errorf("啟動 PHP-CGI %s 失敗: %w", version, err)
+		return fmt.Errorf(i18n.T("啟動 PHP-CGI %s 失敗: %w"), version, err)
 	}
 
 	a.saveLastServiceState()
@@ -336,7 +336,7 @@ func (a *App) StartPHP(version string) error {
 // StopPHP 停止特定版本的 PHP-CGI 服務
 func (a *App) StopPHP(version string) error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 	a.procMgr.StopPHPCGI(version)
 	a.saveLastServiceState()
@@ -350,7 +350,7 @@ func (a *App) StopPHP(version string) error {
 // StartProjectRuntime 啟動特定專案的背景/終端 Runtime
 func (a *App) StartProjectRuntime(projectName string) error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 
 	var proj *config.ProjectConfig
@@ -361,7 +361,7 @@ func (a *App) StartProjectRuntime(projectName string) error {
 		}
 	}
 	if proj == nil {
-		return fmt.Errorf("找不到專案 %s", projectName)
+		return fmt.Errorf(i18n.T("找不到專案 %s"), projectName)
 	}
 
 	// 1. 檢查端口佔用
@@ -370,7 +370,7 @@ func (a *App) StartProjectRuntime(projectName string) error {
 		portVal = 3000
 	}
 	if !process.IsPortAvailable(portVal) {
-		return fmt.Errorf("端口 %d 已被其他進程佔用", portVal)
+		return fmt.Errorf(i18n.T("端口 %d 已被其他進程佔用"), portVal)
 	}
 
 	// 2. 推導執行路徑 (Bundled Runtime 優先，否則尋找系統 PATH)
@@ -418,12 +418,12 @@ func (a *App) StartProjectRuntime(projectName string) error {
 	}
 
 	if exePath == "" && resolvedRT != "custom" {
-		return fmt.Errorf("找不到可用的 %s 執行器，請檢查設定與 PATH", resolvedRT)
+		return fmt.Errorf(i18n.T("找不到可用的 %s 執行器，請檢查設定與 PATH"), resolvedRT)
 	}
 
 	// 3. 呼叫底層 process 啟動
 	if err := a.procMgr.StartRuntime(*proj, proj.RuntimeMode, exePath); err != nil {
-		return fmt.Errorf("啟動專案 Runtime 失敗: %w", err)
+		return fmt.Errorf(i18n.T("啟動專案 Runtime 失敗: %w"), err)
 	}
 
 	return nil
@@ -432,7 +432,7 @@ func (a *App) StartProjectRuntime(projectName string) error {
 // StopProjectRuntime 停止特定專案的 Runtime 服務
 func (a *App) StopProjectRuntime(projectName string) error {
 	if a.procMgr == nil {
-		return fmt.Errorf("進程管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 
 	var proj *config.ProjectConfig
@@ -443,7 +443,7 @@ func (a *App) StopProjectRuntime(projectName string) error {
 		}
 	}
 	if proj == nil {
-		return fmt.Errorf("找不到專案 %s", projectName)
+		return fmt.Errorf(i18n.T("找不到專案 %s"), projectName)
 	}
 
 	a.procMgr.StopRuntime(*proj)
@@ -581,7 +581,7 @@ func (a *App) generateCaddyfiles() error {
 		content += "}\n"
 
 		if err := os.WriteFile(caddyPath, []byte(content), 0600); err != nil {
-			return fmt.Errorf("寫入 Caddy 設定檔 %s 失敗: %w", caddyPath, err)
+			return fmt.Errorf(i18n.T("寫入 Caddy 設定檔 %s 失敗: %w"), caddyPath, err)
 		}
 	}
 	return nil
@@ -591,7 +591,7 @@ func (a *App) generateCaddyfiles() error {
 func (a *App) validateCaddyPath(path string) (string, error) {
 	cleaned := filepath.Clean(path)
 	if strings.Contains(cleaned, "..") {
-		return "", fmt.Errorf("路徑含非法的目錄遍歷: %s", path)
+		return "", fmt.Errorf(i18n.T("路徑含非法的目錄遍歷: %s"), path)
 	}
 	return strings.ReplaceAll(cleaned, "\\", "/"), nil
 }
@@ -696,10 +696,10 @@ func (a *App) OpenFolder(path string) error {
 // SelectFolder 彈出 Wails 原生的目錄選擇對話框，並回傳選擇的路徑
 func (a *App) SelectFolder() (string, error) {
 	if a.ctx == nil {
-		return "", fmt.Errorf("應用程式 Context 未初始化")
+		return "", fmt.Errorf("%s", i18n.T("應用程式 Context 未初始化"))
 	}
 	path, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "選擇專案目錄",
+		Title: i18n.T("選擇專案目錄"),
 	})
 	if err != nil {
 		return "", err
@@ -846,7 +846,7 @@ func (a *App) QueryTables(schema string) ([]string, error) {
 // OpenInHeidiSQL 使用 HeidiSQL 圖形介面軟體開啟 MariaDB
 func (a *App) OpenInHeidiSQL() error {
 	if len(a.scanRes.HeidiSQLList) == 0 {
-		return fmt.Errorf("找不到已安裝的 HeidiSQL 執行檔，請確認 HeidiSQL 是否在 bin/ 中")
+		return fmt.Errorf("%s", i18n.T("找不到已安裝的 HeidiSQL 執行檔，請確認 HeidiSQL 是否在 bin/ 中"))
 	}
 
 	heidiPath := a.scanRes.HeidiSQLList[0].ExePath
@@ -861,7 +861,7 @@ func (a *App) OpenInHeidiSQL() error {
 
 	cmd := exec.Command(heidiPath, "-h=127.0.0.1", fmt.Sprintf("-P=%d", portVal), fmt.Sprintf("-u=%s", user))
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("啟動 HeidiSQL 失敗: %w", err)
+		return fmt.Errorf(i18n.T("啟動 HeidiSQL 失敗: %w"), err)
 	}
 
 	go cmd.Wait()
@@ -894,15 +894,15 @@ type laravelPHPMapping struct {
 // DetectProjectPath 偵測專案物理目錄的資訊，包含自動生成的名稱、網域別名、專案類型與執行環境等
 func (a *App) DetectProjectPath(path string) (*ProjectDetectResult, error) {
 	if path == "" {
-		return nil, fmt.Errorf("路徑不能為空")
+		return nil, fmt.Errorf("%s", i18n.T("路徑不能為空"))
 	}
 
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, fmt.Errorf("路徑無效或不存在: %w", err)
+		return nil, fmt.Errorf(i18n.T("路徑無效或不存在: %w"), err)
 	}
 	if !fi.IsDir() {
-		return nil, fmt.Errorf("選擇的路徑不是一個有效的資料夾")
+		return nil, fmt.Errorf("%s", i18n.T("選擇的路徑不是一個有效的資料夾"))
 	}
 
 	folderName := filepath.Base(path)
@@ -1051,7 +1051,7 @@ func (a *App) validatePHPMajorVersion(majorVersion string) string {
 // StartTerminalSession 啟動一個新終端會話，並回傳會話 ID
 func (a *App) StartTerminalSession(projName string, cols int, rows int) (string, error) {
 	if a.termMgr == nil {
-		return "", fmt.Errorf("終端管理器未初始化")
+		return "", fmt.Errorf("%s", i18n.T("終端管理器未初始化"))
 	}
 
 	var proj *config.ProjectConfig
@@ -1115,7 +1115,7 @@ func (a *App) StartTerminalSession(projName string, cols int, rows int) (string,
 // SendTerminalInput 傳送輸入字元或指令到終端會話
 func (a *App) SendTerminalInput(sessionID string, data string) error {
 	if a.termMgr == nil {
-		return fmt.Errorf("終端管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("終端管理器未初始化"))
 	}
 	return a.termMgr.Write(sessionID, data)
 }
@@ -1123,7 +1123,7 @@ func (a *App) SendTerminalInput(sessionID string, data string) error {
 // ResizeTerminal 調整指定終端會話的視窗大小
 func (a *App) ResizeTerminal(sessionID string, cols int, rows int) error {
 	if a.termMgr == nil {
-		return fmt.Errorf("終端管理器未初始化")
+		return fmt.Errorf("%s", i18n.T("終端管理器未初始化"))
 	}
 	return a.termMgr.Resize(sessionID, cols, rows)
 }
@@ -1148,7 +1148,7 @@ func (a *App) RestartApp() error {
 
 	execPath, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("無法取得執行檔路徑: %w", err)
+		return fmt.Errorf(i18n.T("無法取得執行檔路徑: %w"), err)
 	}
 
 	cmd := exec.Command(execPath, "--restart")
@@ -1158,7 +1158,7 @@ func (a *App) RestartApp() error {
 	}
 
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("自動重啟失敗: %w", err)
+		return fmt.Errorf(i18n.T("自動重啟失敗: %w"), err)
 	}
 
 	runtime.Quit(a.ctx)

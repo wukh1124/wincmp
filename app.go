@@ -82,7 +82,7 @@ func (a *App) startup(ctx context.Context) {
 
 	// 在載入設定檔前，自動檢測並釋放預設設定檔到 conf/
 	if err := config.RestoreDefaultConf(a.baseDir); err != nil {
-		a.handleErrorLog("system", "釋放預設設定檔失敗", err)
+		a.handleErrorLog("system", i18n.T("釋放預設設定檔失敗"), err)
 	}
 
 	// 2. 載入設定檔以套用語言與全域設定
@@ -130,9 +130,9 @@ func (a *App) startup(ctx context.Context) {
 	// 6. 掃描已安裝的服務版本
 	a.scanRes, err = scanner.ScanBinDir(a.baseDir)
 	if err != nil {
-		a.handleErrorLog("system", "掃描服務版本失敗", err)
+		a.handleErrorLog("system", i18n.T("掃描服務版本失敗"), err)
 	} else {
-		a.handleLog("system", "掃描 bin/ 目錄完成")
+		a.handleLog("system", i18n.T("掃描 bin/ 目錄完成"))
 	}
 
 	// 7. 啟動背景資源監控
@@ -334,11 +334,11 @@ func (a *App) cleanExpiredLogs() {
 			continue
 		}
 
-		// 如果檔案的日期在截止日期之前，則刪除它
+		// 如果檔案的日期在截止日期之前，則刪除 it
 		if fileDate.Before(cutoffDate) {
 			filePath := filepath.Join(logDir, name)
 			_ = os.Remove(filePath)
-			a.handleLog("system", fmt.Sprintf("ℹ️ 已自動刪除過期日誌檔: %s", name))
+			a.handleLog("system", i18n.Tfmt("ℹ️ 已自動刪除過期日誌檔: %s", name))
 		}
 	}
 }

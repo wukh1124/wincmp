@@ -9,6 +9,7 @@ import {
   ResizeTerminal,
   StopTerminalSession
 } from '../../wailsjs/go/main/App';
+import { t, useLanguage } from '../i18n';
 
 import '@xterm/xterm/css/xterm.css';
 
@@ -19,6 +20,7 @@ interface ProjectTerminalProps {
 }
 
 export default function ProjectTerminal({ projectName, isOpen, onClose }: ProjectTerminalProps) {
+  useLanguage(); // 訂閱語系變更
   const terminalRef = useRef<HTMLDivElement>(null);
   const termInstance = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -76,7 +78,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
     term.open(terminalRef.current);
     
     // 渲染提示資訊
-    term.writeln('\x1b[38;5;39m🚀 [WinCMP] 正在啟動專案終端會話...\x1b[0m');
+    term.writeln('\x1b[38;5;39m🚀 [WinCMP] ' + t("正在啟動專案終端會話...") + '\x1b[0m');
 
     // 3. 延遲執行 fit 避免 DOM 尺寸未就緒導致計算為 0
     setTimeout(async () => {
@@ -107,7 +109,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
         // 7. 監聽後端進程關閉事件
         EventsOn('terminal_exit', (res: { sessionId: string }) => {
           if (res.sessionId === sID) {
-            term.writeln('\r\n\x1b[38;5;203m🚫 [WinCMP] 終端會話已中斷或關閉\x1b[0m\r\n');
+            term.writeln('\r\n\x1b[38;5;203m🚫 [WinCMP] ' + t("終端會話已中斷或關閉") + '\x1b[0m\r\n');
           }
         });
 
@@ -132,7 +134,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
       } catch (err: any) {
         console.error("無法建立終端會話:", err);
         setErrorMsg(err.toString() || "無法建立 PTY 進程");
-        term.writeln(`\r\n\x1b[31m❌ 啟動失敗: ${err}\x1b[0m\r\n`);
+        term.writeln(`\r\n\x1b[31m❌ ${t("啟動失敗")}: ${err}\x1b[0m\r\n`);
       }
     }, 150);
 
@@ -179,7 +181,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
               <TermIcon size={14} className="text-blue-500" />
               <div>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-gray-200">
-                  專案開發終端 (Terminal)
+                  {t("專案開發終端 (Terminal)")}
                 </h3>
                 <p className="text-[10px] text-gray-500 font-mono mt-0.5">{projectName}</p>
               </div>
@@ -200,7 +202,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
             {errorMsg && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#08080a]/90 text-red-400 px-8 py-4 gap-3 text-center">
                 <ShieldAlert size={36} className="text-red-500" />
-                <div className="text-xs font-semibold">無法啟動終端</div>
+                <div className="text-xs font-semibold">{t("無法啟動終端")}</div>
                 <div className="text-[11px] font-mono text-gray-500 bg-black/40 px-3 py-2 rounded-lg border border-darkBorder max-w-full truncate">
                   {errorMsg}
                 </div>
@@ -211,7 +213,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
           {/* Footer */}
           <div className="px-6 py-3 border-t border-darkBorder flex justify-between items-center bg-[#0d0d10] shrink-0 text-[10px] text-gray-500">
             <div>
-              💡 支援完整互動指令、Ctrl+C 中斷與 TAB 自動補齊。
+              {t("💡 支援完整互動指令、Ctrl+C 中斷與 TAB 自動補齊。")}
             </div>
             <button
               onClick={() => {
@@ -224,7 +226,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
               }}
               className="px-2.5 py-1 hover:bg-darkBorder border border-darkBorder rounded text-gray-400 hover:text-white transition flex items-center gap-1 font-semibold"
             >
-              <RefreshCw size={10} /> 重啟
+              <RefreshCw size={10} /> {t("重啟")}
             </button>
           </div>
         </div>

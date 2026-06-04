@@ -21,8 +21,10 @@ import {
 import { scanner } from '../../wailsjs/go/models';
 import DependencyManager from './DependencyManager';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { t, useLanguage } from '../i18n';
 
 export default function Dashboard() {
+  useLanguage(); // 訂閱語系變更
   const [config, setConfig] = useState<any>(null);
   const [scanResult, setScanResult] = useState<scanner.ScanResult | null>(null);
   const [servicesStatus, setServicesStatus] = useState<Record<string, boolean>>({});
@@ -144,7 +146,7 @@ export default function Dashboard() {
       }
       await updateStatus();
     } catch (err: any) {
-      (window as any).customAlert(`操作失敗: ${err}`);
+      (window as any).customAlert(`${t("操作失敗")}: ${err}`);
     } finally {
       setLoadingServices(prev => ({ ...prev, [key]: false }));
     }
@@ -161,7 +163,7 @@ export default function Dashboard() {
       await SaveConfig(newCfg);
       setConfig(newCfg);
     } catch (err) {
-      (window as any).customAlert(`保存設定失敗: ${err}`);
+      (window as any).customAlert(`${t("保存設定失敗")}: ${err}`);
     }
   };
 
@@ -191,13 +193,13 @@ export default function Dashboard() {
               <AlertTriangle size={18} />
             </div>
             <div>
-              <span className="font-bold text-red-200 block text-sm">⚠️ 偵測到核心依賴元件缺失</span>
+              <span className="font-bold text-red-200 block text-sm">⚠️ {t("偵測到核心依賴元件缺失")}</span>
               <span className="text-xs text-red-300/80 mt-0.5 block">
-                本機未安裝：
+                {t("本機未安裝：")}
                 {[
-                  missingCore.caddy && "Caddy Web 伺服器",
-                  missingCore.php && "PHP 執行環境"
-                ].filter(Boolean).join("、")}。請先完成依賴安裝以確保專案與服務正常運作。
+                  missingCore.caddy && t("Caddy Web 伺服器"),
+                  missingCore.php && t("PHP 執行環境")
+                ].filter(Boolean).join(t("、"))}{t("。請先完成依賴安裝以確保專案與服務正常運作。")}
               </span>
             </div>
           </div>
@@ -206,13 +208,13 @@ export default function Dashboard() {
               onClick={() => setShowDepManager(true)}
               className="flex-1 md:flex-none px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition"
             >
-              <Package size={14} /> 立即一鍵下載配置
+              <Package size={14} /> {t("立即一鍵下載配置")}
             </button>
           </div>
           <button
             onClick={() => setDismissBanner(true)}
             className="absolute top-3 right-3 text-gray-400 hover:text-gray-200 p-1 hover:bg-white/5 rounded-lg transition"
-            title="關閉"
+            title={t("關閉")}
           >
             <X size={16} />
           </button>
@@ -222,8 +224,8 @@ export default function Dashboard() {
       {/* 標頭 */}
       <div className="flex justify-between items-center select-none">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">⚡ 儀表板 (Dashboard)</h1>
-          <p className="text-xs text-gray-400 mt-1">管理 Caddy, MariaDB, PHP-CGI 與背景開發服務</p>
+          <h1 className="text-xl font-bold tracking-tight text-white">⚡ {t("儀表板")}</h1>
+          <p className="text-xs text-gray-400 mt-1">{t("管理 Caddy, MariaDB, PHP-CGI 與背景開發服務")}</p>
         </div>
         <div className="flex gap-2.5">
           <button
@@ -231,7 +233,7 @@ export default function Dashboard() {
             className="px-3 py-2 rounded-lg text-xs font-semibold border border-darkBorder flex items-center gap-1.5 bg-darkCard hover:bg-opacity-80 transition duration-200 text-gray-200"
           >
             <Package size={13} className="text-blue-400" />
-            <span>依賴庫管理</span>
+            <span>{t("依賴庫管理")}</span>
           </button>
           <button
             onClick={handleScan}
@@ -239,7 +241,7 @@ export default function Dashboard() {
             className={`px-3 py-2 rounded-lg text-xs font-semibold border border-darkBorder flex items-center gap-1.5 bg-darkCard hover:bg-opacity-80 transition duration-200 ${isScanning ? 'opacity-50' : ''}`}
           >
             <RefreshCw size={13} className={isScanning ? 'animate-spin' : ''} />
-            {isScanning ? '掃描中...' : '重新掃描服務'}
+            {isScanning ? t("掃描中...") : t("重新掃描服務")}
           </button>
         </div>
       </div>
@@ -249,7 +251,7 @@ export default function Dashboard() {
         {/* Card 1: 依賴元件狀態 */}
         <div className="bg-darkCard border border-darkBorder rounded-xl p-4 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between text-gray-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">依賴元件狀態</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{t("依賴元件狀態")}</span>
             <Package size={16} className="text-blue-400" />
           </div>
           <div className="mt-2.5">
@@ -274,10 +276,10 @@ export default function Dashboard() {
               return (
                 <>
                   <span className={`text-xl font-black tracking-tight ${readyCount === 4 ? 'text-white' : 'text-yellow-400'}`}>
-                    {readyCount} / 4 已就緒
+                    {t("%s / 4 已就緒", readyCount)}
                   </span>
                   <p className="text-[10px] text-gray-500 mt-2 font-medium">
-                    {readyCount === 4 ? '所有核心依賴配置正常' : `缺: ${missing.join(', ')}`}
+                    {readyCount === 4 ? t("所有核心依賴配置正常") : `${t("缺: ")}${missing.join(', ')}`}
                   </p>
                 </>
               );
@@ -288,7 +290,7 @@ export default function Dashboard() {
         {/* Card 2: 埠口衝突檢測 */}
         <div className="bg-darkCard border border-darkBorder rounded-xl p-4 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between text-gray-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">埠口衝突檢測</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{t("埠口衝突檢測")}</span>
             <AlertTriangle size={16} className={Object.values(portConflicts).some(Boolean) ? 'text-red-400 animate-pulse' : 'text-green-400'} />
           </div>
           <div className="mt-2.5">
@@ -298,10 +300,10 @@ export default function Dashboard() {
               return (
                 <>
                   <span className={`text-xl font-black tracking-tight ${hasConflict ? 'text-red-400' : 'text-green-400'}`}>
-                    {hasConflict ? `${conflicts.length} 個衝突` : '無埠口衝突'}
+                    {hasConflict ? t("%s 個衝突", conflicts.length) : t("無埠口衝突")}
                   </span>
                   <p className="text-[10px] text-gray-500 mt-2 font-medium truncate">
-                    {hasConflict ? `Port: ${conflicts.join(', ')} 被佔用` : '本機埠口使用正常'}
+                    {hasConflict ? `Port: ${conflicts.join(', ')} ${t("被佔用")}` : t("本機埠口使用正常")}
                   </p>
                 </>
               );
@@ -312,7 +314,7 @@ export default function Dashboard() {
         {/* Card 3: Hosts 本地網域 */}
         <div className="bg-darkCard border border-darkBorder rounded-xl p-4 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between text-gray-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Hosts 本地網域</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{t("Hosts 本地網域")}</span>
             <Layers size={16} className="text-teal-400" />
           </div>
           <div className="mt-2.5">
@@ -326,9 +328,9 @@ export default function Dashboard() {
               const autoUpdate = config?.global?.auto_update_hosts;
               return (
                 <>
-                  <span className="text-xl font-black text-white tracking-tight">{domainCount} 個網域</span>
+                  <span className="text-xl font-black text-white tracking-tight">{t("%s 個網域", domainCount)}</span>
                   <p className="text-[10px] text-gray-500 mt-2 font-medium">
-                    Hosts 自動同步: {autoUpdate ? '開啟' : '關閉'}
+                    {t("Hosts 自動同步: ")}{autoUpdate ? t("開啟") : t("關閉")}
                   </p>
                 </>
               );
@@ -339,7 +341,7 @@ export default function Dashboard() {
         {/* Card 4: 託管專案概覽 */}
         <div className="bg-darkCard border border-darkBorder rounded-xl p-4 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between text-gray-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">託管專案概覽</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">{t("託管專案概覽")}</span>
             <Folder size={16} className="text-indigo-400" />
           </div>
           <div className="mt-2.5">
@@ -349,9 +351,9 @@ export default function Dashboard() {
               const rate = total > 0 ? Math.round((enabled / total) * 100) : 0;
               return (
                 <>
-                  <span className="text-xl font-black text-white tracking-tight">{enabled} / {total} 啟用</span>
+                  <span className="text-xl font-black text-white tracking-tight">{t("%s / %s 啟用", enabled, total)}</span>
                   <p className="text-[10px] text-gray-500 mt-2 font-medium">
-                    專案啟用率: {rate}%
+                    {t("專案啟用率: ")}{rate}%
                   </p>
                 </>
               );
@@ -364,7 +366,7 @@ export default function Dashboard() {
       <div className="space-y-4">
         <div className="flex items-center gap-2 select-none border-b border-darkBorder/40 pb-2">
           <LayoutGrid size={15} className="text-blue-500" />
-          <h3 className="font-bold text-sm text-gray-300">核心系統服務</h3>
+          <h3 className="font-bold text-sm text-gray-300">{t("核心系統服務")}</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -384,7 +386,7 @@ export default function Dashboard() {
                     <span className={`relative inline-flex rounded-full h-2 w-2 ${running ? 'bg-green-500' : 'bg-gray-500'}`}></span>
                   </span>
                   <span className={`font-bold ${running ? 'text-green-400' : 'text-gray-400'}`}>
-                    {running ? '運行中' : '已停止'}
+                    {running ? t("運行中") : t("已停止")}
                   </span>
                 </div>
 
@@ -393,9 +395,9 @@ export default function Dashboard() {
                     <Server size={22} />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="font-bold text-sm text-gray-100">Caddy 反向代理</h4>
-                    <p className="text-[11px] text-gray-500 font-medium">版本: {caddy ? caddy.Version : '未安裝'}</p>
-                    <p className="text-[11px] text-gray-400 font-mono">埠口: 80, 443, 2019</p>
+                    <h4 className="font-bold text-sm text-gray-100">{t("Caddy 反向代理")}</h4>
+                    <p className="text-[11px] text-gray-500 font-medium">{t("版本: ")}{caddy ? caddy.Version : t("未安裝")}</p>
+                    <p className="text-[11px] text-gray-400 font-mono">{t("埠口: ")}80, 443, 2019</p>
                   </div>
                 </div>
 
@@ -406,7 +408,7 @@ export default function Dashboard() {
                       disabled={loadingStart || !caddy}
                       className="w-full py-1.5 bg-green-600/90 hover:bg-green-600 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none"
                     >
-                      <Play size={12} /> {loadingStart ? '啟動中...' : '啟動服務'}
+                      <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
                   ) : (
                     <>
@@ -415,14 +417,14 @@ export default function Dashboard() {
                         disabled={loadingStop}
                         className="flex-1 py-1.5 bg-red-950/40 hover:bg-red-950/60 border border-red-900/30 text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none"
                       >
-                        <Square size={12} /> {loadingStop ? '停止中...' : '停止'}
+                        <Square size={12} /> {loadingStop ? t("停止中...") : t("停止")}
                       </button>
                       <button
                         onClick={() => handleServiceAction('caddy', 'reload', caddy)}
                         disabled={loadingReload}
                         className="flex-1 py-1.5 bg-darkInput border border-darkBorder hover:bg-darkBorder text-gray-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none"
                       >
-                        <RefreshCw size={12} /> {loadingReload ? '重載中...' : '重載'}
+                        <RefreshCw size={12} /> {loadingReload ? t("重載中...") : t("重載")}
                       </button>
                     </>
                   )}
@@ -448,7 +450,7 @@ export default function Dashboard() {
                     <span className={`relative inline-flex rounded-full h-2 w-2 ${running ? 'bg-green-500' : 'bg-gray-500'}`}></span>
                   </span>
                   <span className={`font-bold ${running ? 'text-green-400' : 'text-gray-400'}`}>
-                    {running ? '運行中' : '已停止'}
+                    {running ? t("運行中") : t("已停止")}
                   </span>
                 </div>
 
@@ -457,9 +459,9 @@ export default function Dashboard() {
                     <Database size={22} />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="font-bold text-sm text-gray-100">MariaDB 資料庫</h4>
-                    <p className="text-[11px] text-gray-500 font-medium">版本: {mariadb ? mariadb.Version : '未安裝'}</p>
-                    <p className="text-[11px] text-gray-400 font-mono">埠口: {dbPort}</p>
+                    <h4 className="font-bold text-sm text-gray-100">{t("MariaDB 資料庫")}</h4>
+                    <p className="text-[11px] text-gray-500 font-medium">{t("版本: ")}{mariadb ? mariadb.Version : t("未安裝")}</p>
+                    <p className="text-[11px] text-gray-400 font-mono">{t("埠口: ")}{dbPort}</p>
                   </div>
                 </div>
 
@@ -470,7 +472,7 @@ export default function Dashboard() {
                       disabled={loadingStart || !mariadb}
                       className="w-full py-1.5 bg-green-600/90 hover:bg-green-600 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none"
                     >
-                      <Play size={12} /> {loadingStart ? '啟動中...' : '啟動服務'}
+                      <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
                   ) : (
                     <button
@@ -478,7 +480,7 @@ export default function Dashboard() {
                       disabled={loadingStop}
                       className="w-full py-1.5 bg-red-950/40 hover:bg-red-950/60 border border-red-900/30 text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none"
                     >
-                      <Square size={12} /> {loadingStop ? '停止中...' : '停止服務'}
+                      <Square size={12} /> {loadingStop ? t("停止中...") : t("停止服務")}
                     </button>
                   )}
                 </div>
@@ -503,7 +505,7 @@ export default function Dashboard() {
                     <span className={`relative inline-flex rounded-full h-2 w-2 ${running ? 'bg-green-500' : 'bg-gray-500'}`}></span>
                   </span>
                   <span className={`font-bold ${running ? 'text-green-400' : 'text-gray-400'}`}>
-                    {running ? '運行中' : '已停止'}
+                    {running ? t("運行中") : t("已停止")}
                   </span>
                 </div>
 
@@ -512,8 +514,8 @@ export default function Dashboard() {
                     <Cpu size={22} />
                   </div>
                   <div className="space-y-1">
-                    <h4 className="font-bold text-sm text-gray-100">Mailpit 測試郵件</h4>
-                    <p className="text-[11px] text-gray-500 font-medium">版本: {mailpit ? mailpit.Version : '未安裝'}</p>
+                    <h4 className="font-bold text-sm text-gray-100">{t("Mailpit 測試郵件")}</h4>
+                    <p className="text-[11px] text-gray-500 font-medium">{t("版本: ")}{mailpit ? mailpit.Version : t("未安裝")}</p>
                     <p className="text-[11px] text-gray-400 font-mono">SMTP: {smtpPort} | HTTP: {httpPort}</p>
                   </div>
                 </div>
@@ -525,7 +527,7 @@ export default function Dashboard() {
                       disabled={loadingStart || !mailpit}
                       className="w-full py-1.5 bg-green-600/90 hover:bg-green-600 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none"
                     >
-                      <Play size={12} /> {loadingStart ? '啟動中...' : '啟動服務'}
+                      <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
                   ) : (
                     <button
@@ -533,7 +535,7 @@ export default function Dashboard() {
                       disabled={loadingStop}
                       className="w-full py-1.5 bg-red-950/40 hover:bg-red-950/60 border border-red-900/30 text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none"
                     >
-                      <Square size={12} /> {loadingStop ? '停止中...' : '停止服務'}
+                      <Square size={12} /> {loadingStop ? t("停止中...") : t("停止服務")}
                     </button>
                   )}
                 </div>
@@ -547,7 +549,7 @@ export default function Dashboard() {
       <div className="space-y-4 pt-2">
         <div className="flex items-center gap-2 select-none border-b border-darkBorder/40 pb-2">
           <Server size={15} className="text-green-500" />
-          <h3 className="font-bold text-sm text-gray-300">PHP FastCGI 伺服器 (多端口負載平衡)</h3>
+          <h3 className="font-bold text-sm text-gray-300">{t("PHP FastCGI 伺服器 (多端口負載平衡)")}</h3>
         </div>
 
         {scanResult?.PHPList && scanResult.PHPList.length > 0 ? (
@@ -572,7 +574,7 @@ export default function Dashboard() {
                       <span className={`relative inline-flex rounded-full h-2 w-2 ${running ? 'bg-green-500' : 'bg-gray-500'}`}></span>
                     </span>
                     <span className={`font-bold ${running ? 'text-green-400' : 'text-gray-400'}`}>
-                      {running ? '運行中' : '已停止'}
+                      {running ? t("運行中") : t("已停止")}
                     </span>
                   </div>
 
@@ -582,14 +584,14 @@ export default function Dashboard() {
                     </div>
                     <div className="space-y-1">
                       <h4 className="font-bold text-sm text-gray-100">PHP {php.Version}</h4>
-                      <p className="text-[11px] text-gray-400 font-mono">埠口: {portDisplay}</p>
+                      <p className="text-[11px] text-gray-400 font-mono">{t("埠口: ")}{portDisplay}</p>
                     </div>
                   </div>
 
                   {/* 進程數量選擇與啟停 */}
                   <div className="mt-4 space-y-3 pt-3 border-t border-darkBorder/40">
                     <div className="flex items-center justify-between text-xs select-none">
-                      <span className="text-gray-500 font-semibold">進程數量 (Processes)</span>
+                      <span className="text-gray-500 font-semibold">{t("進程數量 (Processes)")}</span>
                       <select
                         disabled={running}
                         value={configuredCount}
@@ -597,7 +599,7 @@ export default function Dashboard() {
                         className="bg-darkInput border border-darkBorder text-gray-300 rounded-lg px-2 py-1 outline-none focus:border-blue-500 disabled:opacity-50 transition cursor-pointer text-xs font-semibold"
                       >
                         {[1, 2, 3, 5, 10, 20, 50, 100].map(n => (
-                          <option key={n} value={n}>{n} 個進程</option>
+                          <option key={n} value={n}>{t("%s 個進程", n)}</option>
                         ))}
                       </select>
                     </div>
@@ -609,7 +611,7 @@ export default function Dashboard() {
                           disabled={loadingStart}
                           className="w-full py-1.5 bg-green-600/90 hover:bg-green-600 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none"
                         >
-                          <Play size={12} /> {loadingStart ? '啟動中...' : '啟動 PHP'}
+                          <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動 PHP")}
                         </button>
                       ) : (
                         <button
@@ -617,7 +619,7 @@ export default function Dashboard() {
                           disabled={loadingStop}
                           className="w-full py-1.5 bg-red-950/40 hover:bg-red-950/60 border border-red-900/30 text-red-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none"
                         >
-                          <Square size={12} /> {loadingStop ? '停止中...' : '停止 PHP'}
+                          <Square size={12} /> {loadingStop ? t("停止中...") : t("停止 PHP")}
                         </button>
                       )}
                     </div>
@@ -628,7 +630,7 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="bg-darkCard border border-darkBorder rounded-xl p-8 text-center text-gray-400 select-none text-xs">
-            未偵測到任何已安裝的 PHP 版本。請將 PHP 解壓縮後放入 ./bin/php/ 目錄下。
+            {t("未偵測到任何已安裝的 PHP 版本。請將 PHP 解壓縮後放入 ./bin/php/ 目錄下。")}
           </div>
         )}
       </div>

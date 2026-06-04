@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cpu, HardDrive, Server, Layers, Activity, RefreshCw } from 'lucide-react';
 import { GetDetailedResources } from '../../wailsjs/go/main/App';
+import { t, useLanguage } from '../i18n';
 
 interface ProcessResource {
   cpu: number;
@@ -22,6 +23,7 @@ interface DetailedResources {
 }
 
 export default function ResourceMonitor() {
+  useLanguage(); // 訂閱語系變更
   const [data, setData] = useState<DetailedResources | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +64,7 @@ export default function ResourceMonitor() {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3 select-none">
         <RefreshCw size={24} className="animate-spin text-blue-500" />
-        <span className="text-xs font-semibold">正在載入系統與服務資源數據...</span>
+        <span className="text-xs font-semibold">{t("正在載入系統與服務資源數據...")}</span>
       </div>
     );
   }
@@ -71,7 +73,7 @@ export default function ResourceMonitor() {
     return (
       <div className="p-6 text-center select-none">
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 inline-block max-w-md">
-          <span className="text-red-400 font-bold block mb-2">⚠️ 載入資源監控失敗</span>
+          <span className="text-red-400 font-bold block mb-2">⚠️ {t("載入資源監控失敗")}</span>
           <span className="text-xs text-red-300/80 block break-all font-mono mb-4">{error}</span>
           <button
             onClick={() => {
@@ -80,7 +82,7 @@ export default function ResourceMonitor() {
             }}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition"
           >
-            重新嘗試
+            {t("重新嘗試")}
           </button>
         </div>
       </div>
@@ -107,9 +109,9 @@ export default function ResourceMonitor() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Activity className="text-blue-500" size={20} /> 資源監控 (Resource Monitor)
+            <Activity className="text-blue-500" size={20} /> {t("資源監控 (Resource Monitor)")}
           </h1>
-          <p className="text-xs text-gray-400 mt-1">即時監控系統總體、主程式、Web 視窗介面及各背景服務的 CPU 與 RAM 使用狀況</p>
+          <p className="text-xs text-gray-400 mt-1">{t("即時監控系統總體、主程式、Web 視窗介面及各背景服務的 CPU 與 RAM 使用狀況")}</p>
         </div>
         <button
           onClick={() => fetchResources()}
@@ -118,7 +120,7 @@ export default function ResourceMonitor() {
             }`}
         >
           <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
-          <span>{isRefreshing ? '整理中...' : '手動整理'}</span>
+          <span>{isRefreshing ? t('整理中...') : t('手動整理')}</span>
         </button>
       </div>
 
@@ -128,7 +130,7 @@ export default function ResourceMonitor() {
         <div className="space-y-2">
           <div className="flex justify-between items-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
             <span className="flex items-center gap-1.5">
-              <Cpu size={14} className="text-blue-400" /> WinCMP CPU 總佔用
+              <Cpu size={14} className="text-blue-400" /> {t("WinCMP CPU 總佔用")}
             </span>
             <span className="font-mono text-white text-sm">{totalCpu.toFixed(1)}%</span>
           </div>
@@ -146,7 +148,7 @@ export default function ResourceMonitor() {
         <div className="space-y-2">
           <div className="flex justify-between items-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
             <span className="flex items-center gap-1.5">
-              <HardDrive size={14} className="text-indigo-400" /> WinCMP 記憶體 (RAM) 總佔用
+              <HardDrive size={14} className="text-indigo-400" /> {t("WinCMP 記憶體 (RAM) 總佔用")}
             </span>
             <span className="font-mono text-white text-sm">{totalRam} MB</span>
           </div>
@@ -170,17 +172,17 @@ export default function ResourceMonitor() {
                 <Server size={18} />
               </div>
               <div>
-                <h4 className="font-bold text-sm text-gray-100">WinCMP 核心 (Go 後端)</h4>
+                <h4 className="font-bold text-sm text-gray-100">{t("WinCMP 核心 (Go 後端)")}</h4>
                 <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Core Process</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="space-y-1">
-                <span className="text-gray-500 font-semibold">CPU 佔用率</span>
+                <span className="text-gray-500 font-semibold">{t("CPU 佔用率")}</span>
                 <span className="block font-bold text-gray-200 text-sm">{core.cpu.toFixed(1)}%</span>
               </div>
               <div className="space-y-1">
-                <span className="text-gray-500 font-semibold">記憶體 (RAM)</span>
+                <span className="text-gray-500 font-semibold">{t("記憶體 (RAM)")}</span>
                 <span className="block font-bold text-gray-200 text-sm">{core.ram} MB</span>
               </div>
             </div>
@@ -203,17 +205,17 @@ export default function ResourceMonitor() {
                 <Layers size={18} />
               </div>
               <div>
-                <h4 className="font-bold text-sm text-gray-100">Web 視窗介面 (WebView2)</h4>
+                <h4 className="font-bold text-sm text-gray-100">{t("Web 視窗介面 (WebView2)")}</h4>
                 <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">UI Render Engine</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div className="space-y-1">
-                <span className="text-gray-500 font-semibold">CPU 佔用率</span>
+                <span className="text-gray-500 font-semibold">{t("CPU 佔用率")}</span>
                 <span className="block font-bold text-gray-200 text-sm">{web.cpu.toFixed(1)}%</span>
               </div>
               <div className="space-y-1">
-                <span className="text-gray-500 font-semibold">記憶體 (RAM)</span>
+                <span className="text-gray-500 font-semibold">{t("記憶體 (RAM)")}</span>
                 <span className="block font-bold text-gray-200 text-sm">{web.ram} MB</span>
               </div>
             </div>
@@ -234,7 +236,7 @@ export default function ResourceMonitor() {
       <div className="space-y-4 pt-2">
         <div className="flex items-center gap-2 border-b border-darkBorder/40 pb-2">
           <Server size={15} className="text-green-500" />
-          <h3 className="font-bold text-sm text-gray-300">啟動中的依賴服務 (Services Stack)</h3>
+          <h3 className="font-bold text-sm text-gray-300">{t("啟動中的依賴服務 (Services Stack)")}</h3>
         </div>
 
         {svcKeys.length > 0 ? (
@@ -243,11 +245,11 @@ export default function ResourceMonitor() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-darkBorder bg-black bg-opacity-20 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
-                    <th className="px-5 py-3">服務名稱</th>
-                    <th className="px-5 py-3">狀態</th>
-                    <th className="px-5 py-3">CPU 佔用</th>
-                    <th className="px-5 py-3">記憶體 (RAM)</th>
-                    <th className="px-5 py-3 font-mono">進程 ID (PIDs)</th>
+                    <th className="px-5 py-3">{t("服務名稱")}</th>
+                    <th className="px-5 py-3">{t("狀態")}</th>
+                    <th className="px-5 py-3">{t("CPU 佔用")}</th>
+                    <th className="px-5 py-3">{t("記憶體 (RAM)")}</th>
+                    <th className="px-5 py-3 font-mono">{t("進程 ID (PIDs)")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-darkBorder/40 text-xs font-semibold text-gray-300">
@@ -264,7 +266,7 @@ export default function ResourceMonitor() {
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                             </span>
-                            運行中
+                            {t("運行中")}
                           </span>
                         </td>
                         <td className="px-5 py-4 font-mono text-gray-100">{svc.cpu.toFixed(1)}%</td>
@@ -281,7 +283,7 @@ export default function ResourceMonitor() {
           </div>
         ) : (
           <div className="bg-darkCard border border-darkBorder rounded-xl p-8 text-center text-gray-500 select-none text-xs">
-            目前沒有啟動中的子服務。請前往「儀表板」啟動 Caddy、PHP 或 MariaDB 服務。
+            {t("目前沒有啟動中的子服務。請前往「儀表板」啟動 Caddy、PHP 或 MariaDB 服務。")}
           </div>
         )}
       </div>

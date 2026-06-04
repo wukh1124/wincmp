@@ -3,8 +3,11 @@ import { Settings as SettingsIcon, Save, FolderOpen, Shield, Database, Mail, Lan
 import { GetConfig, SaveConfig, SelectFolder, OpenFolder } from '../../wailsjs/go/main/App';
 import DependencyManager from './DependencyManager';
 import { logStore } from './logStore';
+import { t, useLanguage, setLanguage } from '../i18n';
 
 export default function Settings() {
+  useLanguage(); // 訂閱語系變更
+
   const [config, setConfig] = useState<any>(null);
   const [originalConfig, setOriginalConfig] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -76,9 +79,11 @@ export default function Settings() {
       setConfig(newCfg);
       setOriginalConfig(JSON.parse(JSON.stringify(newCfg)));
       (window as any).isSettingsDirty = false;
-      (window as any).customAlert("設定儲存成功！部分設定 (如語言) 可能需要重新啟動以完全套用。");
+      // 即時生效設定前端語系
+      setLanguage(newCfg.global.language || 'zh-TW');
+      (window as any).customAlert(t("設定儲存成功！"));
     } catch (err) {
-      (window as any).customAlert(`儲存設定失敗: ${err}`);
+      (window as any).customAlert(`${t("儲存設定失敗")}: ${err}`);
     } finally {
       setIsSaving(false);
     }
@@ -95,7 +100,7 @@ export default function Settings() {
         await OpenFolder('./conf/wincmp.json');
       }
     } catch (err) {
-      (window as any).customAlert(`無法開啟設定檔: ${err}`);
+      (window as any).customAlert(`${t("無法開啟設定檔")}: ${err}`);
     }
   };
 
@@ -107,7 +112,7 @@ export default function Settings() {
   };
 
   if (!config) {
-    return <div className="p-8 text-center text-gray-400 select-none text-xs font-semibold">載入設定中...</div>;
+    return <div className="p-8 text-center text-gray-400 select-none text-xs font-semibold">{t("載入設定中...")}</div>;
   }
 
   return (
@@ -115,8 +120,8 @@ export default function Settings() {
       {/* 標頭 */}
       <div className="flex justify-between items-center select-none">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">⚙️ 系統全域設定 (Settings)</h1>
-          <p className="text-xs text-gray-400 mt-1">配置開發路徑、資料庫參數以及 WinCMP 全域行為</p>
+          <h1 className="text-xl font-bold tracking-tight text-white">⚙️ {t("系統全域設定 (Settings)")}</h1>
+          <p className="text-xs text-gray-400 mt-1">{t("配置開發路徑、資料庫參數以及 WinCMP 全域行為")}</p>
         </div>
         <div className="flex gap-2.5">
           <button
@@ -124,7 +129,7 @@ export default function Settings() {
             className="px-3.5 py-2.5 bg-darkCard border border-darkBorder hover:border-gray-600 text-gray-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200"
           >
             <Package size={14} className="text-blue-400" />
-            <span>依賴庫管理中心</span>
+            <span>{t("依賴庫管理中心")}</span>
           </button>
           <button
             onClick={handleSave}
@@ -132,7 +137,7 @@ export default function Settings() {
             className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200"
           >
             <Save size={14} />
-            <span>{isSaving ? '儲存中...' : '儲存全域設定'}</span>
+            <span>{isSaving ? t("儲存中...") : t("儲存全域設定")}</span>
           </button>
         </div>
       </div>
@@ -141,12 +146,12 @@ export default function Settings() {
         {/* 1. 基本路徑與行為 */}
         <div className="bg-darkCard border border-darkBorder rounded-xl p-5 space-y-4">
           <h3 className="font-bold text-sm text-gray-200 flex items-center gap-2 border-b border-darkBorder/40 pb-3 select-none">
-            <SettingsIcon size={14} className="text-blue-400" /> 基本路徑與行為
+            <SettingsIcon size={14} className="text-blue-400" /> {t("基本路徑與行為")}
           </h3>
 
           {/* WWW 根目錄 */}
           <div className="space-y-1.5">
-            <label className="text-[10px] text-gray-500 font-bold uppercase">預設 Web 專案目錄 (WWW Dir)</label>
+            <label className="text-[10px] text-gray-500 font-bold uppercase">{t("預設 Web 專案目錄 (WWW Dir)")}</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -158,14 +163,14 @@ export default function Settings() {
                 onClick={() => handleSelectFolder('default_www')}
                 className="px-3 py-1.5 bg-darkInput border border-darkBorder hover:border-gray-500 rounded-lg transition font-semibold"
               >
-                選擇
+                {t("選擇")}
               </button>
             </div>
           </div>
 
           {/* SSL 根目錄 */}
           <div className="space-y-1.5">
-            <label className="text-[10px] text-gray-500 font-bold uppercase">預設 SSL 憑證存放目錄 (SSL Dir)</label>
+            <label className="text-[10px] text-gray-500 font-bold uppercase">{t("預設 SSL 憑證存放目錄 (SSL Dir)")}</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -177,7 +182,7 @@ export default function Settings() {
                 onClick={() => handleSelectFolder('default_ssl')}
                 className="px-3 py-1.5 bg-darkInput border border-darkBorder hover:border-gray-500 rounded-lg transition font-semibold"
               >
-                選擇
+                {t("選擇")}
               </button>
             </div>
           </div>
@@ -185,7 +190,7 @@ export default function Settings() {
           {/* 系統開關組 */}
           <div className="space-y-3 pt-2 select-none">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-gray-300">恢復上次關閉時的服務狀態</span>
+              <span className="font-semibold text-gray-300">{t("恢復上次關閉時的服務狀態")}</span>
               <input
                 type="checkbox"
                 checked={config.global.restore_last_state}
@@ -194,7 +199,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-gray-300">自動向 Windows Hosts 檔更新域名</span>
+              <span className="font-semibold text-gray-300">{t("自動向 Windows Hosts 檔更新域名")}</span>
               <input
                 type="checkbox"
                 checked={config.global.auto_update_hosts}
@@ -203,7 +208,7 @@ export default function Settings() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-gray-300">點擊關閉視窗時縮小至系統托盤 (Minimize to Tray)</span>
+              <span className="font-semibold text-gray-300">{t("點擊關閉視窗時縮小至系統托盤 (Minimize to Tray)")}</span>
               <input
                 type="checkbox"
                 checked={config.global.minimize_to_tray}
@@ -217,13 +222,13 @@ export default function Settings() {
         {/* 2. 資料庫與郵件伺服器 */}
         <div className="bg-darkCard border border-darkBorder rounded-xl p-5 space-y-4">
           <h3 className="font-bold text-sm text-gray-200 flex items-center gap-2 border-b border-darkBorder/40 pb-3 select-none">
-            <Database size={14} className="text-teal-400" /> MariaDB 資料庫 & Mailpit 服務設定
+            <Database size={14} className="text-teal-400" /> {t("MariaDB 資料庫 & Mailpit 服務設定")}
           </h3>
 
           <div className="flex items-center justify-between select-none">
             <div>
-              <span className="font-semibold text-gray-300 block">使用外部自訂 MariaDB/MySQL</span>
-              <span className="text-[10px] text-gray-500 mt-0.5 block">手動指定資料庫二進位目錄與數據目錄</span>
+              <span className="font-semibold text-gray-300 block">{t("使用外部自訂 MariaDB/MySQL")}</span>
+              <span className="text-[10px] text-gray-500 mt-0.5 block">{t("手動指定資料庫二進位目錄與數據目錄")}</span>
             </div>
             <input
               type="checkbox"
@@ -238,7 +243,7 @@ export default function Settings() {
             <div className="space-y-3.5 p-4 border border-darkBorder rounded-xl bg-[#0a0a0c]/40 transition">
               <div className="grid grid-cols-2 gap-3 select-none">
                 <div className="space-y-1">
-                  <label className="text-[10px] text-gray-500 font-bold uppercase">資料庫引擎類型</label>
+                  <label className="text-[10px] text-gray-500 font-bold uppercase">{t("資料庫引擎類型")}</label>
                   <select
                     value={config.global.mariadb_type || 'MariaDB'}
                     onChange={(e) => handleGlobalFieldChange('mariadb_type', e.target.value)}
@@ -249,7 +254,7 @@ export default function Settings() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] text-gray-500 font-bold uppercase">執行 Port</label>
+                  <label className="text-[10px] text-gray-500 font-bold uppercase">{t("執行 Port")}</label>
                   <input
                     type="number"
                     value={config.global.mariadb_port || 3306}
@@ -260,7 +265,7 @@ export default function Settings() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] text-gray-500 font-bold uppercase block select-none">Binary Path (含 bin 資料夾的根目錄)</label>
+                <label className="text-[10px] text-gray-500 font-bold uppercase block select-none">{t("Binary Path (含 bin 資料夾的根目錄)")}</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -272,13 +277,13 @@ export default function Settings() {
                     onClick={() => handleSelectFolder('mariadb_basedir')}
                     className="px-3 py-1 bg-darkInput border border-darkBorder hover:border-gray-500 rounded-lg transition font-semibold"
                   >
-                    選擇
+                    {t("選擇")}
                   </button>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] text-gray-500 font-bold uppercase block select-none">Data Path (資料存放目錄)</label>
+                <label className="text-[10px] text-gray-500 font-bold uppercase block select-none">{t("Data Path (資料存放目錄)")}</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -290,7 +295,7 @@ export default function Settings() {
                     onClick={() => handleSelectFolder('mariadb_datadir')}
                     className="px-3 py-1 bg-darkInput border border-darkBorder hover:border-gray-500 rounded-lg transition font-semibold"
                   >
-                    選擇
+                    {t("選擇")}
                   </button>
                 </div>
               </div>
@@ -300,7 +305,7 @@ export default function Settings() {
           {/* Mailpit 端口與設定 */}
           <div className="border-t border-darkBorder/40 pt-4 space-y-3.5">
             <div className="font-bold text-[10px] text-purple-400 uppercase tracking-wider flex items-center gap-1 select-none">
-              <Mail size={12} /> Mailpit 端口配置
+              <Mail size={12} /> {t("Mailpit 端口配置")}
             </div>
             <div className="grid grid-cols-2 gap-3 select-none">
               <div className="space-y-1">
@@ -323,7 +328,7 @@ export default function Settings() {
               </div>
             </div>
             <div className="flex items-center justify-between pt-1 select-none">
-              <span className="font-semibold text-gray-300">使用內置數據庫持久化保存信箱數據</span>
+              <span className="font-semibold text-gray-300">{t("使用內置數據庫持久化保存信箱數據")}</span>
               <input
                 type="checkbox"
                 checked={config.global.mailpit_use_db}
@@ -337,12 +342,12 @@ export default function Settings() {
         {/* 3. 本地化語系與日誌設定 */}
         <div className="bg-darkCard border border-darkBorder rounded-xl p-5 space-y-4">
           <h3 className="font-bold text-sm text-gray-200 flex items-center gap-2 border-b border-darkBorder/40 pb-3 select-none">
-            <Languages size={14} className="text-purple-400" /> 本地化語言與日誌設定
+            <Languages size={14} className="text-purple-400" /> {t("本地化語言與日誌設定")}
           </h3>
 
           {/* 語言 */}
           <div className="space-y-1.5">
-            <label className="text-[10px] text-gray-500 font-bold uppercase select-none">顯示語言 (Language)</label>
+            <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("顯示語言 (Language)")}</label>
             <select
               value={config.global.language || 'zh-TW'}
               onChange={(e) => handleGlobalFieldChange('language', e.target.value)}
@@ -355,7 +360,7 @@ export default function Settings() {
 
           {/* 預設終端 Shell */}
           <div className="space-y-1.5">
-            <label className="text-[10px] text-gray-500 font-bold uppercase select-none">預設專案終端 (Terminal Shell)</label>
+            <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("預設專案終端 (Terminal Shell)")}</label>
             <select
               value={config.global.terminal_shell || 'powershell.exe'}
               onChange={(e) => handleGlobalFieldChange('terminal_shell', e.target.value)}
@@ -371,7 +376,7 @@ export default function Settings() {
           <div className="grid grid-cols-2 gap-4">
             {/* 日誌天數 */}
             <div className="space-y-1.5">
-              <label className="text-[10px] text-gray-500 font-bold uppercase select-none">檔案日誌保存期限 (天)</label>
+              <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("檔案日誌保存期限 (天)")}</label>
               <input
                 type="number"
                 value={config.global.max_log_retention || 30}
@@ -381,7 +386,7 @@ export default function Settings() {
             </div>
             {/* 最大日誌行數 */}
             <div className="space-y-1.5">
-              <label className="text-[10px] text-gray-500 font-bold uppercase select-none">終端保留最大行數</label>
+              <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("終端保留最大行數")}</label>
               <input
                 type="number"
                 value={config.global.max_log_lines || 500}
@@ -395,16 +400,16 @@ export default function Settings() {
         {/* 4. 快速編輯系統設定檔 */}
         <div className="bg-darkCard border border-darkBorder rounded-xl p-5 space-y-4">
           <h3 className="font-bold text-sm text-gray-200 flex items-center gap-2 border-b border-darkBorder/40 pb-3 select-none">
-            <FileText size={14} className="text-orange-400" /> 系統設定檔案快速捷徑
+            <FileText size={14} className="text-orange-400" /> {t("系統設定檔案快速捷徑")}
           </h3>
-          <p className="text-[11px] text-gray-500 select-none font-medium">可以在這裡直接使用系統預設編輯器開啟核心設定檔，進行進階手動編輯：</p>
+          <p className="text-[11px] text-gray-500 select-none font-medium">{t("可以在這裡直接使用系統預設編輯器開啟核心設定檔，進行進階手動編輯：")}</p>
           <div className="grid grid-cols-3 gap-3 select-none">
             <button
               onClick={() => handleOpenLocalPath('hosts')}
               className="py-3 px-2 bg-darkInput/40 border border-darkBorder hover:border-orange-500/40 hover:bg-orange-500/[0.02] rounded-xl flex flex-col items-center gap-2 transition"
             >
               <Shield size={16} className="text-orange-400" />
-              <span className="font-bold text-gray-300 text-xs">Hosts 檔案</span>
+              <span className="font-bold text-gray-300 text-xs">{t("Hosts 檔案")}</span>
               <span className="text-[10px] text-gray-500 font-mono">(Hosts)</span>
             </button>
             <button
@@ -412,7 +417,7 @@ export default function Settings() {
               className="py-3 px-2 bg-darkInput/40 border border-darkBorder hover:border-emerald-500/40 hover:bg-emerald-500/[0.02] rounded-xl flex flex-col items-center gap-2 transition"
             >
               <SettingsIcon size={16} className="text-emerald-400" />
-              <span className="font-bold text-gray-300 text-xs">php.ini 設定</span>
+              <span className="font-bold text-gray-300 text-xs">{t("php.ini 設定")}</span>
               <span className="text-[10px] text-gray-500 font-mono">(PHP 全域)</span>
             </button>
             <button
@@ -420,7 +425,7 @@ export default function Settings() {
               className="py-3 px-2 bg-darkInput/40 border border-darkBorder hover:border-blue-500/40 hover:bg-blue-500/[0.02] rounded-xl flex flex-col items-center gap-2 transition"
             >
               <Info size={16} className="text-blue-400" />
-              <span className="font-bold text-gray-300 text-xs">WinCMP Json</span>
+              <span className="font-bold text-gray-300 text-xs">{t("WinCMP Json")}</span>
               <span className="text-[10px] text-gray-500 font-mono">(核心配置)</span>
             </button>
           </div>
