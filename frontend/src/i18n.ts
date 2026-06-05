@@ -50,6 +50,8 @@ export const enTranslations: Record<string, string> = {
   "系統提示": "System Notice",
   "系統確認": "System Confirmation",
   "您有尚未儲存的設定變更，確定要離開此頁面嗎？": "You have unsaved settings. Are you sure you want to leave?",
+  "確定": "OK",
+  "取消": "Cancel",
 
   // Settings.tsx
   "系統全域設定": "System Settings",
@@ -87,6 +89,7 @@ export const enTranslations: Record<string, string> = {
   "載入設定中...": "Loading configurations...",
   "設定儲存成功！": "Settings saved successfully!",
   "儲存設定失敗": "Failed to save settings",
+  "無法開啟設定檔": "Failed to open configuration file",
 
   // Dashboard.tsx
   "偵測到核心依賴元件缺失": "Core Dependencies Missing",
@@ -143,6 +146,8 @@ export const enTranslations: Record<string, string> = {
   "啟動 PHP": "Start PHP",
   "停止 PHP": "Stop PHP",
   "未偵測到任何已安裝的 PHP 版本。請將 PHP 解壓縮後放入 ./bin/php/ 目錄下。": "No PHP versions detected. Extract PHP into the ./bin/php/ directory to configure.",
+  "操作失敗": "Operation failed",
+  "保存設定失敗": "Failed to save settings",
 
   // Projects.tsx
   "專案管理面板": "Projects Management Panel",
@@ -190,6 +195,16 @@ export const enTranslations: Record<string, string> = {
   "新增專案成功": "Project added successfully",
   "更新專案成功": "Project updated successfully",
   "刪除專案成功": "Project deleted successfully",
+  "確定要刪除此專案嗎？這只會從 WinCMP 面板移除，不會刪除硬碟上的專案代碼喔！": "Are you sure you want to delete this project? This will only remove it from the WinCMP panel and will not delete the project code on your hard drive!",
+  "儲存失敗：您勾選了使用 WinCMP 內建執行檔，但系統未在 ./bin/ 下偵測到可用的 Node.js 或 Bun 執行檔。請先下載並放置於對應目錄，或取消勾選此選項以使用系統全域執行檔。": "Save failed: You checked 'Use WinCMP Bundled Executable', but the system did not detect any available Node.js or Bun executables under ./bin/. Please download and place them in the corresponding directory first, or uncheck this option to use the system global executable.",
+  "啟動 Runtime 失敗": "Failed to start Runtime",
+  "停止 Runtime 失敗": "Failed to stop Runtime",
+  "無法開啟目錄": "Failed to open directory",
+  "已複製連結": "Link copied",
+  "自動偵測專案失敗": "Failed to auto-detect project",
+  "專案名稱不能為空": "Project name cannot be empty",
+  "保存專案設定失敗": "Failed to save project settings",
+  "刪除專案失敗": "Failed to delete project",
 
   // DBExplorer.tsx
   "資料庫瀏覽 (Database Explorer)": "Database Explorer",

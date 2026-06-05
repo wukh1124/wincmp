@@ -87,7 +87,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
   const runtimeTypes = [
     { value: 'none', label: t('無 Runtime') },
-    { value: 'auto', label: t('Auto (自動偵測 Node/Bun)') },
+    { value: 'auto', label: t('Auto (Node/Bun)') },
     { value: 'node', label: t('Node.js') },
     { value: 'bun', label: t('Bun') },
     { value: 'python', label: t('Python') },
