@@ -92,6 +92,9 @@ export const enTranslations: Record<string, string> = {
   "設定儲存成功！": "Settings saved successfully!",
   "儲存設定失敗": "Failed to save settings",
   "無法開啟設定檔": "Failed to open configuration file",
+  "(Hosts)": "(Hosts)",
+  "(PHP 全域)": "(PHP Global)",
+  "(核心配置)": "(Core Config)",
 
   // Dashboard.tsx
   "偵測到核心依賴元件缺失": "Core Dependencies Missing",

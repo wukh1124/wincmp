@@ -412,7 +412,7 @@ export default function Settings() {
               >
                 <Shield size={16} className="text-orange-400" />
                 <span className="font-bold text-gray-300 text-xs">{t("Hosts 檔案")}</span>
-                <span className="text-[10px] text-gray-500 font-mono">(Hosts)</span>
+                <span className="text-[10px] text-gray-500 font-mono">{t("(Hosts)")}</span>
               </button>
               <button
                 onClick={() => handleOpenLocalPath('phpini')}
@@ -420,7 +420,7 @@ export default function Settings() {
               >
                 <SettingsIcon size={16} className="text-emerald-400" />
                 <span className="font-bold text-gray-300 text-xs">{t("php.ini 設定")}</span>
-                <span className="text-[10px] text-gray-500 font-mono">(PHP 全域)</span>
+                <span className="text-[10px] text-gray-500 font-mono">{t("(PHP 全域)")}</span>
               </button>
               <button
                 onClick={() => handleOpenLocalPath('wincmpjson')}
@@ -428,7 +428,7 @@ export default function Settings() {
               >
                 <Info size={16} className="text-blue-400" />
                 <span className="font-bold text-gray-300 text-xs">{t("WinCMP Json")}</span>
-                <span className="text-[10px] text-gray-500 font-mono">(核心配置)</span>
+                <span className="text-[10px] text-gray-500 font-mono">{t("(核心配置)")}</span>
               </button>
             </div>
           </div>
