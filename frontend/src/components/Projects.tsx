@@ -11,7 +11,8 @@ import {
   ReloadCaddy,
   OpenFolder,
   SelectFolder,
-  DetectProjectPath
+  DetectProjectPath,
+  OpenProjectCaddyfile
 } from '../../wailsjs/go/main/App';
 import { t, useLanguage } from '../i18n';
 
@@ -302,6 +303,35 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       cleanProj.domains = [`local-${cleanProj.name.toLowerCase()}.test`];
     }
 
+    // 重名檢測
+    const duplicate = newCfg.projects?.find((p: any, idx: number) => 
+      idx !== editIndex && p.name.trim().toLowerCase() === cleanProj.name.trim().toLowerCase()
+    );
+    if (duplicate) {
+      (window as any).customAlert(t("專案名稱已存在，請使用其他名稱喔！"));
+      return;
+    }
+
+    let oldName = '';
+    let isNameChanged = false;
+    if (editIndex !== null) {
+      oldName = config.projects[editIndex].name;
+      isNameChanged = oldName !== cleanProj.name;
+    }
+
+    // 專案改名時，若舊進程正在運行中，先自動停止
+    if (isNameChanged && oldName) {
+      const oldRuntimeKey = `runtime_${oldName}`;
+      const isOldRunning = !!servicesStatus[oldRuntimeKey];
+      if (isOldRunning) {
+        try {
+          await StopProjectRuntime(oldName);
+        } catch (stopErr) {
+          console.error("自動停止舊專案 Runtime 失敗:", stopErr);
+        }
+      }
+    }
+
     if (editIndex === null) {
       // 新增
       newCfg.projects = [...(newCfg.projects || []), cleanProj];
@@ -316,6 +346,11 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       setIsModalOpen(false);
       await ReloadCaddy(); // 自動重載 Caddyfile 與 Hosts 檔
       await updateStatus();
+
+      // 改名後的預設路徑貼心提示
+      if (isNameChanged && !cleanProj.root_path) {
+        (window as any).customAlert(t("偵測到您更改了專案名稱，且此專案使用的是預設路徑。請記得將 www/ 目錄下對應的資料夾名稱也改為新的名稱，以避免網站無法訪問喔！"));
+      }
     } catch (err) {
       (window as any).customAlert(`${t("保存專案設定失敗")}: ${err}`);
     }
@@ -594,7 +629,6 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">{t("專案名稱")}</label>
                       <input
                         type="text"
-                        disabled={editIndex !== null}
                         value={editingProject.name}
                         onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
                         placeholder={t("例如: my-laravel-app")}
@@ -805,6 +839,44 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         onChange={(e) => setEditingProject({ ...editingProject, use_ssl: e.target.checked })}
                         className="w-3.5 h-3.5 bg-darkInput border-darkBorder rounded text-blue-500 accent-blue-500 cursor-pointer"
                       />
+                    </div>
+
+                    {/* 5. Caddyfile 路徑與開啟 */}
+                    <div className="border border-darkBorder p-4 rounded-xl bg-[#0a0a0c]/40 space-y-3 border-t border-darkBorder/40">
+                      <div className="flex items-center gap-3">
+                        <Settings size={16} className="text-blue-500" />
+                        <div>
+                          <div className="font-semibold text-gray-200 text-[11px]">{t("Caddy 配置文件路徑")}</div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">{t("編輯專案 Caddyfile 設定")}</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          readOnly
+                          value={editingProject.name ? `conf\\sites\\${editingProject.name}.caddy` : ''}
+                          className="flex-1 bg-darkInput border border-darkBorder text-gray-400 rounded-lg px-3 py-2 outline-none font-mono text-[11px]"
+                        />
+                        <button
+                          type="button"
+                          disabled={editIndex === null}
+                          onClick={async () => {
+                            try {
+                              await OpenProjectCaddyfile(editingProject.name);
+                            } catch (err) {
+                              (window as any).customAlert(`${t("無法開啟設定檔")}: ${err}`);
+                            }
+                          }}
+                          className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white rounded-lg transition font-semibold text-[11px] whitespace-nowrap"
+                        >
+                          {t("開啟檔案")}
+                        </button>
+                      </div>
+                      {editIndex === null && (
+                        <div className="text-[10px] text-gray-500 italic">
+                          * {t("儲存專案後將自動建立 Caddyfile")}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

@@ -37,6 +37,8 @@ export function OpenFolder(arg1:string):Promise<void>;
 
 export function OpenInHeidiSQL():Promise<void>;
 
+export function OpenProjectCaddyfile(arg1:string):Promise<void>;
+
 export function QueryDatabases():Promise<Array<string>>;
 
 export function QueryTables(arg1:string):Promise<Array<string>>;

@@ -121,7 +121,11 @@ var enTranslations = map[string]string{
 	"✅ 已備份現有 Hosts 到: %s":       "Backup existing Hosts to: %s",
 	"更新系統 Hosts 失敗 (可能需要管理員權限)": "Failed to update system Hosts (may require administrator privileges)",
 	"無法寫入 Hosts 檔案。這通常是因為權限不足。\n請嘗試以「系統管理員身分」執行 WinCMP，或者手動將網域新增至 Hosts 檔案中。": "Cannot write to the Hosts file. This is usually due to insufficient privileges.\nPlease try running WinCMP 'As Administrator', or manually add the domains to your Hosts file.",
-
+	"無法建立備份目錄": "Failed to create backup directory",
+	"備份 hosts 失敗": "Failed to backup hosts",
+	"以下域名含非法字元(含底線或主機名): %v，請手動新增至 hosts": "The following domains contain invalid characters (including underscores or hostnames): %v, please add them to hosts manually",
+	"無法開啟 hosts 檔案進行寫入 (可能需要管理員權限)": "Cannot open hosts file for writing (may require administrator privileges)",
+	"無法讀取 hosts 檔案": "Cannot read hosts file",
 
 	// Dashboard & Project actions
 	"啟動資料庫中，請稍候...": "Starting database, please wait...",
@@ -170,6 +174,8 @@ var enTranslations = map[string]string{
 	"寫入 Caddy 設定檔 %s 失敗: %w":                "Failed to write Caddy config %s: %w",
 	"Reload Caddy 失敗":                       "Reload Caddy failed",
 	"✅ Caddy 設定已重新載入":                       "✅ Caddy configuration reloaded",
+	"產生 Caddy 配置文件內容失敗: %w":                "Failed to generate Caddy configuration content: %w",
+	"產生 Caddy 配置文件內容失敗: %v":                "Failed to generate Caddy configuration content: %v",
 	"⚠️ 專案 %s 需要 PHP %s，但 PHP %s 尚未啟動！":     "⚠️ Project %s requires PHP %s, but PHP %s is not running!",
 	"💡 請在 Dashboard 的 PHP FastCGI 區塊啟動對應版本": "💡 Please start the corresponding version in the PHP FastCGI section on Dashboard",
 	"以下專案需要啟動 PHP-CGI 才能正常運作：\n\n":          "The following projects require PHP-CGI to run:\n\n",

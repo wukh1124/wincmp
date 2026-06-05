@@ -66,6 +66,10 @@ export function OpenInHeidiSQL() {
   return window['go']['main']['App']['OpenInHeidiSQL']();
 }
 
+export function OpenProjectCaddyfile(arg1) {
+  return window['go']['main']['App']['OpenProjectCaddyfile'](arg1);
+}
+
 export function QueryDatabases() {
   return window['go']['main']['App']['QueryDatabases']();
 }

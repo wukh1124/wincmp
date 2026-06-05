@@ -521,64 +521,10 @@ func (a *App) generateCaddyfiles() error {
 		}
 
 		caddyPath := filepath.Join(sitesDir, proj.Name+".caddy")
-
-		var domainsStr string
-		if len(proj.Domains) > 0 {
-			domainsStr = strings.Join(proj.Domains, ", ")
-		} else {
-			domainsStr = "local-" + proj.Name + ".test"
+		content, err := a.buildCaddyfileContent(proj)
+		if err != nil {
+			return err
 		}
-
-		content := fmt.Sprintf("%s {\n", domainsStr)
-
-		// SSL 設定
-		if proj.UseSSL {
-			crt := a.appCfg.GetSSLCertPath(proj, a.baseDir)
-			key := a.appCfg.GetSSLKeyPath(proj, a.baseDir)
-			certExists := crt != "" && key != ""
-			var safeCrt, safeKey string
-			if certExists {
-				var crtErr, keyErr error
-				safeCrt, crtErr = a.validateCaddyPath(crt)
-				safeKey, keyErr = a.validateCaddyPath(key)
-				if crtErr != nil || keyErr != nil {
-					certExists = false
-				} else {
-					if _, err := os.Stat(crt); os.IsNotExist(err) {
-						certExists = false
-					} else if _, err := os.Stat(key); os.IsNotExist(err) {
-						certExists = false
-					}
-				}
-			}
-			if certExists {
-				content += fmt.Sprintf("\ttls %s %s\n", safeCrt, safeKey)
-			} else {
-				content += "\ttls internal\n"
-			}
-		}
-
-		content += "\timport common_dev\n"
-
-		if preset.IsRuntimeProject(proj.Type) {
-			port := proj.RuntimePort
-			if port == 0 {
-				port = 3000
-			}
-			content += fmt.Sprintf("\treverse_proxy localhost:%d\n", port)
-		} else {
-			root := a.appCfg.GetProjectRoot(proj, a.baseDir)
-			root = strings.ReplaceAll(root, "\\", "/")
-			content += fmt.Sprintf("\troot * %s\n", root)
-
-			if proj.PHPVersion != "" {
-				phpVerStr := strings.ReplaceAll(proj.PHPVersion, ".", "")
-				content += fmt.Sprintf("\timport php%s\n", phpVerStr)
-			}
-
-			content += "\timport static_site\n"
-		}
-		content += "}\n"
 
 		if err := os.WriteFile(caddyPath, []byte(content), 0600); err != nil {
 			return fmt.Errorf(i18n.T("寫入 Caddy 設定檔 %s 失敗: %w"), caddyPath, err)
@@ -1181,6 +1127,116 @@ func (a *App) GetAppVersion() string {
 func (a *App) IsAdmin() bool {
 	ret, _, _ := procIsUserAnAdmin.Call()
 	return ret != 0
+}
+
+// buildCaddyfileContent 根據專案配置生成 Caddyfile 的內容字串
+func (a *App) buildCaddyfileContent(proj config.ProjectConfig) (string, error) {
+	var domainsStr string
+	if len(proj.Domains) > 0 {
+		domainsStr = strings.Join(proj.Domains, ", ")
+	} else {
+		domainsStr = "local-" + proj.Name + ".test"
+	}
+
+	content := fmt.Sprintf("%s {\n", domainsStr)
+
+	// SSL 設定
+	if proj.UseSSL {
+		crt := a.appCfg.GetSSLCertPath(proj, a.baseDir)
+		key := a.appCfg.GetSSLKeyPath(proj, a.baseDir)
+		certExists := crt != "" && key != ""
+		var safeCrt, safeKey string
+		if certExists {
+			var crtErr, keyErr error
+			safeCrt, crtErr = a.validateCaddyPath(crt)
+			safeKey, keyErr = a.validateCaddyPath(key)
+			if crtErr != nil || keyErr != nil {
+				certExists = false
+			} else {
+				if _, err := os.Stat(crt); os.IsNotExist(err) {
+					certExists = false
+				} else if _, err := os.Stat(key); os.IsNotExist(err) {
+					certExists = false
+				}
+			}
+		}
+		if certExists {
+			content += fmt.Sprintf("\ttls %s %s\n", safeCrt, safeKey)
+		} else {
+			content += "\ttls internal\n"
+		}
+	}
+
+	content += "\timport common_dev\n"
+
+	if preset.IsRuntimeProject(proj.Type) {
+		port := proj.RuntimePort
+		if port == 0 {
+			port = 3000
+		}
+		content += fmt.Sprintf("\treverse_proxy localhost:%d\n", port)
+	} else {
+		root := a.appCfg.GetProjectRoot(proj, a.baseDir)
+		root = strings.ReplaceAll(root, "\\", "/")
+		content += fmt.Sprintf("\troot * %s\n", root)
+
+		if proj.PHPVersion != "" {
+			phpVerStr := strings.ReplaceAll(proj.PHPVersion, ".", "")
+			content += fmt.Sprintf("\timport php%s\n", phpVerStr)
+		}
+
+		content += "\timport static_site\n"
+	}
+	content += "}\n"
+	return content, nil
+}
+
+// OpenProjectCaddyfile 檢查並開啟指定專案的 Caddy 配置文件
+func (a *App) OpenProjectCaddyfile(projectName string) error {
+	if projectName == "" {
+		return fmt.Errorf("%s", i18n.T("專案名稱不能為空"))
+	}
+
+	// 1. 尋找專案設定
+	var targetProj *config.ProjectConfig
+	for i := range a.appCfg.Projects {
+		if a.appCfg.Projects[i].Name == projectName {
+			targetProj = &a.appCfg.Projects[i]
+			break
+		}
+	}
+
+	if targetProj == nil {
+		return fmt.Errorf(i18n.T("找不到專案 %s"), projectName)
+	}
+
+	// 2. 推導路徑
+	sitesDir := filepath.Join(a.baseDir, "conf", "sites")
+	caddyPath := filepath.Join(sitesDir, targetProj.Name+".caddy")
+
+	// 3. 確保檔案存在，如果不存在且專案啟用，則為其產生
+	if _, err := os.Stat(caddyPath); os.IsNotExist(err) {
+		// 呼叫 generateCaddyfiles 重新產生所有設定檔
+		if err := a.generateCaddyfiles(); err != nil {
+			return fmt.Errorf(i18n.T("產生 Caddy 配置文件失敗: %w"), err)
+		}
+	}
+
+	// 4. 再次檢查是否真的產生成功（如果專案沒啟用，generateCaddyfiles 不會產生它）
+	// 如果專案未啟用，我們手動為其單獨產生一個臨時/預設 Caddyfile 以供查看
+	if _, err := os.Stat(caddyPath); os.IsNotExist(err) {
+		content, err := a.buildCaddyfileContent(*targetProj)
+		if err != nil {
+			return fmt.Errorf(i18n.T("產生 Caddy 配置文件內容失敗: %w"), err)
+		}
+		if err := os.WriteFile(caddyPath, []byte(content), 0600); err != nil {
+			return fmt.Errorf(i18n.T("寫入 Caddy 設定檔 %s 失敗: %w"), caddyPath, err)
+		}
+	}
+
+	// 5. 使用系統預設關聯程式開啟檔案
+	cmd := exec.Command("cmd", "/c", "start", "", filepath.Clean(caddyPath))
+	return cmd.Start()
 }
 
 
