@@ -13,6 +13,7 @@ import (
 
 	"wincmp/internal/config"
 	"wincmp/internal/downloader"
+	"wincmp/internal/i18n"
 	"wincmp/internal/scanner"
 )
 
@@ -145,7 +146,7 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 		destDir = filepath.Join(binDir, key, key+"-"+item.Version)
 	}
 
-	a.handleLog("system", fmt.Sprintf("🚀 開始下載核心依賴: %s...", name))
+	a.handleLog("system", i18n.Tfmt("🚀 開始下載核心依賴: %s...", name))
 	a.emitProgress(key, "downloading", 0, 0, 0, "")
 
 	// 2. 下載檔案並透過 callback 發送進度事件
@@ -158,19 +159,19 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 	})
 
 	if err != nil {
-		a.handleErrorLog("system", fmt.Sprintf("❌ 下載 %s 失敗", name), err)
+		a.handleErrorLog("system", i18n.Tfmt("❌ 下載 %s 失敗", name), err)
 		a.emitProgress(key, "error", 0, 0, 0, err.Error())
 		return
 	}
 
 	// 3. 解壓縮處理
 	if strings.HasSuffix(destZip, ".zip") {
-		a.handleLog("system", fmt.Sprintf("📦 正在解壓縮 %s...", name))
+		a.handleLog("system", i18n.Tfmt("📦 正在解壓縮 %s...", name))
 		a.emitProgress(key, "extracting", 0.5, 0, 0, "")
 
 		err = downloader.Unzip(destZip, destDir)
 		if err != nil {
-			a.handleErrorLog("system", fmt.Sprintf("❌ 解壓縮 %s 失敗", name), err)
+			a.handleErrorLog("system", i18n.Tfmt("❌ 解壓縮 %s 失敗", name), err)
 			a.emitProgress(key, "error", 0, 0, 0, err.Error())
 			return
 		}
@@ -186,7 +187,7 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 			if _, err := os.Stat(oldDir); err == nil {
 				os.RemoveAll(newDir)
 				if renameErr := os.Rename(oldDir, newDir); renameErr != nil {
-					a.handleErrorLog("system", "MariaDB 目錄重新命名失敗", renameErr)
+					a.handleErrorLog("system", i18n.T("MariaDB 目錄重新命名失敗"), renameErr)
 				}
 			}
 		}
@@ -198,7 +199,7 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 			if _, err := os.Stat(oldDir); err == nil {
 				if _, err := os.Stat(newDir); os.IsNotExist(err) {
 					if renameErr := os.Rename(oldDir, newDir); renameErr != nil {
-						a.handleErrorLog("system", "Node.js 目錄重新命名失敗", renameErr)
+						a.handleErrorLog("system", i18n.T("Node.js 目錄重新命名失敗"), renameErr)
 					}
 				}
 			}
@@ -226,20 +227,20 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 			batPath := filepath.Join(destDir, "composer.bat")
 			batContent := `@php "%~dp0composer.phar" %*`
 			if err := os.WriteFile(batPath, []byte(batContent), 0755); err != nil {
-				a.handleErrorLog("system", "建立 composer.bat 失敗", err)
+				a.handleErrorLog("system", i18n.T("建立 composer.bat 失敗"), err)
 			}
 		}
 	}
 
-	a.handleLog("system", fmt.Sprintf("✅ %s 安裝與配置成功！", name))
+	a.handleLog("system", i18n.Tfmt("✅ %s 安裝與配置成功！", name))
 
 	// 4. 重新掃描二進位服務目錄
 	scanRes, scanErr := scanner.ScanBinDir(a.baseDir)
 	if scanErr != nil {
-		a.handleErrorLog("system", "安裝完成後重新掃描 bin 失敗", scanErr)
+		a.handleErrorLog("system", i18n.T("安裝完成後重新掃描 bin 失敗"), scanErr)
 	} else {
 		a.scanRes = scanRes
-		a.handleLog("system", "重新掃描 bin 目錄完成，服務已就緒。")
+		a.handleLog("system", i18n.T("重新掃描 bin 目錄完成，服務已就緒。"))
 	}
 
 	// 回報下載成功事件

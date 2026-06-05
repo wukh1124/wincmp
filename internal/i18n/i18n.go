@@ -537,5 +537,17 @@ var enTranslations = map[string]string{
 	// Extra ui elements
 	"載入失敗": "Load Failed",
 	"開啟 HeidiSQL 失敗": "Failed to open HeidiSQL",
+
+	// Downloader logs
+	"🚀 開始下載核心依賴: %s...": "🚀 Start downloading core dependency: %s...",
+	"❌ 下載 %s 失敗": "❌ Failed to download %s",
+	"📦 正在解壓縮 %s...": "📦 Extracting %s...",
+	"❌ 解壓縮 %s 失敗": "❌ Failed to extract %s",
+	"MariaDB 目錄重新命名失敗": "Failed to rename MariaDB directory",
+	"Node.js 目錄重新命名失敗": "Failed to rename Node.js directory",
+	"建立 composer.bat 失敗": "Failed to create composer.bat",
+	"✅ %s 安裝與配置成功！": "✅ %s installed and configured successfully!",
+	"安裝完成後重新掃描 bin 失敗": "Failed to rescan bin after installation",
+	"重新掃描 bin 目錄完成，服務已就緒。": "Rescan bin directory completed, services are ready.",
 }
 

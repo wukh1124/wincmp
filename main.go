@@ -59,8 +59,8 @@ func main() {
 	// 啟動 Wails 視窗應用程式
 	err = wails.Run(&options.App{
 		Title:  "WinCMP Control Panel",
-		Width:  1024,
-		Height: 720,
+		Width:  1280,
+		Height: 768,
 		MinWidth:  1024,
 		MinHeight: 700,
 		AssetServer: &assetserver.Options{
