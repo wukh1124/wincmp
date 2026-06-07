@@ -1,17 +1,14 @@
 # Changelog
 
-## [2.0.0] 2026-06-03
+## [2.0.0] 2026-06-07
 
 ### Added
-- **Full GUI Core Refactoring**: Ported the desktop application framework from Go Fyne to **Wails v2** + **React 18** + **TypeScript**.
-- **Brand New Design System**: Implemented a premium, high-density **Dark Professional** theme using Tailwind CSS and curated HSL color mappings.
-- **High-Performance Log Console**: Integrated instant, high-performance logs renderer supporting real-time stdout/stderr streams from Caddy, MariaDB, PHP, Mailpit, and Runtime.
-- **Improved Projects & DB Explorer**: Rebuilt user interface using TanStack Table with smooth slide-over drawers for configuration editing and TablePlus-like database tables viewer.
-- **Zustand State Management**: Established clean and reactive frontend stores for service, projects, database, settings, and terminal states.
+- **Full GUI Core Refactoring**: Migrated to **Wails v2** + **React 18** + **TypeScript** for better performance and lower resource usage.
+- **Dark Professional Design**: Premium high-density dark UI built with Tailwind CSS and reactive Zustand stores.
+- **Improved Tools**: Added high-performance real-time log console, TanStack Table projects manager, and TablePlus-like database viewer.
 
-### Changed
-- Archived legacy code: Moved previous Go Fyne implementation code to the `legacy_fyne/` directory.
-- Removed obsolete files: Cleaned up unused Go files including `ui_runtime.go` and `bundled_icon.go`.
+### Removed
+- **Removed Legacy GUI**: Completely removed the old Go Fyne implementation (archived to the `legacy_fyne/` directory).
 
 ## [1.2.6] 2026-06-03
 
