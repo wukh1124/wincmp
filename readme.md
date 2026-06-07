@@ -131,6 +131,9 @@ wails build -clean -ldflags "-s -w"
 
 # Production build with dynamic version injection (e.g., v2.0.0)
 wails build -ldflags "-X main.AppVersion=v2.0.0"
+
+# Build for website release info (Manually to Test Only)
+node scripts/generate-release-json.js
 ```
 
 ---

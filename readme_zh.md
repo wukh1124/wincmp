@@ -125,6 +125,9 @@ wails build -clean -ldflags "-s -w"
 
 # 自動化打包建置：透過 Go 的 -ldflags 動態注入版本號 (例如 v3.1.0)
 wails build -ldflags "-X main.AppVersion=v3.1.0"
+
+# 發布新版本資訊 (手動測試)
+node scripts/generate-release-json.js
 ```
 
 ---

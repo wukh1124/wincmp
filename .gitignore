@@ -78,3 +78,4 @@ vendor/
 
 build/
 /website/screenshot/
+/website/release.json

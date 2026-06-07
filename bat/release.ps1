@@ -1,4 +1,4 @@
-# WinCMP Automated Release Script
+﻿# WinCMP Automated Release Script
 # Ensure Console output encoding is UTF-8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
@@ -182,19 +182,21 @@ if ($7zExe) {
     Compress-Archive -Path $ReleaseDirName -DestinationPath $ZipFile -Force
     Write-Host "    -> Successfully generated: $ZipFile" -ForegroundColor Green
 }
+# 9. Generate Release Notes in release_note/
+Write-Host "[9] Generating Release Notes in project release_note directory..." -ForegroundColor Gray
 
-# 9. Generate GitHub Release Suggestion Document
-Write-Host "[9] Generating GitHub Release suggestion document..." -ForegroundColor Gray
-
-$ChangelogPath = Join-Path $ProjectRoot "packaging\wincmp\CHANGELOG.md"
-$ReleaseNotesContent = ""
-
-if (Test-Path $ChangelogPath) {
+# Define helper function to extract changelog section
+function Get-ChangelogSection {
+    param (
+        [string]$ChangelogPath,
+        [string]$Version
+    )
+    if (-not (Test-Path $ChangelogPath)) { return "" }
     $ChangelogLines = Get-Content $ChangelogPath -Encoding utf8
     $StartIndex = -1
     $EndIndex = -1
     
-    # Find the line matching current version, e.g., "## [1.2.5]" or "## 1.2.5"
+    # Find the line matching current version, e.g., "## [2.0.0]" or "## 2.0.0"
     for ($i = 0; $i -lt $ChangelogLines.Count; $i++) {
         $line = $ChangelogLines[$i]
         if ($line -match "^##\s+\[?$Version\]?") {
@@ -217,45 +219,85 @@ if (Test-Path $ChangelogPath) {
         }
         
         $NotesLines = $ChangelogLines[$StartIndex..$EndIndex]
-        $ReleaseNotesContent = ($NotesLines -join "`n").Trim()
+        return ($NotesLines -join "`n").Trim()
     }
+    return ""
 }
 
-if (-not $ReleaseNotesContent) {
-    $ReleaseNotesContent = "- Maintenance updates and stability improvements."
+# Setup directory paths
+$ReleaseNoteDir = Join-Path $ProjectRoot "release_note"
+$VersionDir = Join-Path $ReleaseNoteDir "v$Version"
+
+if (-not (Test-Path $VersionDir)) {
+    New-Item -ItemType Directory -Path $VersionDir -Force | Out-Null
+    Write-Host "    -> Created release note directory: $VersionDir" -ForegroundColor DarkGray
 }
 
-# Construct release suggestion template
-$ReleaseDocTemplate = @'
-# GitHub Release Suggestion (v{0})
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
-## Release Title
-WinCMP v{0}
+# 9.1 Generate English Release Notes
+$EnChangelogPath = Join-Path $ProjectRoot "packaging\wincmp\CHANGELOG.md"
+$EnNotes = Get-ChangelogSection -ChangelogPath $EnChangelogPath -Version $Version
+if (-not $EnNotes) {
+    $EnNotes = "- Maintenance updates and stability improvements."
+}
 
-## Tag Name
-v{0}
-
-## Release Notes (Markdown)
----
-## WinCMP v{0}
-
+$EnTemplate = @"
+# WinCMP v$Version
 This release introduces new features, updates, and fixes to WinCMP.
 
-### What's Changed
-{1}
+## What's Changed
 
-### Getting Started
-1. Download `wincmp-v{0}-win-x64.zip`.
+$EnNotes
+
+## Getting Started
+1. Download ``wincmp-v$Version-win-x64.zip``.
 2. Extract the archive to any folder on your system.
-3. Double-click `WinCMP_v{0}.exe` to launch the control panel.
----
-'@
+3. Double-click ``WinCMP_v$Version.exe`` to launch the control panel.
+"@
 
-$ReleaseDocContent = $ReleaseDocTemplate -f $Version, $ReleaseNotesContent
-$ReleaseNotesFile = Join-Path $ReleaseParentDir "release_notes_v$Version.md"
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($ReleaseNotesFile, $ReleaseDocContent, $utf8NoBom)
-Write-Host "    -> Generated GitHub Release notes: $ReleaseNotesFile" -ForegroundColor Green
+$EnReleaseFile = Join-Path $VersionDir "release_notes.md"
+[System.IO.File]::WriteAllText($EnReleaseFile, $EnTemplate, $utf8NoBom)
+Write-Host "    -> Generated English release notes: $EnReleaseFile" -ForegroundColor Green
+
+# 9.2 Generate Chinese Release Notes
+$ZhChangelogPath = Join-Path $ProjectRoot "packaging\wincmp\CHANGELOG_zh.md"
+$ZhNotes = Get-ChangelogSection -ChangelogPath $ZhChangelogPath -Version $Version
+if (-not $ZhNotes) {
+    $ZhNotes = "- 維護更新與穩定性優化。"
+}
+
+$ZhTemplate = @"
+# WinCMP v$Version
+此版本為 WinCMP 帶來了新的功能、更新與修正。
+
+## What's Changed
+
+$ZhNotes
+
+## Getting Started
+1. 下載 ``wincmp-v$Version-win-x64.zip``。
+2. 解壓縮至您系統中的任何資料夾。
+3. 按兩下 ``WinCMP_v$Version.exe`` 啟動控制面板。
+"@
+
+$ZhReleaseFile = Join-Path $VersionDir "release_notes_zh.md"
+[System.IO.File]::WriteAllText($ZhReleaseFile, $ZhTemplate, $utf8NoBom)
+Write-Host "    -> Generated Chinese release notes: $ZhReleaseFile" -ForegroundColor Green
+
+# 9.3 Update release_info.json
+$Today = Get-Date -Format "yyyy-MM-dd"
+$InfoJsonContent = @"
+{
+  "latest-version": "$Version",
+  "release-date": "$Today"
+}
+"@
+$InfoJsonPath = Join-Path $ReleaseNoteDir "release_info.json"
+[System.IO.File]::WriteAllText($InfoJsonPath, $InfoJsonContent, $utf8NoBom)
+Write-Host "    -> Updated release_info.json: $InfoJsonPath" -ForegroundColor Green
+
+
 
 # Return to root
 Set-Location -Path $ProjectRoot

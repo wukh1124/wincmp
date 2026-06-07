@@ -346,6 +346,11 @@
                         <p data-i18n="changelog_loading">Fetching latest changelog from GitHub...</p>
                     </div>
                     <div class="changelog-content markdown-body" id="changelog-content"></div>
+                    <div class="changelog-footer" style="margin-top: 30px; text-align: center; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 20px;">
+                        <a href="https://github.com/wukh1124/wincmp/releases" target="_blank" class="changelog-more-link" style="color: var(--primary-color); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;" data-i18n="changelog_view_more">
+                            View all releases on GitHub <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
         </section>
@@ -366,8 +371,8 @@
         </div>
     </footer>
 
-    <!-- 載入外部 CDN 解析器 -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 載入本地 Markdown 解析器 -->
+    <script src="marked.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="main.js"></script>
 </body>
