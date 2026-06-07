@@ -30,6 +30,15 @@ jobs:
           mkdir -p website/screenshot
           cp -r screenshot/* website/screenshot/
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate Release JSON
+        run: |
+          node scripts/generate-release-json.js
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:

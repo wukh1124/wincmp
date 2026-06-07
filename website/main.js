@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+    let cachedReleaseData = null;
+
     // ==========================================================================
     // 1. 多國語言字典與核心切換邏輯 (i18n)
     // ==========================================================================
@@ -68,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
             changelog_title: "Latest Updates",
             changelog_subtitle: "See what new features and fixes have been added recently!",
             changelog_loading: "Fetching latest changelog from GitHub...",
+            changelog_view_more: "View all releases on GitHub",
             footer_desc: "WinCMP gratefully integrates and acknowledges open-source projects including Caddy, MariaDB, PHP, Mailpit, Node.js, Composer, HeidiSQL, Wails, and React."
         },
         zh: {
@@ -136,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             changelog_title: "最新版本更新日誌",
             changelog_subtitle: "看看最近幫 WinCMP 增加了什麼厲害的新魔法吧！",
             changelog_loading: "正在從 GitHub 獲取最新發布日誌...",
+            changelog_view_more: "前往 GitHub 查看所有歷史發布與日誌",
             footer_desc: "WinCMP 整合並致敬優秀的開源生態組件，包括 Caddy, MariaDB, PHP, Mailpit, Node.js, Composer, HeidiSQL, Wails 與 React。"
         }
     };
@@ -174,6 +178,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const windowTitle = document.getElementById('gallery-window-title');
         if (activeTab && windowTitle) {
             windowTitle.innerText = `WinCMP - ${activeTab.innerText}`;
+        }
+
+        // 同步更新更新日誌語系
+        if (cachedReleaseData) {
+            renderReleaseInfo(cachedReleaseData);
         }
     }
 
@@ -222,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
     const owner = 'wukh1124';
     const repo = 'wincmp';
-    const apiURL = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
 
     const latestTagEl = document.getElementById('latest-tag');
     const downloadBtn = document.getElementById('download-btn');
@@ -230,65 +238,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const changelogContent = document.getElementById('changelog-content');
 
     async function getLatestRelease() {
-        const cacheDataKey = 'wincmp_release_data';
-        const cacheExpiryKey = 'wincmp_release_expiry';
-        const cacheDuration = 15 * 60 * 1000;
-        const now = Date.now();
-
-        const cachedData = localStorage.getItem(cacheDataKey);
-        const cachedExpiry = localStorage.getItem(cacheExpiryKey);
-
-        if (cachedData && cachedExpiry && now < parseInt(cachedExpiry)) {
-            renderReleaseInfo(JSON.parse(cachedData));
-            return;
-        }
-
         try {
-            const response = await fetch(apiURL, {
-                headers: {
-                    'Accept': 'application.vnd.github.v3+json'
-                }
-            });
-
+            const response = await fetch('./release.json');
             if (!response.ok) {
-                throw new Error(`GitHub API Error: ${response.status}`);
+                throw new Error(`Failed to load release.json: ${response.status}`);
             }
-
             const data = await response.json();
-
-            localStorage.setItem(cacheDataKey, JSON.stringify(data));
-            localStorage.setItem(cacheExpiryKey, (now + cacheDuration).toString());
-
+            cachedReleaseData = data;
             renderReleaseInfo(data);
         } catch (error) {
-            console.error('Failed to fetch latest release from GitHub:', error);
-            if (cachedData) {
-                renderReleaseInfo(JSON.parse(cachedData));
-            } else {
-                renderFallback();
-            }
+            console.error('Failed to fetch release info:', error);
+            renderFallback();
         }
     }
 
     function renderReleaseInfo(data) {
         const tagName = data.tag_name || 'v2.0.0';
         latestTagEl.innerText = tagName;
+        downloadBtn.href = data.exe_url || `https://github.com/${owner}/${repo}/releases/latest`;
 
-        let exeUrl = `https://github.com/${owner}/${repo}/releases/latest`;
-        if (data.assets && data.assets.length > 0) {
-            const exeAsset = data.assets.find(asset => asset.name.endsWith('.exe'));
-            if (exeAsset) {
-                exeUrl = exeAsset.browser_download_url;
-            } else {
-                exeUrl = data.assets[0].browser_download_url;
-            }
-        }
-        downloadBtn.href = exeUrl;
+        const currentLang = localStorage.getItem('wincmp_lang') || 'en';
+        const bodyContent = currentLang === 'zh' ? data.changelog_zh : data.changelog_en;
 
-        if (window.marked && data.body) {
+        if (window.marked && bodyContent) {
             changelogLoading.style.display = 'none';
             changelogContent.style.display = 'block';
-            changelogContent.innerHTML = window.marked.parse(data.body);
+            changelogContent.innerHTML = window.marked.parse(bodyContent);
         } else {
             renderFallback();
         }
