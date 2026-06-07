@@ -162,6 +162,10 @@ wincmp/
   * **Alert 提示**：必須使用全域掛載的 `(window as any).customAlert("提示訊息")`，這會以 Promise 非同步彈出自訂的 React 彈出視窗。
   * **Confirm 確認**：必須使用 `await (window as any).customConfirm("確認訊息")` 進行非同步等待，並依據回傳的 `boolean` (確定為 `true`，取消為 `false`) 執行後續邏輯。
 
+### 4.5 官網圖標與 Lucide 踩坑限制
+* **品牌圖標缺失問題**：在靜態官網 `website/index.html` 中引入 Lucide CDN（例如 `unpkg.com/lucide`）時，由於 Lucide 官方在 v1.0.0 起移成了所有品牌類型的圖標（如 `github`、`slack`、`facebook` 等），導致使用 `<i data-lucide="github"></i>` 會造成圖標無法渲染，並在控制台拋出 `icon name was not found` 錯誤。
+* **解決方案**：對於所有的品牌類型圖標（特別是 GitHub），**必須使用 Inline SVG** 代替 `<i data-lucide="...">`。其他非品牌圖標（如 `menu`、`settings` 等）可繼續正常使用 Lucide。
+
 ---
 
 ## 5. 注意事項與禁止行為
@@ -173,4 +177,4 @@ wincmp/
 
 ---
 
-> 最後更新：2026-06-03
+> 最後更新：2026-06-07

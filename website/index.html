@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="doc_title">WinCMP - Portable Local Development Control Panel for Windows (Caddy + MariaDB + PHP
+        + Mailpit)</title>
+    <meta name="description"
+        content="WinCMP is a lightweight, portable local development control panel for Windows. Integrates Caddy, MariaDB, PHP and Mailpit. Starts without admin rights, using extremely low memory.">
+    <meta name="keywords"
+        content="WinCMP, Windows, Caddy, MariaDB, PHP, Mailpit, Local Dev Environment, XAMPP alternative, Laragon alternative, Wails, Go, React">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- 頂部導覽列 -->
+    <header class="navbar" id="navbar">
+        <div class="container nav-container">
+            <a href="#" class="logo">
+                <img src="favicon.svg" alt="WinCMP Logo" class="logo-img">
+                <span class="logo-text">WinCMP</span>
+            </a>
+            <!-- 手機版選單切換按鈕 -->
+            <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+                <i data-lucide="menu"></i>
+            </button>
+            <nav class="nav-links">
+                <a href="#features" class="nav-link" data-i18n="nav_features">Features</a>
+                <a href="#gallery" class="nav-link" data-i18n="nav_gallery">Screenshots</a>
+                <a href="#comparison" class="nav-link" data-i18n="nav_comparison">Comparison</a>
+                <a href="#architecture" class="nav-link" data-i18n="nav_architecture">Architecture</a>
+                <a href="#changelog" class="nav-link" data-i18n="nav_changelog">Changelog</a>
+
+                <!-- 語言切換按鈕 -->
+                <button class="nav-btn-lang" id="lang-switch-btn">
+                    <i data-lucide="languages"></i>
+                    <span id="lang-btn-text">繁體中文</span>
+                </button>
+
+                <a href="https://github.com/wukh1124/wincmp" target="_blank" class="nav-btn-github" id="github-nav-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-github">
+                        <path
+                            d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+                        <path d="M9 18c-4.51 2-5-2-7-2" />
+                    </svg>
+                    <span>GitHub</span>
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero 主視覺區 -->
+        <section class="hero-section">
+            <div class="hero-glow-1"></div>
+            <div class="hero-glow-2"></div>
+            <div class="container hero-container">
+                <div class="badge-container">
+                    <span class="version-badge">
+                        <span class="pulse-dot"></span>
+                        <span id="latest-badge-prefix" data-i18n="hero_badge_prefix">Latest Version:</span> <span
+                            id="latest-tag">Loading...</span>
+                    </span>
+                </div>
+                <h1 class="hero-title" data-i18n="hero_title">Extreme Lightweight & Portable<br><span
+                        class="gradient-text">Local Dev Control Panel</span> for Windows</h1>
+                <p class="hero-subtitle" data-i18n="hero_subtitle">
+                    Integrated with <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> +
+                    <strong>Mailpit</strong> and interactive terminal. Core development services run entirely without
+                    admin privileges. Fast, lightweight, and hassle-free!
+                </p>
+                <div class="hero-actions">
+                    <a href="https://github.com/wukh1124/wincmp/releases/latest" target="_blank" class="btn btn-primary"
+                        id="download-btn">
+                        <i data-lucide="download"></i>
+                        <span data-i18n="hero_download_btn">Download Now (WinCMP.exe)</span>
+                    </a>
+                    <a href="https://github.com/wukh1124/wincmp" target="_blank" class="btn btn-secondary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="lucide lucide-github">
+                            <path
+                                d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+                            <path d="M9 18c-4.51 2-5-2-7-2" />
+                        </svg>
+                        <span data-i18n="hero_github_btn">View GitHub Repo</span>
+                    </a>
+                </div>
+
+                <!-- 主介面預覽 -->
+                <div class="hero-screenshot-container">
+                    <div class="window-header">
+                        <div class="window-dots">
+                            <span class="window-dot red"></span>
+                            <span class="window-dot yellow"></span>
+                            <span class="window-dot green"></span>
+                        </div>
+                        <div class="window-title" id="gallery-main-window-title">WinCMP Control Panel</div>
+                    </div>
+                    <img src="screenshot/dashboard.png" alt="WinCMP Dashboard" class="hero-screenshot"
+                        id="hero-main-img">
+                </div>
+            </div>
+        </section>
+
+        <!-- 核心特色區 -->
+        <section id="features" class="features-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title" data-i18n="features_title">Why Choose WinCMP?</h2>
+                    <p class="section-subtitle" data-i18n="features_subtitle">Get rid of XAMPP's bloat and Laragon's
+                        dependency on system environment variables, and enjoy the ultimate local Web development
+                        environment on Windows!</p>
+                </div>
+                <div class="features-grid">
+                    <!-- 卡片 1 -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i data-lucide="feather"></i>
+                        </div>
+                        <h3 class="feature-card-title" data-i18n="feat_1_title">Extreme Lightweight</h3>
+                        <p class="feature-card-desc" data-i18n="feat_1_desc">Statically compiled in Go + Wails,
+                            leveraging native OS WebView2 without Electron. Starts in milliseconds, idling memory usage
+                            is only about 30-50MB.</p>
+                    </div>
+                    <!-- 卡片 2 -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i data-lucide="shield-check"></i>
+                        </div>
+                        <h3 class="feature-card-title" data-i18n="feat_2_title">Admin-Privilege-Free Core</h3>
+                        <p class="feature-card-desc" data-i18n="feat_2_desc">Caddy, PHP-CGI, MariaDB, and Mailpit run
+                            entirely under restricted user permissions. No system registry writes or path pollution,
+                            fully portable.</p>
+                    </div>
+                    <!-- 卡片 3 -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i data-lucide="terminal"></i>
+                        </div>
+                        <h3 class="feature-card-title" data-i18n="feat_3_title">Interactive Terminal Drawer</h3>
+                        <p class="feature-card-desc" data-i18n="feat_3_desc">Built-in Windows ConPTY and xterm.js at
+                            project root. Slide out a fully functional terminal drawer supporting PowerShell/CMD/Git
+                            Bash/WSL with autocomplete.</p>
+                    </div>
+                    <!-- 卡片 4 -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i data-lucide="shuffle"></i>
+                        </div>
+                        <h3 class="feature-card-title" data-i18n="feat_4_title">PHP Multi-Process Balancing</h3>
+                        <p class="feature-card-desc" data-i18n="feat_4_desc">Utilizes Caddy's upstream load balancing to
+                            spawn 3 independent FastCGI processes for each PHP version, boosting local development
+                            reliability.</p>
+                    </div>
+                    <!-- 卡片 5 -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i data-lucide="toy-brick"></i>
+                        </div>
+                        <h3 class="feature-card-title" data-i18n="feat_5_title">Runtime Multi-Environment</h3>
+                        <p class="feature-card-desc" data-i18n="feat_5_desc">Supports Node.js, Bun, Python, and Go
+                            frameworks. Easily toggle between running in the background or spawning inside a separate
+                            terminal window.</p>
+                    </div>
+                    <!-- 卡片 6 -->
+                    <div class="feature-card">
+                        <div class="feature-icon-warning">
+                            <i data-lucide="shield-alert"></i>
+                        </div>
+                        <h3 class="feature-card-title" data-i18n="feat_6_title">Hosts Sync & Backup (Needs Admin)</h3>
+                        <p class="feature-card-desc" data-i18n="feat_6_desc">Easily sync custom domains to the Windows
+                            hosts file. Due to Windows security protection, this writing and backup feature requires UAC
+                            elevation.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 介面展示區 (Gallery) -->
+        <section id="gallery" class="gallery-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title" data-i18n="gallery_title">Intuitive & Modern User Interface</h2>
+                    <p class="section-subtitle" data-i18n="gallery_subtitle">Every screen is carefully polished with
+                        smooth transitions and real-time status monitoring. Beautiful and powerful!</p>
+                </div>
+
+                <div class="gallery-tabs" id="gallery-tabs">
+                    <button class="gallery-tab active" data-img="screenshot/dashboard.png">
+                        <i data-lucide="layout-dashboard"></i> <span data-i18n="gallery_tab_dashboard">Dashboard</span>
+                    </button>
+                    <button class="gallery-tab" data-img="screenshot/add_new_project.png">
+                        <i data-lucide="folder-plus"></i> <span data-i18n="gallery_tab_add_project">Add Project</span>
+                    </button>
+                    <button class="gallery-tab" data-img="screenshot/projects.png">
+                        <i data-lucide="folder-kanban"></i> <span data-i18n="gallery_tab_projects">Projects</span>
+                    </button>
+                    <button class="gallery-tab" data-img="screenshot/project_terminal.png">
+                        <i data-lucide="terminal-square"></i> <span data-i18n="gallery_tab_terminal">Built-in
+                            Terminal</span>
+                    </button>
+                    <button class="gallery-tab" data-img="screenshot/resource_monitor.png">
+                        <i data-lucide="activity"></i> <span data-i18n="gallery_tab_resource">Resource Monitor</span>
+                    </button>
+                    <button class="gallery-tab" data-img="screenshot/settings.png">
+                        <i data-lucide="settings"></i> <span data-i18n="gallery_tab_settings">Preferences</span>
+                    </button>
+                    <button class="gallery-tab" data-img="screenshot/wincmp_dependencies.png">
+                        <i data-lucide="download-cloud"></i> <span data-i18n="gallery_tab_dependencies">Dependency
+                            Downloader</span>
+                    </button>
+                </div>
+
+                <div class="gallery-display-container">
+                    <div class="window-header">
+                        <div class="window-dots">
+                            <span class="window-dot red"></span>
+                            <span class="window-dot yellow"></span>
+                            <span class="window-dot green"></span>
+                        </div>
+                        <div class="window-title" id="gallery-window-title">WinCMP - Dashboard</div>
+                    </div>
+                    <div class="gallery-img-wrapper">
+                        <img src="screenshot/dashboard.png" alt="WinCMP screenshot" class="gallery-img"
+                            id="gallery-display-img">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 性能對比區 -->
+        <section id="comparison" class="comparison-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title" data-i18n="compare_title">Local Development Environments</h2>
+                    <p class="section-subtitle" data-i18n="compare_subtitle">Hardcore metrics comparison between WinCMP
+                        and other popular local web environments on Windows:</p>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="compare_head_metric">Metric</th>
+                                <th class="highlight-column" data-i18n="compare_head_wincmp">WinCMP v2 🚀</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_1_name">Architecture</td>
+                                <td class="highlight-column" data-i18n="compare_row_1_val_1">Go 1.26 + Wails v2 + React
+                                    18</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_2_name">Startup Speed</td>
+                                <td class="highlight-column" data-i18n="compare_row_2_val_1">Tends to be faster (Go
+                                    Core)</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_3_name">Idle RAM</td>
+                                <td class="highlight-column" data-i18n="compare_row_3_val_1">Lower</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_4_name">Privilege</td>
+                                <td class="highlight-column" data-i18n="compare_row_4_val_1">User Space (No Admin)</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_5_name">Hosts Control</td>
+                                <td class="highlight-column" data-i18n="compare_row_5_val_1">Yes (UAC check with
+                                    auto-backup)</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_6_name">Terminal</td>
+                                <td class="highlight-column" data-i18n="compare_row_6_val_1">Built-in xterm.js drawer
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_7_name">Email Sandbox</td>
+                                <td class="highlight-column" data-i18n="compare_row_7_val_1">Built-in Mailpit (Zero
+                                    configuration)</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_8_name">Config Apply</td>
+                                <td class="highlight-column" data-i18n="compare_row_8_val_1">Auto Hot Reload (Zero
+                                    Downtime)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="table-note" data-i18n="compare_table_note">* Note: Comparison is based on default
+                    configurations. RAM usage refers to the Control Panel UI itself in idle state.</p>
+            </div>
+        </section>
+
+        <!-- 架構與技術原理區 -->
+        <section id="architecture" class="architecture-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title" data-i18n="arch_title">WinCMP Architecture</h2>
+                    <p class="section-subtitle" data-i18n="arch_subtitle">Here is a glimpse of how the backend is
+                        designed for high performance and isolation:</p>
+                </div>
+
+                <div class="architecture-grid">
+                    <div class="arch-card">
+                        <h3 class="arch-card-title"><span class="arch-num">01</span> <span
+                                data-i18n="arch_card_1_title">Dynamic Env Isolation</span></h3>
+                        <p class="arch-card-text" data-i18n="arch_card_1_desc">Instead of modifying Windows system
+                            global variables, WinCMP creates a temporary execution path only for the active project.
+                            This allows multiple projects to run different PHP/Node versions simultaneously without any
+                            system pollution.</p>
+                    </div>
+                    <div class="arch-card">
+                        <h3 class="arch-card-title"><span class="arch-num">02</span> <span
+                                data-i18n="arch_card_2_title">Smart Ports & Seamless Reload</span></h3>
+                        <p class="arch-card-text" data-i18n="arch_card_2_desc">WinCMP automatically manages ports to
+                            prevent conflicts when running multiple PHP/Node versions. Any configuration changes are
+                            applied instantly in the background via Caddy's hot-reload, ensuring zero downtime.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 動態更新日誌區 -->
+        <section id="changelog" class="changelog-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title" data-i18n="changelog_title">Latest Updates</h2>
+                    <p class="section-subtitle" data-i18n="changelog_subtitle">See what new features and fixes have been
+                        added recently!</p>
+                </div>
+
+                <div class="changelog-box" id="changelog-box">
+                    <div class="changelog-loading" id="changelog-loading">
+                        <div class="spinner"></div>
+                        <p data-i18n="changelog_loading">Fetching latest changelog from GitHub...</p>
+                    </div>
+                    <div class="changelog-content markdown-body" id="changelog-content"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-left">
+                <p class="footer-desc" data-i18n="footer_desc">Lightweight, portable, and modern local dev control panel
+                    for Windows developers.</p>
+            </div>
+            <div class="footer-right">
+                <p class="copyright">Licensed under the <a href="https://opensource.org/license/mit/"
+                        target="_blank">MIT License</a>.</p>
+                <p class="powered-by">Made by <a href="https://github.com/wukh1124" target="_blank">wukh1124</a>
+                    & 小愛</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 載入外部 CDN 解析器 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="main.js"></script>
+</body>
+
+</html>
