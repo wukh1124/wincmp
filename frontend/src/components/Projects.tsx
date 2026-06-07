@@ -73,6 +73,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   // 初始化專案類型與 Runtime 類型對照表
   const projectTypes = [
     { value: 'static', label: t('Static HTML') },
+    { value: 'php', label: t('純 PHP') },
     { value: 'laravel', label: t('Laravel PHP') },
     { value: 'vite', label: t('Vite React/Vue') },
     { value: 'next', label: t('Next.js') },
@@ -147,7 +148,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
   const isRuntimeProject = (type?: string) => {
     if (!type) return false;
-    return !['static', 'laravel'].includes(type);
+    return !['static', 'laravel', 'php'].includes(type);
   };
 
   const handleToggleEnable = async (idx: number) => {
@@ -306,6 +307,9 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     const newCfg = { ...config };
     const cleanProj = { ...editingProject };
     cleanProj.name = trimName;
+    if (cleanProj.type !== 'laravel' && cleanProj.type !== 'php') {
+      cleanProj.php_version = '';
+    }
 
     // 清理 domains 空白
     cleanProj.domains = cleanProj.domains.filter(d => d.trim() !== "");
@@ -451,7 +455,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                           <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/10">
                             {projectTypes.find(t => t.value === proj.type)?.label || proj.type}
                           </span>
-                          {proj.type === 'laravel' && proj.php_version && (
+                          {(proj.type === 'laravel' || proj.type === 'php') && proj.php_version && (
                             <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/10">
                               PHP {proj.php_version}
                             </span>
@@ -718,7 +722,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       </div>
 
                       {/* PHP 版本 */}
-                      {editingProject.type === 'laravel' && (
+                      {(editingProject.type === 'laravel' || editingProject.type === 'php') && (
                         <div className="space-y-1.5">
                           <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500">{t("PHP 執行版本")}</label>
                           <select

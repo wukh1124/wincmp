@@ -23,7 +23,7 @@ export default function App() {
 
   // 新增版本號、管理員狀態與搜尋專案相關的 state
   const [isAdmin, setIsAdmin] = useState(false);
-  const [appVersion, setAppVersion] = useState('v3.0.0');
+  const [appVersion, setAppVersion] = useState('v2.0.0');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [config, setConfig] = useState<any>(null);
@@ -78,7 +78,7 @@ export default function App() {
     (window as any).isSettingsDirty = false;
     setActiveTab(tabId);
   };
- 
+
   // 覆寫與註冊漂亮的自訂彈窗，避免 wails.localhost 標題
   useEffect(() => {
     (window as any).customAlert = (message: any) => {
@@ -93,7 +93,7 @@ export default function App() {
         });
       });
     };
- 
+
     (window as any).customConfirm = (message: any) => {
       return new Promise<boolean>((resolve) => {
         setCustomConfirm({
@@ -106,12 +106,12 @@ export default function App() {
         });
       });
     };
- 
+
     window.alert = (message: any) => {
       (window as any).customAlert(message);
     };
   }, []);
- 
+
   const toggleSidebar = () => {
     setIsCollapsed(prev => {
       const next = !prev;
@@ -119,7 +119,7 @@ export default function App() {
       return next;
     });
   };
- 
+
   // 訂閱 Go 端推送的 CPU / RAM 資源佔用
   useEffect(() => {
     const handleResourceUpdate = (data: any) => {
@@ -130,14 +130,14 @@ export default function App() {
         });
       }
     };
- 
+
     const unsubscribe = EventsOn('resource_usage', handleResourceUpdate);
- 
+
     return () => {
       unsubscribe();
     };
   }, []);
- 
+
   const renderActiveComponent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -156,7 +156,7 @@ export default function App() {
         return <Dashboard />;
     }
   };
- 
+
   const menuItems = [
     { id: 'dashboard', label: t('儀表板'), icon: <Home size={15} /> },
     { id: 'projects', label: t('專案管理'), icon: <Folder size={15} /> },
@@ -344,9 +344,8 @@ export default function App() {
           <div className="flex items-center gap-4">
             {/* 管理員權限指示徽章 */}
             <div
-              className={`flex items-center gap-1.5 text-xs font-semibold cursor-help select-none ${
-                isAdmin ? 'text-blue-400' : 'text-amber-500'
-              }`}
+              className={`flex items-center gap-1.5 text-xs font-semibold cursor-help select-none ${isAdmin ? 'text-blue-400' : 'text-amber-500'
+                }`}
               title={
                 isAdmin
                   ? t('已取得系統管理員權限，可自動配置 Hosts 網域別名')
@@ -357,7 +356,7 @@ export default function App() {
               <span>{isAdmin ? t('管理員模式') : t('限制模式')}</span>
             </div>
             <div className="h-3 w-[1px] bg-darkBorder" />
-            
+
             {/* 連線狀態指示燈 */}
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <span className="relative flex h-1.5 w-1.5">

@@ -23,6 +23,7 @@ const (
 	TypeGoAPI         = "go_api"
 	TypePocketBase    = "pocketbase"
 	TypeCustom        = "custom"
+	TypePHP           = "php"
 )
 
 // RuntimeType 定義執行器類型的常數
@@ -61,6 +62,15 @@ var presets = map[string]Preset{
 		RuntimeOptions:   []string{RuntimeNone},
 		IsRuntimeProject: false,
 		DetectPriority:   100,
+	},
+	TypePHP: {
+		ID:               TypePHP,
+		Label:            "PHP Site",
+		DefaultPort:      0,
+		DefaultRuntime:   RuntimeNone,
+		RuntimeOptions:   []string{RuntimeNone},
+		IsRuntimeProject: false,
+		DetectPriority:   90,
 	},
 	TypeLaravel: {
 		ID:               TypeLaravel,

@@ -152,8 +152,8 @@ func migrateLegacyNodeFields(cfg *WincmpConfig) {
 			p.RuntimeType = "go_air"
 		}
 
-		// 5. 靜態類型 / Laravel 不需要 Runtime
-		if p.Type == "" || p.Type == "static" || p.Type == "laravel" {
+		// 5. 靜態類型 / Laravel / PHP 不需要 Runtime
+		if p.Type == "" || p.Type == "static" || p.Type == "laravel" || p.Type == "php" {
 			p.RuntimeType = "none"
 			p.RuntimePort = 0
 		}
@@ -235,6 +235,11 @@ func (c *WincmpConfig) Save(path string) error {
 		c.Projects[i].NodeMode = ""
 		c.Projects[i].NodeVersion = ""
 		c.Projects[i].UseEnvBin = false
+
+		// 只有 laravel 和 php 專案才可以有 php_version，其他清空
+		if c.Projects[i].Type != "laravel" && c.Projects[i].Type != "php" {
+			c.Projects[i].PHPVersion = ""
+		}
 	}
 
 	// 儲存前加密 MariaDB 密碼

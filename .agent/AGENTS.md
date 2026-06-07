@@ -1,4 +1,4 @@
-# WinCMP - Agent 開發指南 (Wails v3.0.0+)
+# WinCMP - Agent 開發指南 (Wails v2.0.0+)
 
 本檔案提供 Agent 程式碼助手在此程式碼庫中進行開發與維護時所需的一切架構資訊與規範。
 

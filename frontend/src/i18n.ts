@@ -181,6 +181,7 @@ export const enTranslations: Record<string, string> = {
   "PHP 版本": "PHP Version",
   "無": "None",
   "不使用 PHP (靜態網站)": "Do not use PHP (Static Site)",
+  "純 PHP": "PHP Site",
   "SSL 安全連線 (HTTPS)": "SSL Secure Connection (HTTPS)",
   "使用 WinCMP 自動生成憑證": "Use WinCMP auto-generated certificate",
   "偵測到為 Runtime 專案": "Runtime Project Detected",

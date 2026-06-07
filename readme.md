@@ -129,8 +129,8 @@ wails build -clean
 # Production build with stripped symbols for size optimization
 wails build -clean -ldflags "-s -w"
 
-# Production build with dynamic version injection (e.g., v3.1.0)
-wails build -ldflags "-X main.AppVersion=v3.1.0"
+# Production build with dynamic version injection (e.g., v2.0.0)
+wails build -ldflags "-X main.AppVersion=v2.0.0"
 ```
 
 ---
