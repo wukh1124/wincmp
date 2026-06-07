@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host "     WinCMP Automated Release Wizard " -ForegroundColor Cyan
+Write-Host "     WinCMP Automated Release Wizard (Wails) " -ForegroundColor Cyan
 Write-Host "===================================================" -ForegroundColor Cyan
 
 # 1. Get project paths
@@ -12,58 +12,34 @@ $ScriptDir = $PSScriptRoot
 $ProjectRoot = Split-Path -Path $ScriptDir -Parent
 Set-Location -Path $ProjectRoot
 
-Write-Host "[1] Reading Version from FyneApp.toml..." -ForegroundColor Gray
-$FyneAppPath = Join-Path $ProjectRoot "FyneApp.toml"
-if (-not (Test-Path $FyneAppPath)) {
-    Write-Error "FyneApp.toml not found! Make sure you run this script within the WinCMP project."
+Write-Host "[1] Reading Version from VERSION..." -ForegroundColor Gray
+$VersionPath = Join-Path $ProjectRoot "VERSION"
+if (-not (Test-Path $VersionPath)) {
+    Write-Error "VERSION file not found! Make sure you run this script within the WinCMP project."
 }
 
-$FyneAppContent = Get-Content $FyneAppPath -Raw -Encoding utf8
-if ($FyneAppContent -match 'Version\s*=\s*"([^"]+)"') {
-    $Version = $Matches[1]
-    Write-Host "    -> Version detected: v$Version" -ForegroundColor Green
-} else {
-    Write-Error "Failed to parse Version from FyneApp.toml!"
+$Version = (Get-Content $VersionPath -Raw).Trim()
+if ($Version.StartsWith("v")) {
+    $Version = $Version.Substring(1)
 }
+Write-Host "    -> Version detected: v$Version" -ForegroundColor Green
 
-# 1.1 Backup FyneApp.toml to prevent Git dirty changes from 'fyne package -release'
-$FyneAppBackup = $null
-if (Test-Path $FyneAppPath) {
-    $FyneAppBackup = Get-Content $FyneAppPath -Raw -Encoding utf8
-    Write-Host "    -> Cached FyneApp.toml contents to restore Build number later" -ForegroundColor DarkGray
-}
+# 2. Compile release build using Wails
+Write-Host "[2] Compiling release build with Wails..." -ForegroundColor Gray
 
-# 2. Compile release build using Fyne (or Go fallback)
-Write-Host "[2] Compiling release build with Icon..." -ForegroundColor Gray
-
-# Check if 'fyne' CLI is available
-$HasFyne = $false
-$fyneCheck = Get-Command "fyne" -ErrorAction SilentlyContinue
-if ($fyneCheck) {
-    $HasFyne = $true
+$wailsCheck = Get-Command "wails" -ErrorAction SilentlyContinue
+if (-not $wailsCheck) {
+    Write-Error "Wails CLI not found! Please install it using 'go install github.com/wailsapp/wails/v2/cmd/wails@latest'."
 }
 
 $BuildFailed = $false
 try {
-    if ($HasFyne) {
-        Write-Host "    -> Fyne CLI detected. Packaging using 'fyne package -release'..." -ForegroundColor DarkGray
-        fyne package -release
-        Write-Host "    -> Fyne package build succeeded!" -ForegroundColor Green
-    } else {
-        Write-Host "    -> Fyne CLI not found. Falling back to standard 'go build'..." -ForegroundColor Yellow
-        go build -ldflags "-H windowsgui -s -w" -o wincmp.exe .
-        Write-Host "    -> Go build succeeded!" -ForegroundColor Green
-    }
+    Write-Host "    -> Running 'wails build -clean -ldflags ""-s -w -X main.AppVersion=v$Version"" -o wincmp.exe'..." -ForegroundColor DarkGray
+    wails build -clean -ldflags "-s -w -X main.AppVersion=v$Version" -o wincmp.exe
+    Write-Host "    -> Wails build succeeded!" -ForegroundColor Green
 } catch {
     $BuildFailed = $true
-    Write-Error "Compilation failed! Please check your Go, Fyne, or GCC configuration."
-} finally {
-    # Restore FyneApp.toml to keep git state clean
-    if ($FyneAppBackup) {
-        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-        [System.IO.File]::WriteAllText($FyneAppPath, $FyneAppBackup, $utf8NoBom)
-        Write-Host "    -> Restored FyneApp.toml to its original state (clean git status)" -ForegroundColor Green
-    }
+    Write-Error "Wails compilation failed! Please check your configuration."
 }
 
 if ($BuildFailed) {
@@ -95,20 +71,15 @@ $TemplateDir = Join-Path $ProjectRoot "packaging\wincmp"
 if (-not (Test-Path $TemplateDir)) {
     Write-Error "Template directory packaging\wincmp not found!"
 }
-
-# Copy structure
 Copy-Item -Path "$TemplateDir\*" -Destination $TargetDir -Recurse -Force
 
 # 5. Copy and rename executable
 Write-Host "[5] Copying and renaming executable..." -ForegroundColor Gray
-$BuiltExe = Join-Path $ProjectRoot "wincmp.exe"
-if (-not (Test-Path $BuiltExe)) {
-    $BuiltExe = Join-Path $ProjectRoot "WinCMP.exe"
-}
+$BuiltExe = Join-Path $ProjectRoot "build\bin\wincmp.exe"
 $TargetExe = Join-Path $TargetDir "WinCMP_v$Version.exe"
 
 if (-not (Test-Path $BuiltExe)) {
-    Write-Error "Could not find built wincmp.exe or WinCMP.exe!"
+    Write-Error "Could not find built wincmp.exe at $BuiltExe"
 }
 Copy-Item -Path $BuiltExe -Destination $TargetExe -Force
 Write-Host "    -> Created executable: WinCMP_v$Version.exe" -ForegroundColor Green
@@ -254,7 +225,7 @@ if (-not $ReleaseNotesContent) {
     $ReleaseNotesContent = "- Maintenance updates and stability improvements."
 }
 
-# Construct release suggestion template using format operator to avoid quote escapes
+# Construct release suggestion template
 $ReleaseDocTemplate = @'
 # GitHub Release Suggestion (v{0})
 

@@ -1,0 +1,42 @@
+{
+  "caddy": {
+    "version": "2.11.3",
+    "url": "https://github.com/caddyserver/caddy/releases/download/v2.11.3/caddy_2.11.3_windows_amd64.zip"
+  },
+  "composer": {
+    "version": "2.7.7",
+    "url": "https://github.com/composer/composer/releases/download/2.7.7/composer.phar"
+  },
+  "heidisql": {
+    "version": "12.17",
+    "url": "https://github.com/HeidiSQL/HeidiSQL/releases/download/12.17/HeidiSQL_12.17_64_Portable.zip"
+  },
+  "mailpit": {
+    "version": "1.30.1",
+    "url": "https://github.com/axllent/mailpit/releases/download/v1.30.1/mailpit-windows-amd64.zip"
+  },
+  "mariadb": {
+    "version": "11.4.10",
+    "url": "https://archive.mariadb.org/mariadb-11.4.10/winx64-packages/mariadb-11.4.10-winx64.zip"
+  },
+  "node": {
+    "version": "24.16.0",
+    "url": "https://nodejs.org/dist/v24.16.0/node-v24.16.0-win-x64.zip"
+  },
+  "php73": {
+    "version": "7.3.33",
+    "url": "https://windows.php.net/downloads/releases/archives/php-7.3.33-nts-Win32-VC15-x64.zip"
+  },
+  "php82": {
+    "version": "8.2.30",
+    "url": "https://windows.php.net/downloads/releases/archives/php-8.2.30-nts-Win32-vs16-x64.zip"
+  },
+  "php83": {
+    "version": "8.3.28",
+    "url": "https://windows.php.net/downloads/releases/archives/php-8.3.28-nts-Win32-vs16-x64.zip"
+  },
+  "php84": {
+    "version": "8.4.21",
+    "url": "https://downloads.php.net/~windows/releases/archives/php-8.4.21-nts-Win32-vs17-x64.zip"
+  }
+}

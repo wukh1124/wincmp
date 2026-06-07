@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"wincmp/internal/i18n"
 )
 
 const (
@@ -27,7 +29,7 @@ func IsValidDomain(domain string) bool {
 func BackupHosts(baseDir string) (string, error) {
 	backupDir := filepath.Join(baseDir, "data", "backup", "hosts")
 	if err := os.MkdirAll(backupDir, 0700); err != nil {
-		return "", fmt.Errorf("無法建立備份目錄: %w", err)
+		return "", fmt.Errorf("%s: %w", i18n.T("無法建立備份目錄"), err)
 	}
 
 	timestamp := time.Now().Format("20060102150405")
@@ -35,7 +37,7 @@ func BackupHosts(baseDir string) (string, error) {
 	backupPath := filepath.Join(backupDir, backupFileName)
 
 	if err := copyFile(HostsFilePath, backupPath); err != nil {
-		return "", fmt.Errorf("備份 hosts 失敗: %w", err)
+		return "", fmt.Errorf("%s: %w", i18n.T("備份 hosts 失敗"), err)
 	}
 
 	return backupPath, nil
@@ -95,13 +97,13 @@ func UpdateHosts(domains []string) error {
 				invalidDomains = append(invalidDomains, d)
 			}
 		}
-		return fmt.Errorf("以下域名含非法字元(含底線或主機名): %v，請手動新增至 hosts", invalidDomains)
+		return fmt.Errorf("%s", i18n.Tfmt("以下域名含非法字元(含底線或主機名): %v，請手動新增至 hosts", invalidDomains))
 	}
 
 	// 直接以追加模式開啟 hosts 檔案
 	f, err := os.OpenFile(HostsFilePath, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("無法開啟 hosts 檔案進行寫入 (可能需要管理員權限): %w", err)
+		return fmt.Errorf("%s: %w", i18n.T("無法開啟 hosts 檔案進行寫入 (可能需要管理員權限)"), err)
 	}
 	defer f.Close()
 
@@ -125,7 +127,7 @@ func UpdateHosts(domains []string) error {
 func readExistingDomains() ([]string, error) {
 	file, err := os.Open(HostsFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("無法讀取 hosts 檔案: %w", err)
+		return nil, fmt.Errorf("%s: %w", i18n.T("無法讀取 hosts 檔案"), err)
 	}
 	defer file.Close()
 

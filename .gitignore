@@ -55,6 +55,7 @@ vendor/
 /conf/wincmp.json
 
 # 如果未來有動態生成的憑證或密鑰
+*.bak
 *.key
 *.pem
 *.cer
@@ -74,3 +75,6 @@ vendor/
 /conf/Caddyfile
 .sisyphus/
 .memory-bank/
+
+build/
+/website/screenshot/

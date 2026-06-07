@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"fyne.io/fyne/v2"
+	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/process"
 
 	"wincmp/internal/i18n"
@@ -43,6 +44,11 @@ type Monitor struct {
 	cachedPIDs    []int
 	cachedProcs   []*process.Process
 	lastPIDUpdate time.Time
+
+	// Web WebView2 快取
+	cachedWebPIDs    []int
+	cachedWebProcs   []*process.Process
+	lastWebPIDUpdate time.Time
 }
 
 func NewAppResourceMonitor(procMgr interface{}) *Monitor {
@@ -272,3 +278,259 @@ func (m *Monitor) Stop() {
 		m.cancel()
 	}
 }
+
+// GetCPUAndRAM 獲取當前開發環境整體的 CPU 佔用與 RAM 總佔用 (含核心、Web視窗、各子服務的總合)
+func (m *Monitor) GetCPUAndRAM() (totalCPU float64, totalRAM uint64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// 1. 計算主程式 CPUPercent 與 RAM
+	var coreCPU float64
+	var coreRAM uint64
+	if m.proc != nil {
+		if cpu, err := m.proc.CPUPercent(); err == nil {
+			normalized := cpu / float64(m.cpuCount)
+			normalized = math.Round(normalized*10) / 10
+			if normalized < 0 {
+				normalized = 0
+			} else if normalized > 100 {
+				normalized = 100
+			}
+			coreCPU = normalized
+		}
+
+		if memInfo, err := m.proc.MemoryInfo(); err == nil {
+			coreRAM = memInfo.RSS / 1024 / 1024
+		}
+	}
+	totalCPU += coreCPU
+	totalRAM += coreRAM
+
+	// 2. 獲取所有運行服務 PID 列表
+	var currentSvcPIDs []int
+	pm, hasPM := m.procMgr.(interface {
+		GetAllPIDs() []int
+		GetServiceBreakdown() []procmgr.ServiceInfo
+	})
+
+	if hasPM {
+		currentSvcPIDs = pm.GetAllPIDs()
+	}
+
+	// 3. Web 視窗介面 (WebView2) CPU & RAM 佔用
+	// WebView2 進程為主進程之子進程，且不屬於已被註冊的服務
+	if time.Since(m.lastWebPIDUpdate) > 5*time.Second {
+		var webPIDs []int
+		if procs, err := process.Processes(); err == nil {
+			for _, p := range procs {
+				ppid, err := p.Ppid()
+				if err == nil && ppid == int32(m.pid) {
+					pidVal := int(p.Pid)
+					isService := false
+					for _, svcPID := range currentSvcPIDs {
+						if pidVal == svcPID {
+							isService = true
+							break
+						}
+					}
+					if !isService {
+						webPIDs = append(webPIDs, pidVal)
+					}
+				}
+			}
+		}
+		m.cachedWebPIDs = webPIDs
+		m.cachedWebProcs = make([]*process.Process, 0, len(webPIDs))
+		for _, pid := range webPIDs {
+			if p, err := process.NewProcess(int32(pid)); err == nil {
+				m.cachedWebProcs = append(m.cachedWebProcs, p)
+			}
+		}
+		m.lastWebPIDUpdate = time.Now()
+	}
+
+	var webCPU float64
+	var webRAM uint64
+	for _, p := range m.cachedWebProcs {
+		if cpuPct, err := p.CPUPercent(); err == nil {
+			normalized := cpuPct / float64(m.cpuCount)
+			webCPU += normalized
+		}
+		if memInfo, err := p.MemoryInfo(); err == nil {
+			webRAM += memInfo.RSS
+		}
+	}
+	totalCPU += webCPU
+	totalRAM += webRAM / 1024 / 1024
+
+	// 4. 各依賴服務（Caddy, MariaDB, PHP 等）各自的 CPU & RAM
+	if hasPM {
+		services := pm.GetServiceBreakdown()
+		for _, svc := range services {
+			var svcCPU float64
+			var svcRAM uint64
+			for _, pid := range svc.PIDs {
+				if pid <= 0 {
+					continue
+				}
+				if p, err := process.NewProcess(int32(pid)); err == nil {
+					if cpuPct, err := p.CPUPercent(); err == nil {
+						normalized := cpuPct / float64(m.cpuCount)
+						svcCPU += normalized
+					}
+					if memInfo, err := p.MemoryInfo(); err == nil {
+						svcRAM += memInfo.RSS
+					}
+				}
+			}
+			totalCPU += svcCPU
+			totalRAM += svcRAM / 1024 / 1024
+		}
+	}
+
+	// 進行最後的小數點四捨五入
+	totalCPU = math.Round(totalCPU*10) / 10
+	return
+}
+
+type DetailedResources struct {
+	SystemCPU float64                    `json:"systemCpu"`
+	Core      ProcessResource            `json:"core"`
+	Web       ProcessResource            `json:"web"`
+	Services  map[string]ServiceResource `json:"services"`
+}
+
+type ProcessResource struct {
+	CPU float64 `json:"cpu"`
+	RAM uint64  `json:"ram"` // MB
+}
+
+type ServiceResource struct {
+	Name string  `json:"name"`
+	CPU  float64 `json:"cpu"`
+	RAM  uint64  `json:"ram"` // MB
+	PIDs []int   `json:"pids"`
+}
+
+// GetDetailedResourceUsage 獲取當前系統 CPU、WinCMP 核心、WebView2 介面及各運行服務的 CPU & RAM 佔用明細
+func (m *Monitor) GetDetailedResourceUsage() (DetailedResources, error) {
+	var dr DetailedResources
+	dr.Services = make(map[string]ServiceResource)
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// 1. 系統總體 CPU 佔用率
+	percent, err := cpu.Percent(0, false)
+	if err == nil && len(percent) > 0 {
+		dr.SystemCPU = math.Round(percent[0]*10) / 10
+	}
+
+	// 2. WinCMP 核心 CPU & RAM 佔用
+	if m.proc != nil {
+		if cpuPct, err := m.proc.CPUPercent(); err == nil {
+			normalized := cpuPct / float64(m.cpuCount)
+			normalized = math.Round(normalized*10) / 10
+			if normalized < 0 {
+				normalized = 0
+			} else if normalized > 100 {
+				normalized = 100
+			}
+			dr.Core.CPU = normalized
+		}
+		if memInfo, err := m.proc.MemoryInfo(); err == nil {
+			dr.Core.RAM = memInfo.RSS / 1024 / 1024
+		}
+	}
+
+	// 3. 獲取所有運行服務 PID 列表
+	var currentSvcPIDs []int
+	pm, hasPM := m.procMgr.(interface {
+		GetAllPIDs() []int
+		GetServiceBreakdown() []procmgr.ServiceInfo
+	})
+
+	if hasPM {
+		currentSvcPIDs = pm.GetAllPIDs()
+	}
+
+	// 4. Web 視窗介面 (WebView2) CPU & RAM 佔用
+	// WebView2 進程為主進程之子進程，且不屬於已被註冊的服務
+	if time.Since(m.lastWebPIDUpdate) > 5*time.Second {
+		var webPIDs []int
+		if procs, err := process.Processes(); err == nil {
+			for _, p := range procs {
+				ppid, err := p.Ppid()
+				if err == nil && ppid == int32(m.pid) {
+					pidVal := int(p.Pid)
+					// 如果這個 PID 不是已註冊之依賴服務 PID，即為 Web 視窗進程
+					isService := false
+					for _, svcPID := range currentSvcPIDs {
+						if pidVal == svcPID {
+							isService = true
+							break
+						}
+					}
+					if !isService {
+						webPIDs = append(webPIDs, pidVal)
+					}
+				}
+			}
+		}
+		m.cachedWebPIDs = webPIDs
+		m.cachedWebProcs = make([]*process.Process, 0, len(webPIDs))
+		for _, pid := range webPIDs {
+			if p, err := process.NewProcess(int32(pid)); err == nil {
+				m.cachedWebProcs = append(m.cachedWebProcs, p)
+			}
+		}
+		m.lastWebPIDUpdate = time.Now()
+	}
+
+	var webCPU float64
+	var webRAM uint64
+	for _, p := range m.cachedWebProcs {
+		if cpuPct, err := p.CPUPercent(); err == nil {
+			normalized := cpuPct / float64(m.cpuCount)
+			webCPU += normalized
+		}
+		if memInfo, err := p.MemoryInfo(); err == nil {
+			webRAM += memInfo.RSS
+		}
+	}
+	dr.Web.CPU = math.Round(webCPU*10) / 10
+	dr.Web.RAM = webRAM / 1024 / 1024
+
+	// 5. 各依賴服務（Caddy, MariaDB, PHP 等）各自的 CPU & RAM
+	if hasPM {
+		services := pm.GetServiceBreakdown()
+		for _, svc := range services {
+			var svcCPU float64
+			var svcRAM uint64
+			for _, pid := range svc.PIDs {
+				if pid <= 0 {
+					continue
+				}
+				if p, err := process.NewProcess(int32(pid)); err == nil {
+					if cpuPct, err := p.CPUPercent(); err == nil {
+						normalized := cpuPct / float64(m.cpuCount)
+						svcCPU += normalized
+					}
+					if memInfo, err := p.MemoryInfo(); err == nil {
+						svcRAM += memInfo.RSS
+					}
+				}
+			}
+			dr.Services[svc.Key] = ServiceResource{
+				Name: svc.Name,
+				CPU:  math.Round(svcCPU*10) / 10,
+				RAM:  svcRAM / 1024 / 1024,
+				PIDs: svc.PIDs,
+			}
+		}
+	}
+
+	return dr, nil
+}
+
+

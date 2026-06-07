@@ -39,6 +39,7 @@ type GlobalConfig struct {
 	MaxLogLines     int    `json:"max_log_lines"`     // UI 顯示行數限制
 
 	AutoUpdateHosts bool `json:"auto_update_hosts"` // 自動更新 Hosts
+	TerminalShell   string `json:"terminal_shell"`   // 終端 Shell 設定: "powershell.exe", "cmd.exe" 等
 
 	PHP PHPSettings `json:"php,omitempty"`
 
@@ -151,8 +152,8 @@ func migrateLegacyNodeFields(cfg *WincmpConfig) {
 			p.RuntimeType = "go_air"
 		}
 
-		// 5. 靜態類型 / Laravel 不需要 Runtime
-		if p.Type == "" || p.Type == "static" || p.Type == "laravel" {
+		// 5. 靜態類型 / Laravel / PHP 不需要 Runtime
+		if p.Type == "" || p.Type == "static" || p.Type == "laravel" || p.Type == "php" {
 			p.RuntimeType = "none"
 			p.RuntimePort = 0
 		}
@@ -204,6 +205,11 @@ func Load(path string) (*WincmpConfig, error) {
 		cfg.Global.Language = "zh-TW"
 	}
 
+	// 預設終端為 powershell.exe
+	if cfg.Global.TerminalShell == "" {
+		cfg.Global.TerminalShell = "powershell.exe"
+	}
+
 	return &cfg, nil
 }
 
@@ -229,6 +235,11 @@ func (c *WincmpConfig) Save(path string) error {
 		c.Projects[i].NodeMode = ""
 		c.Projects[i].NodeVersion = ""
 		c.Projects[i].UseEnvBin = false
+
+		// 只有 laravel 和 php 專案才可以有 php_version，其他清空
+		if c.Projects[i].Type != "laravel" && c.Projects[i].Type != "php" {
+			c.Projects[i].PHPVersion = ""
+		}
 	}
 
 	// 儲存前加密 MariaDB 密碼
@@ -280,6 +291,19 @@ func (c *WincmpConfig) GetProjectRoot(project ProjectConfig, baseDir string) str
 		if cleanedBase != "public" {
 			root = filepath.Join(root, "public")
 		}
+	}
+	return root
+}
+
+// GetProjectPhysicalRoot 取得專案的物理根目錄。若有自訂路徑則使用，否則使用預設 www 路徑，且不進行 Laravel 的 public 路徑轉換。
+func (c *WincmpConfig) GetProjectPhysicalRoot(project ProjectConfig, baseDir string) string {
+	root := project.RootPath
+	if root == "" {
+		wwwDir := c.Global.DefaultWWW
+		if !filepath.IsAbs(wwwDir) {
+			wwwDir = filepath.Join(baseDir, wwwDir)
+		}
+		root = filepath.Join(wwwDir, project.Name)
 	}
 	return root
 }

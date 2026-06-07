@@ -1,14 +1,15 @@
 # WinCMP 🚀
 
 ![Go Version](https://img.shields.io/badge/Go-1.26.2+-00ADD8?style=for-the-badge&logo=go)
-![Fyne Version](https://img.shields.io/badge/Fyne-v2.7.3-blue?style=for-the-badge)
+![Wails Version](https://img.shields.io/badge/Wails-v2.12.0-red?style=for-the-badge&logo=wails)
+![React Version](https://img.shields.io/badge/React-v18-blue?style=for-the-badge&logo=react)
 ![Platform](https://img.shields.io/badge/Platform-Windows_11-0078D6?style=for-the-badge&logo=windows)
 ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
 
 **WinCMP** is a modern, portable local development environment control panel designed specifically for Windows. 
 The name is derived from **Win**dows + **C**addy + **M**ariaDB + **P**HP.
 
-Inspired by XAMPP and Laragon, WinCMP aims to provide a more lightweight, **portable (no installation required)**, and **mostly admin-privilege-free** development solution (excluding optional Hosts file modifications). Built with Go and the Fyne GUI framework, it features extremely low resource usage and fast startup speeds.
+Inspired by XAMPP and Laragon, WinCMP aims to provide a more lightweight, **portable (no installation required)**, and **mostly admin-privilege-free** development solution (excluding optional Hosts file modifications). Built with Go core and the Wails v2 framework, it features a premium React 18 frontend with extremely low resource usage, fast startup speeds, and beautiful visual aesthetics.
 
 ---
 
@@ -20,12 +21,13 @@ Inspired by XAMPP and Laragon, WinCMP aims to provide a more lightweight, **port
 
 ## ✨ Features
 
-- 🪶 **Extremely Lightweight**: Statically compiled in Go, no Electron dependency.
+- 🪶 **Extremely Lightweight**: Statically compiled in Go + Wails, leveraging the native OS web engine (WebView2) without Electron dependencies.
 - 🛡️ **No Admin Privileges Needed for Core Services**: Fully supports running under restricted environments without modifying system environment variables or writing to the registry. *(Note: Automatic writing to the Windows `hosts` file for custom domains is optional and requires Administrator elevation/UAC prompt).*
-- 🎨 **Modern UI/UX**: Built-in Dark/Light modes with smooth sidebar navigation and real-time status monitoring.
+- 🎨 **Modern UI/UX**: Premium Dark Professional theme with smooth sidebar navigation, real-time status monitoring, and interactive micro-animations.
 - 🔄 **PHP Multi-Process Load Balancing**: Leverages Caddy's upstream mechanism to run multiple FastCGI processes for each PHP version.
 - 📂 **Automated Project Management**: Visually manage Laravel, Next.js, Nuxt, Astro, Vite, Python, Go, and other projects. Automatically detects frameworks and generates configurations.
 - 🚀 **Runtime Multi-Environment Execution**: Supports Node.js, Bun, Python, Go (Air/Run), and Custom development environments, with options to start in Background or Terminal mode.
+- 💻 **Project Integrated Interactive Terminal**: Spawns a beautiful drawer-based Terminal (PowerShell, CMD, Git Bash, WSL) at the project root using Windows ConPTY and `xterm.js` with interactive CLI and auto-completion support.
 - 📜 **Isolated Environments**: Dynamically injects `PATH` when launching subprocesses to ensure PHP and its extensions run in the correct binary environments.
 
 ---
@@ -36,15 +38,18 @@ To achieve "plug-and-play" simplicity, WinCMP strictly adheres to the following 
 
 ```text
 wincmp/
-├── wincmp.exe               # Go compiled main executable
+├── main.go                  # Application entry point: initializes and starts Wails
+├── app.go                   # Wails lifecycle manager (startup, shutdown) and monitor triggers
+├── bridge.go                # Wails & Go Binding API (frontend-backend RPC endpoints)
+├── downloader_bridge.go     # Wails dependency downloader binding API
+├── wincmp.json              # WinCMP global & project configurations (UI data source)
 ├── conf/                    # Configuration center
 │   ├── ssl/                 # SSL Certificates (crt/key)
 │   ├── snippets/            # Shared Caddy configuration snippets
 │   ├── sites/               # Dynamically generated project Caddyfiles
-│   ├── wincmp.json          # WinCMP global & project configurations (UI data source)
 │   ├── Caddyfile            # Caddy entry point (Imports snippets & sites)
 │   └── my.ini               # MariaDB initialization config
-├── bin/                     # Binary executables directory (pre-included or auto-scanned)
+├── bin/                     # Binary executables directory (pre-included or auto-downloaded)
 │   ├── caddy/               # caddy-x.xx.x/caddy.exe
 │   ├── mariadb/             # mariadb-x.x.x/bin/mariadbd.exe
 │   ├── php/                 # php-x.x.x/php-cgi.exe
@@ -57,7 +62,7 @@ wincmp/
 │   └── mariadb/             # Default MariaDB data directory
 ├── logs/                    # Service execution logs (grouped by date)
 ├── www/                     # Default web projects root directory
-├── internal/                # Core logic
+├── internal/                # Core logic (independent of GUI)
 │   ├── config/              # JSON configuration reader/writer
 │   ├── scanner/             # Dynamic version scanning for the bin directory
 │   ├── process/             # Subprocess lifecycle management (Manager)
@@ -68,9 +73,9 @@ wincmp/
 │   ├── resource/            # Resource monitoring (CPU/RAM/Subprocess stack)
 │   ├── crypto/              # MariaDB password encryption
 │   └── singleinstance/      # Single instance lock + window focus helper
-├── ui_runtime.go            # Runtime Tab UI definition
-├── bundled_icon.go          # Application icon resources
-└── bat/                     # Startup scripts for backup (testing reference)
+└── frontend/                # Frontend React + TSX project
+    ├── src/                 # Frontend source files (Dashboard, Projects, etc.)
+    └── tailwind.config.js   # Tailwind style configurations
 ```
 
 ---
@@ -99,33 +104,33 @@ To avoid modifying the system's global `PATH`, WinCMP prepends the corresponding
 
 ### 1. Prerequisites
 - [Go 1.26.2+](https://go.dev/dl/)
-- C Compiler (required for Fyne Cgo dependency)
+- [Wails CLI](https://wails.io/docs/gettingstarted/installation/): Make sure Wails v2 is installed on your system. Otherwise install it using `go install github.com/wailsapp/wails/v2/cmd/wails@latest`.
+- C Compiler: MinGW-w64 (WinLibs) for compiling underlying native Windows bindings. Make sure `gcc -v` works.
+- [Node.js](https://nodejs.org/): Node.js 18+ for compiling frontend components.
 
-### 2. Admin-Privilege-Free Compilation (Using WinLibs)
-If you cannot install MSYS2 on your system:
-1. Download the zip version of [WinLibs MinGW-w64](https://winlibs.com/).
-2. Extract it and add the `bin/` folder to your **User Path variables**.
-3. Verify that `gcc -v` works in your shell.
+### 2. Development Hot Reload
+```cmd
+# Start Wails dev server (watches both Go backend and React frontend)
+wails dev
+```
 
 ### 3. Build Commands
 ```cmd
-# Initialize dependencies
+# Tidy Go modules & frontend packages
 go mod tidy
+cd frontend && npm install && cd ..
 
-# Standard build
-go build -v -o wincmp.exe .
+# Build with debug console and developer tools
+wails build -debug
 
-# Release build (No CMD window console)
-go build -v -o wincmp.exe -ldflags "-H windowsgui" .
+# Release build (no CMD window console, outputs wincmp.exe)
+wails build -clean
 
-# Compact release build (Stripped symbols)
-go build -ldflags "-H windowsgui -s -w" -o wincmp.exe .
+# Production build with stripped symbols for size optimization
+wails build -clean -ldflags "-s -w"
 
-# Package using Fyne (Includes icons and resources)
-fyne package -release
-
-# If packaging fails, clear cache first
-go clean -cache
+# Production build with dynamic version injection (e.g., v2.0.0)
+wails build -ldflags "-X main.AppVersion=v2.0.0"
 ```
 
 ---
@@ -133,7 +138,7 @@ go clean -cache
 ## 🗺️ Roadmap
 
 ### ✅ Completed
-- [x] Modern UI prototype and project management interface.
+- [x] Modern UI prototype and project management interface (rebuilt with Wails + React 18).
 - [x] Multi-tab system logs with log-rotation mechanism.
 - [x] MariaDB scanning and database viewer.
 - [x] Multi-process PHP load balancing for Caddy.
@@ -143,12 +148,13 @@ go clean -cache
 - [x] **Laravel Auto-Detection** (confidence score system, automatically routing to `public/`).
 - [x] **Port Conflict Check** (runs checks before launch to minimize race conditions).
 - [x] **Hosts File Auto-Management** (automatically syncs local domains after prompting for UAC elevation).
-- [x] **Dark/Light Theme Toggle** (integrated with Fyne's theme system).
+- [x] **Dark/Light Theme Toggle** (integrated with Tailwind CSS).
 - [x] **Runtime Multi-Environment Support** (Node.js, Bun, Python, Go Air/Run, Custom).
 - [x] **Framework Preset Auto-Detection** (Next.js, Nuxt, Astro, Vite, Django, FastAPI, Flask, PocketBase, Go API).
 - [x] **Double Launch Mode for Runtimes** (Background / Terminal).
 - [x] **Legacy Project Auto-Migration** (node_port → runtime_port, etc.).
 - [x] **Mailpit Integration** (start/stop toggle on Dashboard and configuration dialog).
+- [x] **Project Integrated Interactive Terminal** (integrated Windows ConPTY with `xterm.js` to support interactive CLI, auto-completion, and customization in Settings).
 
 ### ⏳ Planned
 > **💡 For a detailed roadmap, technical analysis, and prioritization, please refer to the complete [Develop Task List](doc/develop_task_list.md).**

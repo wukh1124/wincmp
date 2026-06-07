@@ -5,3 +5,8 @@
 */bat/*.zip
 */logs/*.log
 */www/*
+*/build/*
+*/frontend/dist/*
+*/frontend/node_modules/*
+*/bin/*
+*/*.exe

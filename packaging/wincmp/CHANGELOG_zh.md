@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.0] 2026-06-03
+
+### Added
+- **全新重構 GUI 核心**：將原有的 Go Fyne 桌面應用程式，重構為基於現代化 Web 技術棧的 **Wails v2** + **React 18** + **TypeScript** 桌面應用程式。
+- **全新設計系統**：引入精美的 Dark Professional (深色專業級) 介面設計，支援 HSL 設計標記與 Tailwind CSS。
+- **高效能日誌終端**：整合高性能日誌渲染，支援多個系統與服務的 stdout/stderr 串流即時輸出。
+- **改進專案管理與資料庫瀏覽器**：基於 TanStack Table 實作的無縫數據表格，支援右側抽屜式 (Slide-over Drawer) 專案配置修改與更流暢的資料庫瀏覽。
+- **Zustand 狀態管理**：在前端實現分離且輕量的 Zustand 狀態管理，以提升應用程式效能。
+
+### Changed
+- 歸檔舊版程式碼：將舊的 Go Fyne 程式碼完整歸檔移至 `legacy_fyne/` 目錄。
+- 移除已不再使用的 `ui_runtime.go` 與 `bundled_icon.go`。
+
 ## [1.2.6] 2026-06-03
 
 ### Added
