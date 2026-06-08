@@ -213,6 +213,7 @@ var enTranslations = map[string]string{
 	"  ✓ 設定檔已載入 (%d 個專案)":            "  ✓ Configuration loaded (%d project(s))",
 	"無法載入依賴設定檔，將使用預設設定":        "Failed to load dependency configuration, default configuration will be used",
 	"  ✓ 依賴設定檔已載入":               "  ✓ Dependency configuration loaded",
+	"🔍 定時檢查發現新版本: %s":             "🔍 Background check found new version: %s",
 
 	// Settings hints
 	"(系統 Hosts)": "(System Hosts)",

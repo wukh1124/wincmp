@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
 import Settings from './components/Settings';
 import ResourceMonitor from './components/ResourceMonitor';
 import TerminalLogs from './components/TerminalLogs';
+import VersionUpdate from './components/VersionUpdate';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { GetAppVersion, IsAdmin, GetConfig } from '../wailsjs/go/main/App';
 import logo from './assets/images/icon.svg';
@@ -14,8 +15,10 @@ import { t, setLanguage, useLanguage } from './i18n';
 export default function App() {
   useLanguage(); // 訂閱語系變更
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'resources' | 'settings' | 'logs'>('dashboard');
-  const [showLogs, setShowLogs] = useState(true);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'resources' | 'settings' | 'logs' | 'update'>('dashboard');
+  const [showLogs, setShowLogs] = useState(() => {
+    return localStorage.getItem('wincmp_show_logs') === 'true';
+  });
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
   const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
   const [customAlert, setCustomAlert] = useState<{ isOpen: boolean; message: string; resolve?: () => void }>({ isOpen: false, message: '' });
@@ -28,6 +31,7 @@ export default function App() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [config, setConfig] = useState<any>(null);
   const [highlightedProjectName, setHighlightedProjectName] = useState<string | null>(null);
+  const [hasUpdate, setHasUpdate] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -120,6 +124,14 @@ export default function App() {
     });
   };
 
+  const handleToggleLogs = () => {
+    setShowLogs(prev => {
+      const next = !prev;
+      localStorage.setItem('wincmp_show_logs', String(next));
+      return next;
+    });
+  };
+
   // 訂閱 Go 端推送的 CPU / RAM 資源佔用
   useEffect(() => {
     const handleResourceUpdate = (data: any) => {
@@ -138,6 +150,31 @@ export default function App() {
     };
   }, []);
 
+  // 訂閱 Go 端推送的版本更新通知
+  useEffect(() => {
+    const handleUpdateAvailable = (data: any) => {
+      setHasUpdate(true);
+    };
+
+    const unsubscribe = EventsOn('update_available', handleUpdateAvailable);
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // 監聽手動啟動服務時的自動展開日誌事件
+  useEffect(() => {
+    const handleAutoExpand = () => {
+      setShowLogs(true);
+      localStorage.setItem('wincmp_show_logs', 'true');
+    };
+    window.addEventListener('wincmp_auto_expand_logs', handleAutoExpand);
+    return () => {
+      window.removeEventListener('wincmp_auto_expand_logs', handleAutoExpand);
+    };
+  }, []);
+
   const renderActiveComponent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -152,6 +189,8 @@ export default function App() {
         return <Settings />;
       case 'logs':
         return <TerminalLogs />;
+      case 'update':
+        return <VersionUpdate />;
       default:
         return <Dashboard />;
     }
@@ -163,6 +202,7 @@ export default function App() {
     { id: 'db_explorer', label: t('資料庫瀏覽'), icon: <Database size={15} /> },
     { id: 'resources', label: t('資源監控'), icon: <Cpu size={15} /> },
     { id: 'settings', label: t('系統設定'), icon: <SettingsIcon size={15} /> },
+    { id: 'update', label: t('版本更新'), icon: <Download size={15} /> },
     { id: 'logs', label: t('終端日誌'), icon: <Terminal size={15} /> }
   ] as const;
 
@@ -199,7 +239,7 @@ export default function App() {
                 key={item.id}
                 onClick={() => handleTabChange(item.id)}
                 title={isCollapsed ? item.label.split(' ')[0] : undefined}
-                className={`w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 ${isCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
+                className={`w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 relative ${isCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
                   } ${activeTab === item.id
                     ? 'bg-blue-600/10 text-blue-400 border-l-[3px] border-blue-500 rounded-r-lg'
                     : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border-l-[3px] border-transparent rounded-r-lg'
@@ -209,6 +249,9 @@ export default function App() {
                   {item.icon}
                 </span>
                 {!isCollapsed && <span className="whitespace-nowrap transition-opacity duration-300">{item.label}</span>}
+                {item.id === 'update' && hasUpdate && (
+                  <span className={`w-2 h-2 bg-red-500 rounded-full absolute ${isCollapsed ? 'top-1.5 right-1.5' : 'right-4 top-1/2 -translate-y-1/2'}`} />
+                )}
               </button>
             ))}
           </nav>
@@ -379,14 +422,14 @@ export default function App() {
         {activeTab !== 'logs' && (
           <div className="h-9 border-t border-darkBorder bg-[#0e0e11] px-6 flex justify-between items-center select-none text-[11px]">
             <button
-              onClick={() => setShowLogs(!showLogs)}
+              onClick={handleToggleLogs}
               className="flex items-center gap-1.5 font-semibold text-gray-400 hover:text-gray-200 transition"
             >
               <Terminal size={11} className="text-blue-400" />
               <span>{showLogs ? t('收起 Logs 控制台') : t('打開 Logs 控制台')}</span>
             </button>
             <button
-              onClick={() => setShowLogs(!showLogs)}
+              onClick={handleToggleLogs}
               className="p-1 rounded-md text-gray-400 hover:text-gray-200 hover:bg-white/5 transition flex items-center justify-center"
               title={showLogs ? t('收起 Logs 控制台') : t('打開 Logs 控制台')}
             >

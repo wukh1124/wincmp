@@ -107,6 +107,13 @@ export default function Dashboard() {
     }
   };
 
+  const triggerAutoExpandLogs = () => {
+    if (localStorage.getItem('wincmp_logs_auto_expanded') !== 'true') {
+      localStorage.setItem('wincmp_logs_auto_expanded', 'true');
+      window.dispatchEvent(new CustomEvent('wincmp_auto_expand_logs'));
+    }
+  };
+
   const handleServiceAction = async (serviceName: string, action: 'start' | 'stop' | 'reload', extraInfo?: any) => {
     const key = `${serviceName}-${action}`;
     setLoadingServices(prev => ({ ...prev, [key]: true }));
@@ -115,6 +122,7 @@ export default function Dashboard() {
       if (serviceName === 'caddy') {
         if (action === 'start') {
           await StartCaddy(extraInfo.Version, extraInfo.ExePath);
+          triggerAutoExpandLogs();
         } else if (action === 'stop') {
           await StopCaddy();
         } else if (action === 'reload') {
@@ -124,6 +132,7 @@ export default function Dashboard() {
         const version = extraInfo.Version;
         if (action === 'start') {
           await StartMariaDB(version);
+          triggerAutoExpandLogs();
         } else if (action === 'stop') {
           await StopMariaDB(version);
         }
@@ -133,6 +142,7 @@ export default function Dashboard() {
           const httpPort = config?.global?.mailpit_http_port || 8025;
           const useDB = config?.global?.mailpit_use_db || false;
           await StartMailpit(extraInfo.Version, extraInfo.ExePath, smtpPort, httpPort, useDB);
+          triggerAutoExpandLogs();
         } else if (action === 'stop') {
           await StopMailpit();
         }
@@ -140,6 +150,7 @@ export default function Dashboard() {
         const version = extraInfo.Version;
         if (action === 'start') {
           await StartPHP(version);
+          triggerAutoExpandLogs();
         } else if (action === 'stop') {
           await StopPHP(version);
         }

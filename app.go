@@ -22,6 +22,7 @@ import (
 	"fyne.io/systray"
 
 	"wincmp/internal/terminal"
+	"wincmp/internal/updater"
 )
 
 // App struct
@@ -80,6 +81,9 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}
 
+	// 啟動時清理殘留的舊版本檔案及臨時目錄
+	updater.CleanupOldVersion(a.baseDir)
+
 	// 在載入設定檔前，自動檢測並釋放預設設定檔到 conf/
 	if err := config.RestoreDefaultConf(a.baseDir); err != nil {
 		a.handleErrorLog("system", i18n.T("釋放預設設定檔失敗"), err)
@@ -135,73 +139,75 @@ func (a *App) startup(ctx context.Context) {
 	// 5.6 初始化終端管理器
 	a.termMgr = terminal.NewManager()
 
-	a.handleLog("system", i18n.T("掃描 ./bin 目錄中的服務版本..."))
-
-	// 6. 掃描已安裝的服務版本
-	a.scanRes, err = scanner.ScanBinDir(a.baseDir)
-	if err != nil {
-		a.handleErrorLog("system", i18n.T("掃描服務版本失敗"), err)
-	} else {
-		if len(a.scanRes.CaddyList) > 0 {
-			a.handleLog("system", i18n.Tfmt("  ✓ 找到 Caddy 版本: [%s]", a.scanRes.CaddyList[0].Version))
+	// 6. 啟動背景掃描與服務狀態恢復 (避免阻塞 Wails 視窗顯示與 JS 載入)
+	go func() {
+		a.handleLog("system", i18n.T("掃描 ./bin 目錄中的服務版本..."))
+		var err error
+		a.scanRes, err = scanner.ScanBinDir(a.baseDir)
+		if err != nil {
+			a.handleErrorLog("system", i18n.T("掃描服務版本失敗"), err)
 		} else {
-			a.handleLog("system", i18n.T("  ✗ 未找到 Caddy"))
-		}
-		if len(a.scanRes.MariaDBList) > 0 {
-			a.handleLog("system", i18n.Tfmt("  ✓ 找到 MariaDB 版本: [%s]", a.scanRes.MariaDBList[0].Version))
-		} else {
-			a.handleLog("system", i18n.T("  ✗ 未找到 MariaDB"))
-		}
-		if len(a.scanRes.MailpitList) > 0 {
-			a.handleLog("system", i18n.Tfmt("  ✓ 找到 Mailpit 版本: [%s]", a.scanRes.MailpitList[0].Version))
-		} else {
-			a.handleLog("system", i18n.T("  ✗ 未找到 Mailpit"))
-		}
-		if len(a.scanRes.PHPList) > 0 {
-			var phpVers []string
-			for _, php := range a.scanRes.PHPList {
-				phpVers = append(phpVers, php.Version)
+			if len(a.scanRes.CaddyList) > 0 {
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Caddy 版本: [%s]", a.scanRes.CaddyList[0].Version))
+			} else {
+				a.handleLog("system", i18n.T("  ✗ 未找到 Caddy"))
 			}
-			a.handleLog("system", i18n.Tfmt("  ✓ 找到 PHP 版本: [%s]", strings.Join(phpVers, ", ")))
-		} else {
-			a.handleLog("system", i18n.T("  ✗ 未找到 PHP"))
-		}
-		if len(a.scanRes.NodeList) > 0 {
-			var nodeVers []string
-			for _, n := range a.scanRes.NodeList {
-				nodeVers = append(nodeVers, n.Version)
+			if len(a.scanRes.MariaDBList) > 0 {
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 MariaDB 版本: [%s]", a.scanRes.MariaDBList[0].Version))
+			} else {
+				a.handleLog("system", i18n.T("  ✗ 未找到 MariaDB"))
 			}
-			a.handleLog("system", i18n.Tfmt("  ✓ 找到 Node 版本: [%s]", strings.Join(nodeVers, ", ")))
-		} else {
-			a.handleLog("system", i18n.T("  ✗ 未找到 Node"))
-		}
-		if len(a.scanRes.BunList) > 0 {
-			var bunVers []string
-			for _, b := range a.scanRes.BunList {
-				bunVers = append(bunVers, b.Version)
+			if len(a.scanRes.MailpitList) > 0 {
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Mailpit 版本: [%s]", a.scanRes.MailpitList[0].Version))
+			} else {
+				a.handleLog("system", i18n.T("  ✗ 未找到 Mailpit"))
 			}
-			a.handleLog("system", i18n.Tfmt("  ✓ 找到 Bun 版本: [%s]", strings.Join(bunVers, ", ")))
+			if len(a.scanRes.PHPList) > 0 {
+				var phpVers []string
+				for _, php := range a.scanRes.PHPList {
+					phpVers = append(phpVers, php.Version)
+				}
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 PHP 版本: [%s]", strings.Join(phpVers, ", ")))
+			} else {
+				a.handleLog("system", i18n.T("  ✗ 未找到 PHP"))
+			}
+			if len(a.scanRes.NodeList) > 0 {
+				var nodeVers []string
+				for _, n := range a.scanRes.NodeList {
+					nodeVers = append(nodeVers, n.Version)
+				}
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Node 版本: [%s]", strings.Join(nodeVers, ", ")))
+			} else {
+				a.handleLog("system", i18n.T("  ✗ 未找到 Node"))
+			}
+			if len(a.scanRes.BunList) > 0 {
+				var bunVers []string
+				for _, b := range a.scanRes.BunList {
+					bunVers = append(bunVers, b.Version)
+				}
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Bun 版本: [%s]", strings.Join(bunVers, ", ")))
+			}
+
+			if len(a.scanRes.ComposerList) > 0 {
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Composer 版本: [%s]", a.scanRes.ComposerList[0].Version))
+			} else {
+				a.handleLog("system", i18n.T("  ✗ 未找到 Composer"))
+			}
+			if len(a.scanRes.HeidiSQLList) > 0 {
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 HeidiSQL 版本: [%s]", a.scanRes.HeidiSQLList[0].Version))
+			} else {
+				a.handleLog("system", i18n.T("  ✗ 未找到 HeidiSQL"))
+			}
+
+			a.handleLog("system", i18n.T("掃描 bin/ 目錄完成"))
 		}
 
-		if len(a.scanRes.ComposerList) > 0 {
-			a.handleLog("system", i18n.Tfmt("  ✓ 找到 Composer 版本: [%s]", a.scanRes.ComposerList[0].Version))
-		} else {
-			a.handleLog("system", i18n.T("  ✗ 未找到 Composer"))
-		}
-		if len(a.scanRes.HeidiSQLList) > 0 {
-			a.handleLog("system", i18n.Tfmt("  ✓ 找到 HeidiSQL 版本: [%s]", a.scanRes.HeidiSQLList[0].Version))
-		} else {
-			a.handleLog("system", i18n.T("  ✗ 未找到 HeidiSQL"))
-		}
-
-		a.handleLog("system", i18n.T("掃描 bin/ 目錄完成"))
-	}
+		// 恢復上次關閉前的服務狀態
+		a.restoreLastState()
+	}()
 
 	// 7. 啟動背景資源監控
 	a.startResourceMonitoring()
-
-	// 8. 恢復上次關閉前的服務狀態
-	go a.restoreLastState()
 
 	// 9. 初始化系統托盤
 	a.setupSystray()
@@ -214,6 +220,9 @@ func (a *App) startup(ctx context.Context) {
 		}
 		singleinstance.ActivateWindow("WinCMP Control Panel")
 	})
+
+	// 11. 啟動定時自動檢查更新
+	go a.startUpdateCheckTimer()
 }
 
 // shutdown 在應用程式關閉時由 Wails 自動呼叫，安全停止所有背景服務與子進程並關閉日誌
@@ -440,7 +449,7 @@ func (a *App) handleLog(category string, msg string) {
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, "log", map[string]interface{}{
 			"category":    catKey,
-			"message":     newText,
+			"message":     msg,
 			"time":        timeStr,
 			"projectName": projectName,
 		})
@@ -656,6 +665,47 @@ func (a *App) restoreLastState() {
 				}
 			}
 		}
+	}
+}
+
+// startUpdateCheckTimer 定時檢查更新 (每 6 小時檢查一次)
+func (a *App) startUpdateCheckTimer() {
+	// 啟動 5 秒後先進行首次檢查
+	time.Sleep(5 * time.Second)
+	a.performUpdateCheck()
+
+	ticker := time.NewTicker(6 * time.Hour)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			a.performUpdateCheck()
+		}
+	}
+}
+
+// performUpdateCheck 執行單次更新檢查並推送事件
+func (a *App) performUpdateCheck() {
+	if a.appCfg == nil || !a.appCfg.Global.AutoCheckUpdate {
+		return
+	}
+
+	info, err := updater.CheckNewVersionOpt(AppVersion, true)
+	if err != nil {
+		a.handleErrorLog("system", "定時檢查版本更新失敗", err)
+		return
+	}
+
+	if info.HasUpdate && a.ctx != nil {
+		a.handleLog("system", i18n.Tfmt("🔍 定時檢查發現新版本: %s", info.LatestVersion))
+		runtime.EventsEmit(a.ctx, "update_available", map[string]interface{}{
+			"latest_version": info.LatestVersion,
+			"release_notes":  info.ReleaseNotes,
+			"published_at":   info.PublishedAt,
+			"download_url":   info.DownloadURL,
+			"asset_type":     info.AssetType,
+		})
 	}
 }
 
