@@ -373,6 +373,10 @@ var enTranslations = map[string]string{
 	"🛑 停止 PHP-CGI %s...": "🛑 Stopping PHP-CGI %s...",
 	"PHP-CGI %s 停止失敗": "PHP-CGI %s failed to stop",
 	"✅ PHP-CGI %s 已停止": "✅ PHP-CGI %s stopped",
+	"ℹ️ 未檢測到 cacert.pem，準備自動從網際網路下載...": "ℹ️ cacert.pem not detected, preparing to download from the internet...",
+	"🌐 正在從 %s 下載 cacert.pem...": "🌐 Downloading cacert.pem from %s...",
+	"❌ 下載 cacert.pem 失敗，可能會影響 PHP 的 SSL 連線功能": "❌ Failed to download cacert.pem, which may affect PHP's SSL connection capability",
+	"✅ cacert.pem 下載並設定成功！": "✅ cacert.pem downloaded and configured successfully!",
 
 	// mariadb.go
 	"%s 已經在運行中": "%s is already running",

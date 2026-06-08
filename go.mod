@@ -3,7 +3,6 @@ module wincmp
 go 1.26.2
 
 require (
-	fyne.io/fyne/v2 v2.7.4
 	fyne.io/systray v1.12.1
 	github.com/UserExistsError/conpty v0.1.4
 	github.com/go-sql-driver/mysql v1.9.3
