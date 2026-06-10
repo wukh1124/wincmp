@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"os"
@@ -11,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"fyne.io/fyne/v2"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/process"
 
@@ -21,16 +19,12 @@ import (
 
 const (
 	EnableStackTotal = true
-
-	updateInterval = time.Second
 )
 
 type Monitor struct {
 	pid      int
 	proc     *process.Process
 	cpuCount int
-	ticker   *time.Ticker
-	cancel   context.CancelFunc
 	mu       sync.RWMutex
 
 	procMgr interface{}
@@ -62,61 +56,10 @@ func NewAppResourceMonitor(procMgr interface{}) *Monitor {
 		pid:      pid,
 		proc:     proc,
 		cpuCount: runtime.NumCPU(),
-		ticker:   time.NewTicker(updateInterval),
 		procMgr:  procMgr,
 	}
 }
 
-type hoverDetector interface {
-	IsHovered() bool
-}
-
-func (m *Monitor) Start(label fyne.CanvasObject) {
-	statusLabel, ok := label.(interface{ SetText(string) })
-	if !ok {
-		return
-	}
-
-	// tooltip 動態更新（需要 SetToolTip 介面）
-	tooltipLabel, hasTooltip := label.(interface{ SetToolTip(string) })
-
-	// 懸停偵測介面
-	detector, hasDetector := label.(hoverDetector)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	m.cancel = cancel
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-m.ticker.C:
-			m.mu.RLock()
-			ramStr, cpuStr, stackStr := m.fetchResourceData()
-			m.mu.RUnlock()
-
-			var text string
-			if EnableStackTotal && stackStr != "" {
-				text = fmt.Sprintf("WinCMP RAM: %s | CPU: %s | Stack Total: %s", ramStr, cpuStr, stackStr)
-			} else {
-				text = fmt.Sprintf("WinCMP RAM: %s | CPU: %s", ramStr, cpuStr)
-			}
-
-			// 計算 tooltip 明細（只有在懸停且啟用時才計算，節省資源）
-			var tooltip string
-			if hasTooltip && EnableStackTotal && (!hasDetector || detector.IsHovered()) {
-				tooltip = m.FetchStackBreakdown(ramStr, cpuStr)
-			}
-
-			fyne.Do(func() {
-				statusLabel.SetText(text)
-				if hasTooltip && tooltip != "" {
-					tooltipLabel.SetToolTip(tooltip)
-				}
-			})
-		}
-	}
-}
 
 func (m *Monitor) fetchResourceData() (ramStr, cpuStr, stackStr string) {
 	ramStr = "-- MB"
@@ -270,13 +213,6 @@ func (m *Monitor) FetchStackBreakdown(ramStr, cpuStr string) string {
 	m.lastBreakdown = sb.String()
 	m.lastBreakTime = time.Now()
 	return m.lastBreakdown
-}
-
-func (m *Monitor) Stop() {
-	m.ticker.Stop()
-	if m.cancel != nil {
-		m.cancel()
-	}
 }
 
 // GetCPUAndRAM 獲取當前開發環境整體的 CPU 佔用與 RAM 總佔用 (含核心、Web視窗、各子服務的總合)

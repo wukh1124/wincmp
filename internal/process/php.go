@@ -2,12 +2,15 @@ package process
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync/atomic"
 	"syscall"
 
+	"wincmp/internal/config"
 	"wincmp/internal/i18n"
 	"wincmp/internal/scanner"
 )
@@ -44,14 +47,38 @@ func (m *Manager) StartPHPCGI(phpInfo scanner.PHPVersionInfo) error {
 	phpIniPath := filepath.Join(m.baseDir, "conf", "php", "php.ini")
 	extDir := filepath.Join(phpDir, "ext")
 
+	// 檢查並自動下載 cacert.pem
+	cacertPath := filepath.Join(m.baseDir, "conf", "ssl", "cacert.pem")
+	if _, err := os.Stat(cacertPath); os.IsNotExist(err) {
+		m.log("php", "%s", i18n.T("ℹ️ 未檢測到 cacert.pem，準備自動從網際網路下載..."))
+		depPath := filepath.Join(m.baseDir, "conf", "dependencies.json")
+		depCfg, err := config.LoadDependencies(depPath)
+		url := "https://curl.se/ca/cacert.pem"
+		if err == nil {
+			if item, ok := depCfg["cacert"]; ok && item.URL != "" {
+				url = item.URL
+			}
+		}
+		m.log("php", "%s", i18n.Tfmt("🌐 正在從 %s 下載 cacert.pem...", url))
+		if err := downloadCacert(url, cacertPath); err != nil {
+			m.errorLog("php", i18n.T("❌ 下載 cacert.pem 失敗，可能會影響 PHP 的 SSL 連線功能"), err)
+		} else {
+			m.log("php", "%s", i18n.T("✅ cacert.pem 下載並設定成功！"))
+		}
+	}
+
 	cmds := make([]*exec.Cmd, 0, len(ports))
 
 	for _, port := range ports {
 		bindAddr := fmt.Sprintf("127.0.0.1:%d", port)
 
+		// 將 cacert.pem 的路徑轉換為正斜線，避免 Windows 路徑反斜線被 PHP 轉義或解析錯誤
+		cacertSlashPath := filepath.ToSlash(cacertPath)
 		cmd := exec.Command(phpInfo.ExePath,
 			"-c", phpIniPath,
 			"-d", "extension_dir="+extDir,
+			"-d", "openssl.cafile="+cacertSlashPath,
+			"-d", "curl.cainfo="+cacertSlashPath,
 			"-b", bindAddr,
 		)
 		cmd.Dir = m.baseDir
@@ -128,5 +155,45 @@ func (m *Manager) StopPHPCGI(version string) error {
 		return err
 	}
 	m.log("php", "%s", i18n.Tfmt("✅ PHP-CGI %s 已停止", version))
+	return nil
+}
+
+// downloadCacert 從指定網址下載 cacert.pem 證書並保存到本地
+func downloadCacert(url, dest string) error {
+	// 確保目錄存在
+	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+		return fmt.Errorf("無法建立目錄: %w", err)
+	}
+
+	// 建立臨時檔案，下載完成後再重命名，避免下載中斷產生損壞的檔案
+	tmpDest := dest + ".tmp"
+	out, err := os.Create(tmpDest)
+	if err != nil {
+		return fmt.Errorf("無法建立臨時檔案: %w", err)
+	}
+	defer func() {
+		out.Close()
+		_ = os.Remove(tmpDest) // 如果成功，Rename 後此處 Remove 會回傳錯誤（可忽略）
+	}()
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("下載請求失敗: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("伺服器回應錯誤狀態碼: %d", resp.StatusCode)
+	}
+
+	if _, err = io.Copy(out, resp.Body); err != nil {
+		return fmt.Errorf("寫入檔案失敗: %w", err)
+	}
+	out.Close()
+
+	if err := os.Rename(tmpDest, dest); err != nil {
+		return fmt.Errorf("重新命名檔案失敗: %w", err)
+	}
+
 	return nil
 }

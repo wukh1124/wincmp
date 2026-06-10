@@ -38,5 +38,9 @@
   "php84": {
     "version": "8.4.21",
     "url": "https://downloads.php.net/~windows/releases/archives/php-8.4.21-nts-Win32-vs17-x64.zip"
+  },
+  "cacert": {
+    "version": "2026.06.08",
+    "url": "https://curl.se/ca/cacert.pem"
   }
 }

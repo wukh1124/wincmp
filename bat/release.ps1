@@ -84,6 +84,11 @@ if (-not (Test-Path $BuiltExe)) {
 Copy-Item -Path $BuiltExe -Destination $TargetExe -Force
 Write-Host "    -> Created executable: WinCMP_v$Version.exe" -ForegroundColor Green
 
+# 同時拷貝一個獨立的執行檔到發布目錄下，方便自動更新直接下載 exe
+$StandaloneExe = Join-Path $ReleaseParentDir "WinCMP_v$Version.exe"
+Copy-Item -Path $BuiltExe -Destination $StandaloneExe -Force
+Write-Host "    -> Created standalone executable for updates: $StandaloneExe" -ForegroundColor Green
+
 # 6. Clean redundant files (.gitkeep, .example, logs, backups, etc.)
 Write-Host "[6] Cleaning redundant and test files..." -ForegroundColor Gray
 

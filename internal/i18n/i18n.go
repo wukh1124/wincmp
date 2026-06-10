@@ -213,6 +213,7 @@ var enTranslations = map[string]string{
 	"  ✓ 設定檔已載入 (%d 個專案)":            "  ✓ Configuration loaded (%d project(s))",
 	"無法載入依賴設定檔，將使用預設設定":        "Failed to load dependency configuration, default configuration will be used",
 	"  ✓ 依賴設定檔已載入":               "  ✓ Dependency configuration loaded",
+	"🔍 定時檢查發現新版本: %s":             "🔍 Background check found new version: %s",
 
 	// Settings hints
 	"(系統 Hosts)": "(System Hosts)",
@@ -373,6 +374,10 @@ var enTranslations = map[string]string{
 	"🛑 停止 PHP-CGI %s...": "🛑 Stopping PHP-CGI %s...",
 	"PHP-CGI %s 停止失敗": "PHP-CGI %s failed to stop",
 	"✅ PHP-CGI %s 已停止": "✅ PHP-CGI %s stopped",
+	"ℹ️ 未檢測到 cacert.pem，準備自動從網際網路下載...": "ℹ️ cacert.pem not detected, preparing to download from the internet...",
+	"🌐 正在從 %s 下載 cacert.pem...": "🌐 Downloading cacert.pem from %s...",
+	"❌ 下載 cacert.pem 失敗，可能會影響 PHP 的 SSL 連線功能": "❌ Failed to download cacert.pem, which may affect PHP's SSL connection capability",
+	"✅ cacert.pem 下載並設定成功！": "✅ cacert.pem downloaded and configured successfully!",
 
 	// mariadb.go
 	"%s 已經在運行中": "%s is already running",
@@ -561,5 +566,7 @@ var enTranslations = map[string]string{
 	"✅ %s 安裝與配置成功！": "✅ %s installed and configured successfully!",
 	"安裝完成後重新掃描 bin 失敗": "Failed to rescan bin after installation",
 	"重新掃描 bin 目錄完成，服務已就緒。": "Rescan bin directory completed, services are ready.",
+	"🚀 開始下載新版本：%s (類型: %s)...": "🚀 Start downloading new version: %s (Type: %s)...",
+	"✅ 自動更新成功，程式即將重啟！": "✅ Auto update successful, application is restarting!",
 }
 

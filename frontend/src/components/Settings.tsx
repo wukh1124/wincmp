@@ -218,10 +218,80 @@ export default function Settings() {
                   className="w-3.5 h-3.5 bg-darkInput border-darkBorder rounded text-blue-500 accent-blue-500 cursor-pointer"
                 />
               </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold text-gray-300 block">{t("定時自動檢查新版本")}</span>
+                  <span className="text-[10px] text-gray-500 mt-0.5 block">{t("每 6 小時自動檢查新版本")}</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={config.global.auto_check_update}
+                  onChange={(e) => handleGlobalFieldChange('auto_check_update', e.target.checked)}
+                  className="w-3.5 h-3.5 bg-darkInput border-darkBorder rounded text-blue-500 accent-blue-500 cursor-pointer"
+                />
+              </div>
             </div>
           </div>
 
-          {/* 2. 資料庫與郵件伺服器 */}
+          {/* 2. 本地化語系與日誌設定 */}
+          <div className="bg-darkCard border border-darkBorder rounded-xl p-5 space-y-4">
+            <h3 className="font-bold text-sm text-gray-200 flex items-center gap-2 border-b border-darkBorder/40 pb-3 select-none">
+              <Languages size={14} className="text-purple-400" /> {t("本地化語言與日誌設定")}
+            </h3>
+
+            {/* 語言 */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("顯示語言 (Language)")}</label>
+              <select
+                value={config.global.language || 'zh-TW'}
+                onChange={(e) => handleGlobalFieldChange('language', e.target.value)}
+                className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 transition cursor-pointer font-semibold"
+              >
+                <option value="zh-TW">繁體中文 (zh-TW)</option>
+                <option value="en-US">English (en-US)</option>
+              </select>
+            </div>
+
+            {/* 預設終端 Shell */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("預設專案終端 (Terminal Shell)")}</label>
+              <select
+                value={config.global.terminal_shell || 'powershell.exe'}
+                onChange={(e) => handleGlobalFieldChange('terminal_shell', e.target.value)}
+                className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 transition cursor-pointer font-semibold"
+              >
+                <option value="powershell.exe">PowerShell (powershell.exe)</option>
+                <option value="cmd.exe">Command Prompt (cmd.exe)</option>
+                <option value="C:\Program Files\Git\bin\bash.exe">Git Bash (bash.exe)</option>
+                <option value="wsl.exe">WSL (wsl.exe)</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* 日誌天數 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("檔案日誌保存期限 (天)")}</label>
+                <input
+                  type="number"
+                  value={config.global.max_log_retention || 30}
+                  onChange={(e) => handleGlobalFieldChange('max_log_retention', e.target.value)}
+                  className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 transition font-mono"
+                />
+              </div>
+              {/* 最大日誌行數 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("終端保留最大行數")}</label>
+                <input
+                  type="number"
+                  value={config.global.max_log_lines || 500}
+                  onChange={(e) => handleGlobalFieldChange('max_log_lines', e.target.value)}
+                  className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 transition font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 3. 資料庫與郵件伺服器 */}
           <div className="bg-darkCard border border-darkBorder rounded-xl p-5 space-y-4">
             <h3 className="font-bold text-sm text-gray-200 flex items-center gap-2 border-b border-darkBorder/40 pb-3 select-none">
               <Database size={14} className="text-teal-400" /> {t("MariaDB 資料庫 & Mailpit 服務設定")}
@@ -336,64 +406,6 @@ export default function Settings() {
                   checked={config.global.mailpit_use_db}
                   onChange={(e) => handleGlobalFieldChange('mailpit_use_db', e.target.checked)}
                   className="w-3.5 h-3.5 bg-darkInput border-darkBorder rounded text-purple-500 accent-purple-500 cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 3. 本地化語系與日誌設定 */}
-          <div className="bg-darkCard border border-darkBorder rounded-xl p-5 space-y-4">
-            <h3 className="font-bold text-sm text-gray-200 flex items-center gap-2 border-b border-darkBorder/40 pb-3 select-none">
-              <Languages size={14} className="text-purple-400" /> {t("本地化語言與日誌設定")}
-            </h3>
-
-            {/* 語言 */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("顯示語言 (Language)")}</label>
-              <select
-                value={config.global.language || 'zh-TW'}
-                onChange={(e) => handleGlobalFieldChange('language', e.target.value)}
-                className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 transition cursor-pointer font-semibold"
-              >
-                <option value="zh-TW">繁體中文 (zh-TW)</option>
-                <option value="en-US">English (en-US)</option>
-              </select>
-            </div>
-
-            {/* 預設終端 Shell */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("預設專案終端 (Terminal Shell)")}</label>
-              <select
-                value={config.global.terminal_shell || 'powershell.exe'}
-                onChange={(e) => handleGlobalFieldChange('terminal_shell', e.target.value)}
-                className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 transition cursor-pointer font-semibold"
-              >
-                <option value="powershell.exe">PowerShell (powershell.exe)</option>
-                <option value="cmd.exe">Command Prompt (cmd.exe)</option>
-                <option value="C:\Program Files\Git\bin\bash.exe">Git Bash (bash.exe)</option>
-                <option value="wsl.exe">WSL (wsl.exe)</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* 日誌天數 */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("檔案日誌保存期限 (天)")}</label>
-                <input
-                  type="number"
-                  value={config.global.max_log_retention || 30}
-                  onChange={(e) => handleGlobalFieldChange('max_log_retention', e.target.value)}
-                  className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 transition font-mono"
-                />
-              </div>
-              {/* 最大日誌行數 */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] text-gray-500 font-bold uppercase select-none">{t("終端保留最大行數")}</label>
-                <input
-                  type="number"
-                  value={config.global.max_log_lines || 500}
-                  onChange={(e) => handleGlobalFieldChange('max_log_lines', e.target.value)}
-                  className="w-full bg-darkInput border border-darkBorder text-gray-100 rounded-lg px-3 py-1.5 outline-none focus:border-blue-500 transition font-mono"
                 />
               </div>
             </div>

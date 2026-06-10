@@ -1,0 +1,81 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails CLI
+        shell: pwsh
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@latest
+          # 確保 GOPATH/bin 被加入 Path 中
+          echo "$env:USERPROFILE\go\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install Frontend Dependencies
+        shell: pwsh
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run Release Script
+        shell: pwsh
+        run: |
+          ./bat/release.ps1
+
+      - name: Read Release Notes and Version
+        shell: pwsh
+        id: release_info
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($version.StartsWith("v")) {
+              $version = $version.Substring(1)
+          }
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          
+          # 讀取由 release.ps1 產生的中文 Release Note 作為 Release 內文描述
+          $notesFile = "release_note/v$version/release_notes_zh.md"
+          if (Test-Path $notesFile) {
+              $content = Get-Content $notesFile -Raw
+              $content | Out-File -FilePath release_notes_temp.txt -Encoding utf8
+              echo "HAS_NOTES=true" >> $env:GITHUB_OUTPUT
+          } else {
+              echo "HAS_NOTES=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.release_info.outputs.VERSION }}
+          name: WinCMP v${{ steps.release_info.outputs.VERSION }}
+          body_path: ${{ steps.release_info.outputs.HAS_NOTES == 'true' && 'release_notes_temp.txt' || '' }}
+          draft: false
+          prerelease: false
+          files: |
+            ../wincmp-release-only/wincmp-v${{ steps.release_info.outputs.VERSION }}-win-x64.zip
+            ../wincmp-release-only/WinCMP_v${{ steps.release_info.outputs.VERSION }}.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

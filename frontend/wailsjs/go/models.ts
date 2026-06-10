@@ -49,6 +49,7 @@ export namespace config {
 	    max_log_lines: number;
 	    auto_update_hosts: boolean;
 	    terminal_shell: string;
+	    auto_check_update: boolean;
 	    php?: PHPSettings;
 	    mariadb_external: boolean;
 	    mariadb_basedir: string;
@@ -83,6 +84,7 @@ export namespace config {
 	        this.max_log_lines = source["max_log_lines"];
 	        this.auto_update_hosts = source["auto_update_hosts"];
 	        this.terminal_shell = source["terminal_shell"];
+	        this.auto_check_update = source["auto_check_update"];
 	        this.php = this.convertValues(source["php"], PHPSettings);
 	        this.mariadb_external = source["mariadb_external"];
 	        this.mariadb_basedir = source["mariadb_basedir"];
@@ -401,6 +403,37 @@ export namespace scanner {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace updater {
+	
+	export class ReleaseInfo {
+	    has_update: boolean;
+	    latest_version: string;
+	    release_notes: string;
+	    release_notes_zh: string;
+	    release_notes_en: string;
+	    published_at: string;
+	    download_url: string;
+	    asset_type: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReleaseInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.has_update = source["has_update"];
+	        this.latest_version = source["latest_version"];
+	        this.release_notes = source["release_notes"];
+	        this.release_notes_zh = source["release_notes_zh"];
+	        this.release_notes_en = source["release_notes_en"];
+	        this.published_at = source["published_at"];
+	        this.download_url = source["download_url"];
+	        this.asset_type = source["asset_type"];
+	    }
 	}
 
 }

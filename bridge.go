@@ -27,6 +27,7 @@ import (
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
 	"wincmp/internal/singleinstance"
+	"wincmp/internal/updater"
 )
 
 // ==========================================
@@ -143,6 +144,12 @@ func (a *App) ScanServices() (*scanner.ScanResult, error) {
 
 // GetScanResult 獲取當前已快取的服務掃描結果
 func (a *App) GetScanResult() *scanner.ScanResult {
+	if a.scanRes == nil {
+		res, err := scanner.ScanBinDir(a.baseDir)
+		if err == nil {
+			a.scanRes = res
+		}
+	}
 	return a.scanRes
 }
 
@@ -1330,6 +1337,74 @@ func (a *App) GetCategoryLogs(category string, subCategory string) ([]LogEntry, 
 	}
 
 	return entries, nil
+}
+
+// CheckNewVersion 檢查是否有新版本可用
+func (a *App) CheckNewVersion() (*updater.ReleaseInfo, error) {
+	return updater.CheckNewVersion(AppVersion)
+}
+
+// StartAutoUpdate 啟動自動下載並更新覆蓋
+func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
+	a.handleLog("system", i18n.Tfmt("🚀 開始下載新版本：%s (類型: %s)...", downloadURL, assetType))
+
+	// 在協程中執行更新，避免阻塞 Wails
+	go func() {
+		newExePath, err := updater.DownloadAndUpdate(downloadURL, assetType, a.baseDir, func(current, total int64) {
+			var percent float64 = 0
+			if total > 0 {
+				percent = float64(current) / float64(total)
+			}
+
+			// 將下載進度推送到前端
+			if a.ctx != nil {
+				runtime.EventsEmit(a.ctx, "update_progress", map[string]interface{}{
+					"status":    "downloading",
+					"percent":   percent,
+					"currentMB": float64(current) / 1024 / 1024,
+					"totalMB":   float64(total) / 1024 / 1024,
+				})
+			}
+		})
+
+		if err != nil {
+			a.handleErrorLog("system", i18n.T("自動更新失敗"), err)
+			if a.ctx != nil {
+				runtime.EventsEmit(a.ctx, "update_progress", map[string]interface{}{
+					"status": "error",
+					"error":  err.Error(),
+				})
+			}
+			return
+		}
+
+		a.handleLog("system", i18n.T("✅ 自動更新成功，程式即將重啟！"))
+		if a.ctx != nil {
+			runtime.EventsEmit(a.ctx, "update_progress", map[string]interface{}{
+				"status": "completed",
+			})
+		}
+
+		// 提前釋放單實例鎖，讓新啟動的行程順利取得鎖
+		singleinstance.Release()
+
+		// 啟動新版本
+		cmd := exec.Command(newExePath, "--restart")
+		cmd.Dir = a.baseDir
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			CreationFlags: 0x01000000, // CREATE_BREAKAWAY_FROM_JOB
+		}
+
+		if err := cmd.Start(); err != nil {
+			a.handleErrorLog("system", i18n.T("自動重啟失敗"), err)
+		}
+
+		// 稍微延遲後退出舊進程
+		time.Sleep(1 * time.Second)
+		os.Exit(0)
+	}()
+
+	return nil
 }
 
 

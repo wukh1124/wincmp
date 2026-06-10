@@ -405,7 +405,42 @@ export const enTranslations: Record<string, string> = {
   "專案開發終端 (Terminal)": "Project Development Terminal (Terminal)",
   "無法啟動終端": "Failed to start terminal",
   "💡 支援完整互動指令、Ctrl+C 中斷與 TAB 自動補齊。": "💡 Supports interactive command inputs, Ctrl+C to terminate, and TAB auto-completion.",
-  "重啟": "Restart"
+  "重啟": "Restart",
+
+  // VersionUpdate.tsx
+  "版本更新": "Version Update",
+  "軟體版本與自動更新": "Version & Update Manager",
+  "當前版本": "Current Version",
+  "最新版本": "Latest Version",
+  "發布時間": "Release Date",
+  "更新說明": "Release Notes",
+  "立即檢查更新": "Check for Updates",
+  "檢查中...": "Checking...",
+  "立即更新": "Update Now",
+  "下載進度: ": "Download Progress: ",
+  "更新重啟後若遇到 Windows SmartScreen 警告，請點選「其他資訊」並選擇「仍要執行」。": "Note: If Windows SmartScreen blocks execution after updating, click 'More info' and select 'Run anyway'.",
+  "恭喜！您目前使用的是最新版本": "Congratulations! You are using the latest version.",
+  "偵測到新版本 %s": "New version %s detected",
+  "定時自動檢查新版本": "Check for updates periodically in the background",
+  "每 6 小時自動檢查新版本": "Automatically check for updates every 6 hours",
+  "更新成功，即將重啟...": "Update successful, restarting...",
+  "更新失敗": "Update failed",
+  "更新準備中...": "Preparing update...",
+  "檢查更新成功！": "Checked updates successfully!",
+  "檢查更新失敗": "Failed to check updates",
+  "檢查 WinCMP 最新發布版本，並進行一鍵自動替換升級": "Check WinCMP latest releases and upgrade automatically with one click.",
+  "最新發布版本為 %s，發布時間為 %s": "The latest version is %s, published at %s",
+  "無詳細更新說明": "No release notes available",
+  "重試更新": "Retry Update",
+  "軟體版本資訊": "Software Version Information",
+  "管理與安裝最新軟體版本": "Manage and install the latest software version",
+  "正在獲取最新版本資訊...": "Getting the latest version information...",
+  "無法獲取最新版本資訊": "Unable to fetch latest version information",
+  "請檢查網路連線或稍後再試": "Please check your network connection or try again later",
+  "版本更新說明": "Release Notes",
+  "新版本更新說明": "New Version Release Notes",
+  "💡 提示：如果因防毒軟體攔截或系統權限不足導致自動更新失敗，建議您前往 GitHub 手動下載最新版本的 ZIP 壓縮包，解壓覆蓋即可。": "💡 Tip: If auto-update fails due to antivirus blocking or insufficient permissions, we recommend downloading the latest ZIP package from GitHub and replacing it manually.",
+  "手動下載 ZIP 更新": "Manual ZIP Download"
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             feat_6_desc: "支援點擊一鍵同步自訂域名到 Windows Hosts 檔案。由於系統安全防護，此寫入與自動備份功能需要彈出管理員 (UAC) 提權確認。",
             gallery_title: "直觀、美觀的現代介面",
             gallery_subtitle: "每一處 UI 都經過的細心打磨，具備流暢的微動畫與實時狀態監控，好看又好用！",
-            gallery_tab_dashboard: "主控台 Dashboard",
+            gallery_tab_dashboard: "主控台",
             gallery_tab_projects: "專案管理",
             gallery_tab_terminal: "內建終端",
             gallery_tab_add_project: "新增專案",

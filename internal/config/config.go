@@ -40,6 +40,7 @@ type GlobalConfig struct {
 
 	AutoUpdateHosts bool `json:"auto_update_hosts"` // 自動更新 Hosts
 	TerminalShell   string `json:"terminal_shell"`   // 終端 Shell 設定: "powershell.exe", "cmd.exe" 等
+	AutoCheckUpdate bool   `json:"auto_check_update"` // 背景定時檢查更新
 
 	PHP PHPSettings `json:"php,omitempty"`
 
@@ -208,6 +209,11 @@ func Load(path string) (*WincmpConfig, error) {
 	// 預設終端為 powershell.exe
 	if cfg.Global.TerminalShell == "" {
 		cfg.Global.TerminalShell = "powershell.exe"
+	}
+
+	// 向後相容：若舊版 wincmp.json 中不含 "auto_check_update" 欄位，預設為開啟
+	if !strings.Contains(string(data), "auto_check_update") {
+		cfg.Global.AutoCheckUpdate = true
 	}
 
 	return &cfg, nil

@@ -66,16 +66,18 @@ vendor/
 *.zip
 *.caddy
 !/packaging/**/*.caddy
+
 /conf/certs/
 /conf/ssl/*
 !/conf/ssl/.gitkeep
-!/conf/ssl/cacert.pem
+
 /conf/wincmp.json
 /conf/my.ini
 /conf/Caddyfile
 .sisyphus/
 .memory-bank/
 
-build/
+build/bin/
+build/windows/installer/
 /website/screenshot/
 /website/release.json

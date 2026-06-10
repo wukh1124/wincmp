@@ -6,6 +6,10 @@ export function CheckMissingCoreDependencies() {
   return window['go']['main']['App']['CheckMissingCoreDependencies']();
 }
 
+export function CheckNewVersion() {
+  return window['go']['main']['App']['CheckNewVersion']();
+}
+
 export function CheckPortConflicts() {
   return window['go']['main']['App']['CheckPortConflicts']();
 }
@@ -108,6 +112,10 @@ export function SelectFolder() {
 
 export function SendTerminalInput(arg1, arg2) {
   return window['go']['main']['App']['SendTerminalInput'](arg1, arg2);
+}
+
+export function StartAutoUpdate(arg1, arg2) {
+  return window['go']['main']['App']['StartAutoUpdate'](arg1, arg2);
 }
 
 export function StartCaddy(arg1, arg2) {
