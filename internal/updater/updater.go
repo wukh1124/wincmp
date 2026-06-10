@@ -7,12 +7,10 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"wincmp/internal/downloader"
@@ -182,11 +180,11 @@ func fetchRawContent(client *http.Client, url string) string {
 	return string(bodyBytes)
 }
 
-// DownloadAndUpdate 下載並替換二進位檔，成功後執行重啟
-func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb func(current, total int64)) error {
+// DownloadAndUpdate 下載並替換二進位檔，成功後返回新執行檔路徑
+func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb func(current, total int64)) (string, error) {
 	tempDir := filepath.Join(baseDir, "data", "temp")
 	if err := os.MkdirAll(tempDir, 0755); err != nil {
-		return fmt.Errorf("無法建立臨時目錄: %w", err)
+		return "", fmt.Errorf("無法建立臨時目錄: %w", err)
 	}
 
 	var tempExePath string
@@ -195,7 +193,7 @@ func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb 
 	if assetType == "exe" {
 		tempExePath = filepath.Join(tempDir, "wincmp_new.exe")
 		if err := downloader.DownloadFile(url, tempExePath, progressCb); err != nil {
-			return fmt.Errorf("下載 exe 失敗: %w", err)
+			return "", fmt.Errorf("下載 exe 失敗: %w", err)
 		}
 		newExeName = filepath.Base(url)
 		if !strings.HasSuffix(strings.ToLower(newExeName), ".exe") {
@@ -205,7 +203,7 @@ func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb 
 		// zip 流程
 		tempZipPath := filepath.Join(tempDir, "update.zip")
 		if err := downloader.DownloadFile(url, tempZipPath, progressCb); err != nil {
-			return fmt.Errorf("下載 zip 失敗: %w", err)
+			return "", fmt.Errorf("下載 zip 失敗: %w", err)
 		}
 
 		extractDir := filepath.Join(tempDir, "extracted")
@@ -213,7 +211,7 @@ func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb 
 
 		if err := downloader.Unzip(tempZipPath, extractDir); err != nil {
 			os.Remove(tempZipPath)
-			return fmt.Errorf("解壓縮 zip 失敗: %w", err)
+			return "", fmt.Errorf("解壓縮 zip 失敗: %w", err)
 		}
 		os.Remove(tempZipPath)
 
@@ -231,7 +229,7 @@ func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb 
 		})
 		if err != nil || foundExe == "" {
 			_ = os.RemoveAll(extractDir)
-			return fmt.Errorf("在壓縮包中找不到任何 exe 執行檔")
+			return "", fmt.Errorf("在壓縮包中找不到任何 exe 執行檔")
 		}
 
 		newExeName = filepath.Base(foundExe)
@@ -239,20 +237,20 @@ func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb 
 		_ = os.Remove(tempExePath)
 		if err := os.Rename(foundExe, tempExePath); err != nil {
 			_ = os.RemoveAll(extractDir)
-			return fmt.Errorf("搬移解壓後的 exe 失敗: %w", err)
+			return "", fmt.Errorf("搬移解壓後的 exe 失敗: %w", err)
 		}
 		_ = os.RemoveAll(extractDir)
 	}
 
 	// 檢查新 exe 是否確實存在
 	if _, err := os.Stat(tempExePath); err != nil {
-		return fmt.Errorf("無法驗證下載的執行檔: %w", err)
+		return "", fmt.Errorf("無法驗證下載的執行檔: %w", err)
 	}
 
 	// 執行檔案重命名與替換
 	execPath, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("無法取得當前進程的執行檔路徑: %w", err)
+		return "", fmt.Errorf("無法取得當前進程的執行檔路徑: %w", err)
 	}
 
 	oldPath := execPath + ".old"
@@ -260,7 +258,7 @@ func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb 
 
 	// 將當前運行的 exe 重命名為 .old
 	if err := os.Rename(execPath, oldPath); err != nil {
-		return fmt.Errorf("無法將當前執行檔重命名，可能權限不足: %w", err)
+		return "", fmt.Errorf("無法將當前執行檔重命名，可能權限不足: %w", err)
 	}
 
 	// 將新下載的 exe 移動到原執行目錄，並保持新版本原檔名
@@ -269,22 +267,10 @@ func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb 
 	if err := os.Rename(tempExePath, newExePath); err != nil {
 		// 若移動失敗，嘗試還原舊版，以防崩潰
 		_ = os.Rename(oldPath, execPath)
-		return fmt.Errorf("搬移新執行檔失敗: %w", err)
+		return "", fmt.Errorf("搬移新執行檔失敗: %w", err)
 	}
 
-	// 使用 cmd 延遲大約 2 秒後啟動新版本，加上 --restart 參數
-	// 這樣可以確保舊進程有足夠的時間完成 runtime.EventsEmit 並安全退出，釋放 Mutex
-	cmdStr := fmt.Sprintf(`ping 127.0.0.1 -n 3 > nul && start "" "%s" --restart`, newExePath)
-	cmd := exec.Command("cmd", "/c", cmdStr)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		HideWindow:    true,
-		CreationFlags: 0x08000000, // CREATE_NO_WINDOW (無窗口背景執行)
-	}
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("啟動新版本失敗: %w", err)
-	}
-
-	return nil
+	return newExePath, nil
 }
 
 // CleanupOldVersion 清理殘留的舊版本檔案

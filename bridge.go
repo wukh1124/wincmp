@@ -1350,7 +1350,7 @@ func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
 
 	// 在協程中執行更新，避免阻塞 Wails
 	go func() {
-		err := updater.DownloadAndUpdate(downloadURL, assetType, a.baseDir, func(current, total int64) {
+		newExePath, err := updater.DownloadAndUpdate(downloadURL, assetType, a.baseDir, func(current, total int64) {
 			var percent float64 = 0
 			if total > 0 {
 				percent = float64(current) / float64(total)
@@ -1383,6 +1383,20 @@ func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
 			runtime.EventsEmit(a.ctx, "update_progress", map[string]interface{}{
 				"status": "completed",
 			})
+		}
+
+		// 提前釋放單實例鎖，讓新啟動的行程順利取得鎖
+		singleinstance.Release()
+
+		// 啟動新版本
+		cmd := exec.Command(newExePath, "--restart")
+		cmd.Dir = a.baseDir
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			CreationFlags: 0x01000000, // CREATE_BREAKAWAY_FROM_JOB
+		}
+
+		if err := cmd.Start(); err != nil {
+			a.handleErrorLog("system", i18n.T("自動重啟失敗"), err)
 		}
 
 		// 稍微延遲後退出舊進程
