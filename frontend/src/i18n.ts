@@ -438,7 +438,9 @@ export const enTranslations: Record<string, string> = {
   "無法獲取最新版本資訊": "Unable to fetch latest version information",
   "請檢查網路連線或稍後再試": "Please check your network connection or try again later",
   "版本更新說明": "Release Notes",
-  "新版本更新說明": "New Version Release Notes"
+  "新版本更新說明": "New Version Release Notes",
+  "💡 提示：如果因防毒軟體攔截或系統權限不足導致自動更新失敗，建議您前往 GitHub 手動下載最新版本的 ZIP 壓縮包，解壓覆蓋即可。": "💡 Tip: If auto-update fails due to antivirus blocking or insufficient permissions, we recommend downloading the latest ZIP package from GitHub and replacing it manually.",
+  "手動下載 ZIP 更新": "Manual ZIP Download"
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

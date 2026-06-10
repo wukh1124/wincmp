@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowUpCircle, Info, ShieldAlert, Check, RefreshCw } from 'lucide-react';
 import { CheckNewVersion, StartAutoUpdate, GetConfig, GetAppVersion } from '../../wailsjs/go/main/App';
-import { EventsOn } from '../../wailsjs/runtime/runtime';
+import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { t, useLanguage } from '../i18n';
 
 interface ReleaseInfo {
@@ -277,12 +277,25 @@ export default function VersionUpdate() {
                       <span className="font-bold text-xs">{t("更新失敗")}</span>
                       <span className="font-mono text-[10px] opacity-80">{errorMessage}</span>
                     </div>
-                    <button
-                      onClick={handleStartUpdate}
-                      className="px-4 py-2 bg-darkCard border border-darkBorder hover:border-gray-500 text-gray-200 rounded-lg font-semibold transition duration-200 text-xs active:scale-[0.98]"
-                    >
-                      <span>{t("重試更新")}</span>
-                    </button>
+                    
+                    <div className="text-[11px] text-gray-400 leading-relaxed">
+                      {t("💡 提示：如果因防毒軟體攔截或系統權限不足導致自動更新失敗，建議您前往 GitHub 手動下載最新版本的 ZIP 壓縮包，解壓覆蓋即可。")}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={handleStartUpdate}
+                        className="px-4 py-2 bg-darkCard border border-darkBorder hover:border-gray-500 text-gray-200 rounded-lg font-semibold transition duration-200 text-xs active:scale-[0.98]"
+                      >
+                        <span>{t("重試更新")}</span>
+                      </button>
+                      <button
+                        onClick={() => BrowserOpenURL('https://github.com/wukh1124/wincmp/releases/latest')}
+                        className="px-4 py-2 bg-blue-600/10 border border-blue-500/20 hover:border-blue-500 text-blue-400 rounded-lg font-semibold transition duration-200 text-xs active:scale-[0.98]"
+                      >
+                        <span>{t("手動下載 ZIP 更新")}</span>
+                      </button>
+                    </div>
                   </div>
                 )}
 

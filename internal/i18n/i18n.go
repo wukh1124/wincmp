@@ -566,5 +566,7 @@ var enTranslations = map[string]string{
 	"✅ %s 安裝與配置成功！": "✅ %s installed and configured successfully!",
 	"安裝完成後重新掃描 bin 失敗": "Failed to rescan bin after installation",
 	"重新掃描 bin 目錄完成，服務已就緒。": "Rescan bin directory completed, services are ready.",
+	"🚀 開始下載新版本：%s (類型: %s)...": "🚀 Start downloading new version: %s (Type: %s)...",
+	"✅ 自動更新成功，程式即將重啟！": "✅ Auto update successful, application is restarting!",
 }
 
