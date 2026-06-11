@@ -88,6 +88,19 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     return false;
   };
 
+  const shouldDefaultUseWinCMPBin = (rt?: string) => {
+    if (!rt || rt === 'none' || rt === 'custom') return false;
+    const hasBin = hasBundledRuntime(rt);
+    if (!hasBin) return false;
+
+    // 若系統已包含全域 Node 或 Bun 環境，則預設不幫用戶勾選「使用內建 bin」
+    if (rt === 'node' && (scanResult as any)?.has_global_node) return false;
+    if (rt === 'bun' && (scanResult as any)?.has_global_bun) return false;
+    if (rt === 'auto' && ((scanResult as any)?.has_global_node || (scanResult as any)?.has_global_bun)) return false;
+
+    return true;
+  };
+
   useEffect(() => {
     async function initData() {
       try {
@@ -178,7 +191,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
           runtime_port: res.runtime_port || 3000,
           php_version: res.php_version || scanResult?.PHPList?.[0]?.MajorMin || '',
           runtime_version: res.runtime_type === 'bun' ? scanResult?.BunList?.[0]?.Version : scanResult?.NodeList?.[0]?.Version || '',
-          use_wincmp_bin: hasBin
+          use_wincmp_bin: shouldDefaultUseWinCMPBin(res.runtime_type)
         });
         setDetected(true);
       }
@@ -213,8 +226,18 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     cleanProj.domains = cleanProj.domains.filter(d => d.trim() !== "");
     if (cleanProj.domains.length === 0) cleanProj.domains = [`local-${cleanProj.name.toLowerCase().replace(/_/g, '-')}.test`];
     const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$/;
+    let hasInvalidDomain = false;
+    let invalidDomainName = "";
     for (const d of cleanProj.domains) {
-      if (!domainRegex.test(d)) { (window as any).customAlert(t("網域 '%s' 格式不正確喔！請輸入正確的網域格式（例如 my-site.test），且不能包含底線、埠號或路徑。", d)); return; }
+      if (!domainRegex.test(d)) {
+        hasInvalidDomain = true;
+        invalidDomainName = d;
+        break;
+      }
+    }
+    if (hasInvalidDomain) {
+      const confirmSave = await (window as any).customConfirm(t("網域 '%s' 格式不正確喔！請確認是否要繼續保存設定？（正確格式例如 my-site.test，且不能包含底線、埠號或路徑。）", invalidDomainName));
+      if (!confirmSave) return;
     }
     const duplicate = newCfg.projects?.find((p: any, idx: number) => idx !== editIndex && p.name.trim().toLowerCase() === cleanProj.name.trim().toLowerCase());
     if (duplicate) { (window as any).customAlert(t("專案名稱已存在，請使用其他名稱喔！")); return; }
@@ -254,7 +277,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   };
 
   const inputStyle: React.CSSProperties = {
-    background: 'var(--input-bg)', border: '1px solid var(--input-border)',
+    backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)',
     color: 'var(--fg)', borderRadius: 'var(--radius-md)',
     padding: '8px 12px', outline: 'none', fontFamily: 'var(--font-mono)', fontSize: 12,
   };
@@ -414,7 +437,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       {/* ─── Edit Drawer ───────────────────────────────────── */}
       {isModalOpen && editingProject && (
         <div className="fixed inset-0 z-50 overflow-hidden select-none">
-          <div className="absolute inset-0 transition-opacity duration-300" style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(1px)' }} onClick={() => setIsModalOpen(false)} />
+          <div className="absolute inset-0 transition-opacity duration-300" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(1px)' }} onClick={() => setIsModalOpen(false)} />
           <div className="absolute inset-y-0 right-0 pl-10 max-w-full flex">
             <div className="w-screen max-w-md flex flex-col h-full overflow-hidden animate-slide-in" style={{ background: 'var(--card)', borderLeft: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
               {/* Header */}
@@ -623,6 +646,6 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     else if (type === 'pocketbase') { rt = 'go_run'; port = 8090; }
     else if (type === 'custom') { rt = 'custom'; port = 3000; }
     const hasBin = hasBundledRuntime(rt);
-    setEditingProject({ ...editingProject, type, runtime_type: rt, runtime_port: port, runtime_version: rt === 'bun' ? scanResult?.BunList?.[0]?.Version : scanResult?.NodeList?.[0]?.Version, use_wincmp_bin: hasBin });
+    setEditingProject({ ...editingProject, type, runtime_type: rt, runtime_port: port, runtime_version: rt === 'bun' ? scanResult?.BunList?.[0]?.Version : scanResult?.NodeList?.[0]?.Version, use_wincmp_bin: shouldDefaultUseWinCMPBin(rt) });
   }
 }

@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -30,9 +31,46 @@ var (
 
 var hMutex windows.Handle
 
+// isOtherProcessRunning 遍歷系統進程，判斷是否有指定名稱的「其他進程」正在運行
+func isOtherProcessRunning(exeName string) bool {
+	snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
+	if err != nil {
+		return false
+	}
+	defer windows.CloseHandle(snapshot)
+
+	var entry windows.ProcessEntry32
+	entry.Size = uint32(unsafe.Sizeof(entry))
+
+	err = windows.Process32First(snapshot, &entry)
+	if err != nil {
+		return false
+	}
+
+	myPID := uint32(os.Getpid())
+	for {
+		name := windows.UTF16ToString(entry.ExeFile[:])
+		if strings.ToLower(name) == strings.ToLower(exeName) {
+			if entry.ProcessID != myPID {
+				return true
+			}
+		}
+		err = windows.Process32Next(snapshot, &entry)
+		if err != nil {
+			break
+		}
+	}
+	return false
+}
+
 // TryAcquire 嘗試取得唯一 Mutex
 // 回傳 (isFirstInstance bool, err error)
 func TryAcquire() (bool, error) {
+	// 互斥防護：確保不與舊版 wincmp v1 同時運作
+	if isOtherProcessRunning("wincmp.exe") || isOtherProcessRunning("wincmp-wails.exe") {
+		return false, nil
+	}
+
 	name, err := windows.UTF16PtrFromString(mutexName)
 	if err != nil {
 		return false, err

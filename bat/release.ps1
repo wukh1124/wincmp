@@ -241,7 +241,7 @@ if (-not (Test-Path $VersionDir)) {
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 # 9.1 Generate English Release Notes
-$EnChangelogPath = Join-Path $ProjectRoot "packaging\wincmp\CHANGELOG.md"
+$EnChangelogPath = Join-Path $ProjectRoot "CHANGELOG.md"
 $EnNotes = Get-ChangelogSection -ChangelogPath $EnChangelogPath -Version $Version
 if (-not $EnNotes) {
     $EnNotes = "- Maintenance updates and stability improvements."
@@ -266,7 +266,7 @@ $EnReleaseFile = Join-Path $VersionDir "release_notes.md"
 Write-Host "    -> Generated English release notes: $EnReleaseFile" -ForegroundColor Green
 
 # 9.2 Generate Chinese Release Notes
-$ZhChangelogPath = Join-Path $ProjectRoot "packaging\wincmp\CHANGELOG_zh.md"
+$ZhChangelogPath = Join-Path $ProjectRoot "CHANGELOG_zh.md"
 $ZhNotes = Get-ChangelogSection -ChangelogPath $ZhChangelogPath -Version $Version
 if (-not $ZhNotes) {
     $ZhNotes = "- 維護更新與穩定性優化。"
@@ -311,3 +311,4 @@ Write-Host "===================================================" -ForegroundColo
 Write-Host "✨ Automated release completed successfully!" -ForegroundColor Green
 Write-Host "Saved to: $ZipFile" -ForegroundColor Green
 Write-Host "===================================================" -ForegroundColor Green
+

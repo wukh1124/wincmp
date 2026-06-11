@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 
-let currentLanguage = 'zh-TW';
+function detectBrowserLanguage(): string {
+  const lang = navigator.language || (navigator as any).userLanguage || 'zh-TW';
+  if (lang.toLowerCase().startsWith('zh')) {
+    return 'zh-TW';
+  }
+  return 'en-US';
+}
+
+let currentLanguage = detectBrowserLanguage();
 const listeners = new Set<() => void>();
 
 export const getLanguage = () => currentLanguage;

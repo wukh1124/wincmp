@@ -15,7 +15,8 @@
 
 ## ✨ 核心特色
 
-- 🪶 **極致輕量**：採用 Go + Wails 靜態編譯，使用系統自帶的 Web 渲染引擎 (WebView2)，無須 Electron 依賴，體積小巧。
+- 🪶 **極致輕量與單檔運作**：採用 Go + Wails 靜態編譯，只需單個 `wincmp.exe` 即可獨立運作，啟動時會自動在同級目錄下生成相關的設定檔。
+- 📦 **綠色便攜與自由遷移**：在手動遷移時，只需把核心的 `conf/wincmp.json` 設定檔和整個 `/bin` 二進位資料夾帶走，即可在其他 Windows 電腦上完全一致地運作，實現開箱即用。
 - 🛡️ **核心服務免管理員權限**：完全支援在受限環境下運作，不修改系統環境變數，不寫入登錄檔。*（註：自動修改 Windows `hosts` 檔以設定自訂本地網域為選用功能，啟用時需要 UAC 管理員提權）*。
 - 🎨 **現代化 UI/UX**：全新設計的 Dark Professional (深色專業級) 介面，支援流暢的側邊導覽、即時狀態監控與微互動。
 - 🔄 **PHP 多進程負載均衡**：利用 Caddy 的 Upstream 機制，每個 PHP 版本啟動多個 FastCGI 進程進行分流。
@@ -159,6 +160,17 @@ node scripts/generate-release-json.js
 - **系統深度整合**：Windows 開機自動啟動 (`HKCU\Run`)、一鍵設定 Windows 系統路徑環境變數 (`Path`)。
 - **開發工具鏈**：內建 Composer 支援 (免安裝 `composer.phar`)、PHP 進程 Watchdog 自動重啟。
 - **進階服務管理**：整合 HeidiSQL 預覽與快速連線、服務執行檔 (Caddy/PHP/MariaDB) 多版本自動下載器。
+
+## 🤝 致謝與引用 (Credits)
+
+WinCMP 的誕生離不開以下優秀開源技術與設計的啟發和支持，特此致敬：
+- **核心技術**：
+  - [Go 1.26+](https://go.dev/) — 強大高效的後端核心
+  - [Wails v2](https://wails.io/) — 輕量級的桌面應用程式開發框架
+  - [React 18](https://react.dev/) — 靈活流暢的前端渲染核心
+  - [Windows ConPTY](https://learn.microsoft.com/en-us/windows/console/pseudoconsole) & [xterm.js](https://xtermjs.org/) — 完美的內建互動式終端體驗
+- **設計與主題**：
+  - 特別感謝並致敬優秀的 [Open Design](https://github.com/) 社群設計，為 WinCMP 的主題風格 (Theme) 提供靈感與美學指引。
 
 ## 📄 授權條款
 

@@ -368,6 +368,8 @@ export namespace scanner {
 	    BunList: ServiceInfo[];
 	    PHPList: PHPVersionInfo[];
 	    SkippedPHP: string[];
+	    has_global_node: boolean;
+	    has_global_bun: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ScanResult(source);
@@ -384,6 +386,8 @@ export namespace scanner {
 	        this.BunList = this.convertValues(source["BunList"], ServiceInfo);
 	        this.PHPList = this.convertValues(source["PHPList"], PHPVersionInfo);
 	        this.SkippedPHP = source["SkippedPHP"];
+	        this.has_global_node = source["has_global_node"];
+	        this.has_global_bun = source["has_global_bun"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

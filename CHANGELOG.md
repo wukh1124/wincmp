@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.2] 2026-06-12
+
+### Added
+- **Theme Support**: Integrated dark/light/system theme switching.
+- **Process Guard & Port Cleanup**: Introduced Windows Job Object to terminate entire runtime process trees instantly.
+- **Custom Command Safety**: Restricted custom executable/script executions to the active project root directory.
+- **Global Environment Auto-Detection**: Added automatic sensing of global Node.js/Bun installations.
+- **Single-Instance Protection**: Added process check to prevent concurrent runs with legacy v1 version.
+
 ## [2.0.1] 2026-06-08
 
 ### Added

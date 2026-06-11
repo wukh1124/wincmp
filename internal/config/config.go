@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"unsafe"
 
 	"wincmp/internal/crypto"
 )
@@ -201,9 +203,9 @@ func Load(path string) (*WincmpConfig, error) {
 		cfg.Global.DependencyURL = DefaultDependencyURL
 	}
 
-	// 預設語言為繁體中文
+	// 預設語言為自動偵測系統語言
 	if cfg.Global.Language == "" {
-		cfg.Global.Language = "zh-TW"
+		cfg.Global.Language = GetSystemLanguage()
 	}
 
 	// 預設終端為 powershell.exe
@@ -398,3 +400,22 @@ func SanitizeProjectName(name string) string {
 
 	return result
 }
+
+// GetSystemLanguage 偵測 Windows 系統語言，預設回傳 "zh-TW" 或 "en-US"
+func GetSystemLanguage() string {
+	var buf [85]uint16 // LOCALE_NAME_MAX_LENGTH = 85
+	kernel32 := syscall.NewLazyDLL("kernel32.dll")
+	getUserDefaultLocaleName := kernel32.NewProc("GetUserDefaultLocaleName")
+	r, _, _ := getUserDefaultLocaleName.Call(uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	if r > 0 {
+		locale := syscall.UTF16ToString(buf[:])
+		lower := strings.ToLower(locale)
+		// 如果是中文語系 (zh-TW, zh-CN, zh-HK 等) 預設使用 zh-TW
+		if strings.HasPrefix(lower, "zh") {
+			return "zh-TW"
+		}
+	}
+	// 否則預設為英文
+	return "en-US"
+}
+

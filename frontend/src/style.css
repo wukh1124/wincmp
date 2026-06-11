@@ -21,6 +21,11 @@ select {
   padding-right: 32px !important;
 }
 
+select option {
+  background-color: var(--bg-deep) !important;
+  color: var(--fg) !important;
+}
+
 body {
   margin: 0;
   font-family: var(--font-body);

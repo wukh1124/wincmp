@@ -84,7 +84,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden select-none">
-      <div className="absolute inset-0 transition-opacity duration-300" style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(1px)' }} onClick={onClose} />
+      <div className="absolute inset-0 transition-opacity duration-300" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(1px)' }} onClick={onClose} />
       <div className="absolute inset-y-0 right-0 pl-10 max-w-full flex">
         <div className="w-screen max-w-xl flex flex-col h-full overflow-hidden animate-slide-in" style={{ background: 'var(--card)', borderLeft: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
           {/* Header */}

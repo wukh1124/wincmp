@@ -105,6 +105,7 @@
   /* Scrollbar */
   --scrollbar-thumb: rgba(255, 255, 255, 0.1);
   --scrollbar-hover: rgba(255, 255, 255, 0.2);
+  --overlay-bg: rgba(0, 0, 0, 0.95);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -175,6 +176,7 @@
   /* Scrollbar */
   --scrollbar-thumb: #d5cfc5;
   --scrollbar-hover: #bfb8ac;
+  --overlay-bg: rgba(0, 0, 0, 0.45);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -253,6 +255,7 @@
   /* Scrollbar */
   --scrollbar-thumb: #c8c0b0;
   --scrollbar-hover: #9e9585;
+  --overlay-bg: rgba(0, 0, 0, 0.45);
 
   /* Sketch-specific: graph paper grid (applied via pseudo-elements) */
   --graph-line: rgba(173, 196, 222, 0.25);
@@ -407,4 +410,5 @@ html[data-theme="sketch"] {
   /* Scrollbar */
   --scrollbar-thumb: rgba(255, 255, 255, 0.1);
   --scrollbar-hover: rgba(255, 255, 255, 0.2);
+  --overlay-bg: rgba(0, 0, 0, 0.95);
 }

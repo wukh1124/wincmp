@@ -101,7 +101,7 @@ func (a *App) startup(ctx context.Context) {
 				RestoreLastState: true,
 				MinimizeToTray:   false,
 				AutoUpdateHosts:  true,
-				Language:         "zh-TW",
+				Language:         config.GetSystemLanguage(),
 			},
 		}
 	}

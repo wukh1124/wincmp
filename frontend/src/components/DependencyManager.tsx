@@ -217,7 +217,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
+      <div className="absolute inset-0" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
       <div className="relative w-full max-w-2xl max-h-[90vh] rounded-2xl flex flex-col overflow-hidden animate-fade-in select-none" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', color: 'var(--fg)' }}>
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>

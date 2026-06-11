@@ -404,12 +404,25 @@ func (a *App) StartProjectRuntime(projectName string) error {
 	// 2. 推導執行路徑 (Bundled Runtime 優先，否則尋找系統 PATH)
 	exePath := ""
 	resolvedRT := proj.RuntimeType
+	hasNode := len(a.scanRes.NodeList) > 0
 	hasBun := len(a.scanRes.BunList) > 0
 	if resolvedRT == "auto" {
-		if hasBun {
-			resolvedRT = "bun"
+		if proj.UseWinCMPBin {
+			if hasNode {
+				resolvedRT = "node"
+			} else if hasBun {
+				resolvedRT = "bun"
+			} else {
+				resolvedRT = "node"
+			}
 		} else {
-			resolvedRT = "node"
+			if _, err := exec.LookPath("node"); err == nil {
+				resolvedRT = "node"
+			} else if _, err := exec.LookPath("bun"); err == nil {
+				resolvedRT = "bun"
+			} else {
+				resolvedRT = "node"
+			}
 		}
 	}
 

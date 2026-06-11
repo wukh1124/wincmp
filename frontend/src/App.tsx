@@ -517,7 +517,7 @@ export default function App() {
 
       {/* ─── Alert Modal ──────────────────────────────────────── */}
       {customAlert.isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(2px)' }}>
           <div className="w-full max-w-sm rounded-xl overflow-hidden p-5 flex flex-col space-y-4 animate-slide-in" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
             <div className="flex items-center gap-2.5 font-bold text-sm" style={{ color: 'var(--status-info)' }}>
               <span className="text-base">🔔</span>
@@ -542,7 +542,7 @@ export default function App() {
 
       {/* ─── Confirm Modal ────────────────────────────────────── */}
       {customConfirm.isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)' }}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(2px)' }}>
           <div className="w-full max-w-sm rounded-xl overflow-hidden p-5 flex flex-col space-y-4 animate-slide-in" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
             <div className="flex items-center gap-2.5 font-bold text-sm" style={{ color: 'var(--status-info)' }}>
               <span className="text-base">❓</span>
