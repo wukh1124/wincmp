@@ -19,7 +19,7 @@ export default function TerminalLogs() {
   const [activeRuntimeProject, setActiveRuntimeProject] = useState('System');
   const [logs, setLogs] = useState<LogData>(logStore.getLogs());
   const [autoScroll, setAutoScroll] = useState(true);
-  
+
   const logEndRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -119,44 +119,44 @@ export default function TerminalLogs() {
   };
 
   // Warp 風格日誌著色
-  const getLineColor = (text: string) => {
+  const getLineStyle = (text: string): React.CSSProperties => {
     const lower = text.toLowerCase();
     if (
-      lower.includes('error') || 
-      lower.includes('failed') || 
-      lower.includes('🔴') || 
-      lower.includes('❌') || 
-      lower.includes('無法') || 
-      lower.includes('失敗') || 
+      lower.includes('error') ||
+      lower.includes('failed') ||
+      lower.includes('🔴') ||
+      lower.includes('❌') ||
+      lower.includes('無法') ||
+      lower.includes('失敗') ||
       lower.includes('missing') ||
       lower.includes('fatal')
     ) {
-      return 'text-red-400 font-semibold';
+      return { color: 'var(--status-error)', fontWeight: 600 };
     }
     if (
-      lower.includes('warn') || 
-      lower.includes('warning') || 
-      lower.includes('⚠️') || 
+      lower.includes('warn') ||
+      lower.includes('warning') ||
+      lower.includes('⚠️') ||
       lower.includes('警示') ||
       lower.includes('deprecated')
     ) {
-      return 'text-amber-400 font-semibold';
+      return { color: 'var(--status-warn)', fontWeight: 600 };
     }
     if (
-      lower.includes('info') || 
-      lower.includes('success') || 
-      lower.includes('✅') || 
-      lower.includes('運作中') || 
-      lower.includes('運行中') || 
-      lower.includes('已啟動') || 
+      lower.includes('info') ||
+      lower.includes('success') ||
+      lower.includes('✅') ||
+      lower.includes('運作中') ||
+      lower.includes('運行中') ||
+      lower.includes('已啟動') ||
       lower.includes('就緒') ||
       lower.includes('connected') ||
       lower.includes('started') ||
       lower.includes('listening')
     ) {
-      return 'text-emerald-400 font-medium';
+      return { color: 'var(--status-ok)', fontWeight: 500 };
     }
-    return 'text-gray-300';
+    return { color: 'var(--fg-2)' };
   };
 
   // 決定要渲染的日誌行數
@@ -165,9 +165,15 @@ export default function TerminalLogs() {
     : (logs[activeTab as keyof Omit<LogData, 'runtime'>] || []);
 
   return (
-    <div className="flex flex-col h-full bg-[#08080a] overflow-hidden select-none">
+    <div
+      className="flex flex-col h-full overflow-hidden select-none"
+      style={{ backgroundColor: 'var(--bg-deep)' }}
+    >
       {/* 分頁 Tab 與控制項 */}
-      <div className="flex justify-between items-center border-b border-darkBorder bg-[#0b0b0e] px-3 select-none">
+      <div
+        className="flex justify-between items-center border-b px-3 select-none"
+        style={{ backgroundColor: 'var(--surface)', borderBottomColor: 'var(--border)' }}
+      >
         <div className="flex overflow-x-auto scrollbar-none">
           {CATEGORIES.map(tab => (
             <button
@@ -175,9 +181,13 @@ export default function TerminalLogs() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2.5 text-[11px] font-bold border-b-2 transition duration-200 shrink-0 ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-400 bg-white/[0.02]'
-                  : 'border-transparent text-gray-400 hover:text-gray-200'
+                  ? ''
+                  : 'hover:text-[var(--fg)]'
               }`}
+              style={activeTab === tab.id
+                ? { borderBottomColor: 'var(--accent)', color: 'var(--accent)', backgroundColor: 'var(--card-hover)' }
+                : { borderBottomColor: 'transparent', color: 'var(--muted)' }
+              }
             >
               {t(tab.label)}
             </button>
@@ -188,20 +198,26 @@ export default function TerminalLogs() {
           {/* Runtime 專案下拉選單 */}
           {activeTab === 'runtime' && (
             <div className="flex items-center gap-1.5 mr-2">
-              <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">{t("專案:")}</span>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: 'var(--meta)' }}
+              >
+                {t("專案:")}
+              </span>
               <select
                 value={activeRuntimeProject}
                 onChange={(e) => setActiveRuntimeProject(e.target.value)}
-                className="bg-[#121216] border border-darkBorder rounded-lg px-2.5 py-1 text-[10px] text-blue-400 focus:outline-none focus:border-blue-500 font-bold cursor-pointer"
+                className="border rounded-lg px-2.5 py-1 text-[10px] focus:outline-none focus:border-[color:var(--accent)] font-bold cursor-pointer"
+                style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border)', color: 'var(--accent)' }}
               >
                 {runtimeProjects.length > 0 ? (
                   runtimeProjects.map((proj) => (
-                    <option key={proj} value={proj} className="bg-darkBg text-gray-300">
+                    <option key={proj} value={proj} style={{ backgroundColor: 'var(--bg)', color: 'var(--fg-2)' }}>
                       {proj}
                     </option>
                   ))
                 ) : (
-                  <option value="System" className="bg-darkBg text-gray-300">System</option>
+                  <option value="System" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg-2)' }}>System</option>
                 )}
               </select>
             </div>
@@ -213,14 +229,16 @@ export default function TerminalLogs() {
                 setAutoScroll(true);
                 logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="px-2.5 py-1 text-[10px] border border-darkBorder rounded-lg bg-darkInput text-blue-400 hover:border-blue-500/50 flex items-center gap-1 transition font-bold"
+              className="px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold hover:border-[color:var(--accent-muted)]"
+              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--accent)' }}
             >
               <ArrowDown size={11} /> {t("自動滾動")}
             </button>
           )}
           <button
             onClick={handleClearLogs}
-            className="px-2.5 py-1 text-[10px] border border-darkBorder rounded-lg bg-darkInput text-red-400 hover:border-red-500/50 flex items-center gap-1 transition font-bold"
+            className="px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold hover:border-[color:var(--status-error)]"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--status-error)' }}
           >
             <Trash2 size={11} /> {t("清空日誌")}
           </button>
@@ -231,20 +249,32 @@ export default function TerminalLogs() {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 p-5 overflow-y-auto font-mono text-[11px] leading-relaxed bg-[#060608] text-gray-300 select-text"
+        className="flex-1 p-5 overflow-y-auto font-mono text-[11px] leading-relaxed select-text"
+        style={{ backgroundColor: 'var(--bg-deep)', color: 'var(--fg-2)' }}
       >
         {currentTabLogs.length > 0 ? (
           <div className="whitespace-pre-wrap break-all space-y-0.5">
             {currentTabLogs.map((line, idx) => (
-              <div key={idx} className="hover:bg-white/[0.03] px-1 py-0.5 rounded transition duration-75">
-                <span className="text-gray-600 select-none mr-2 font-semibold">[{line.time}]</span>
-                <span className={getLineColor(line.text)}>{line.text}</span>
+              <div
+                key={idx}
+                className="hover:bg-[var(--card-hover)] px-1 py-0.5 rounded transition duration-75"
+              >
+                <span
+                  className="select-none mr-2 font-semibold"
+                  style={{ color: 'var(--meta)' }}
+                >
+                  [{line.time}]
+                </span>
+                <span style={getLineStyle(line.text)}>{line.text}</span>
               </div>
             ))}
             <div ref={logEndRef} />
           </div>
         ) : (
-          <div className="h-full flex items-center justify-center text-gray-600 select-none italic text-xs font-semibold">
+          <div
+            className="h-full flex items-center justify-center select-none italic text-xs font-semibold"
+            style={{ color: 'var(--meta)' }}
+          >
             {t("暫時沒有日誌輸出")}
           </div>
         )}

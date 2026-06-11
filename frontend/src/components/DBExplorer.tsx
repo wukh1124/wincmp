@@ -59,14 +59,15 @@ export default function DBExplorer() {
       {/* 標頭 */}
       <div className="flex justify-between items-center select-none">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">🗄️ {t("資料庫瀏覽器 (DB Explorer)")}</h1>
-          <p className="text-xs text-gray-400 mt-1">{t("內建極簡 Schema / 資料表結構速覽，或一鍵透過外部工具管理")}</p>
+          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("資料庫瀏覽器 (DB Explorer)")}</h1>
+          <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{t("內建極簡 Schema / 資料表結構速覽，或一鍵透過外部工具管理")}</p>
         </div>
         <div className="flex gap-2.5">
           <button
             onClick={checkDBStatus}
             disabled={isLoading}
-            className="px-3.5 py-2 rounded-lg text-xs font-semibold border border-darkBorder flex items-center gap-1.5 bg-darkCard hover:bg-opacity-80 transition duration-200 text-gray-200"
+            className="px-3.5 py-2 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition duration-200"
+            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)', color: 'var(--fg-2)' }}
           >
             <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
             {t("重新整理")}
@@ -74,7 +75,8 @@ export default function DBExplorer() {
           <button
             onClick={handleOpenHeidiSQL}
             disabled={!isRunning}
-            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200"
+            className="px-3.5 py-2 disabled:opacity-50 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200"
+            style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-on)' }}
           >
             <ExternalLink size={13} /> {t("Open in HeidiSQL")}
           </button>
@@ -83,22 +85,22 @@ export default function DBExplorer() {
 
       {/* 資料庫運行狀態判斷 */}
       {!isRunning ? (
-        <div className="flex-1 bg-darkCard border border-darkBorder rounded-xl p-8 flex flex-col items-center justify-center text-center space-y-4 select-none">
-          <div className="p-4 bg-yellow-500 bg-opacity-10 text-yellow-400 rounded-full">
+        <div className="flex-1 border rounded-xl p-8 flex flex-col items-center justify-center text-center space-y-4 select-none" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>
+          <div className="p-4 rounded-full" style={{ backgroundColor: 'var(--status-warn-bg)', color: 'var(--status-warn)' }}>
             <AlertTriangle size={36} />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-gray-100">{t("MariaDB 尚未啟動")}</h3>
-            <p className="text-xs text-gray-400 mt-1.5 max-w-sm leading-relaxed">
+            <h3 className="text-sm font-bold" style={{ color: 'var(--fg)' }}>{t("MariaDB 尚未啟動")}</h3>
+            <p className="text-xs mt-1.5 max-w-sm leading-relaxed" style={{ color: 'var(--muted)' }}>
               {t("請先前往 **Dashboard** 頁面啟動 MariaDB 資料庫服務，再使用 Database Explorer 進行瀏覽。")}
             </p>
           </div>
         </div>
       ) : (
-        <div className="flex-1 bg-darkCard border border-darkBorder rounded-xl flex overflow-hidden min-h-[400px]">
+        <div className="flex-1 border rounded-xl flex overflow-hidden min-h-[400px]" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>
           {/* 左側：Databases 列表 */}
-          <div className="w-1/3 border-r border-darkBorder flex flex-col bg-[#0b0b0e]/30 select-none">
-            <div className="px-5 py-3.5 border-b border-darkBorder bg-[#0f0f12] font-bold text-[10px] tracking-wider uppercase text-gray-500">
+          <div className="w-1/3 border-r flex flex-col select-none" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-deep)' }}>
+            <div className="px-5 py-3.5 border-b font-bold text-[10px] tracking-wider uppercase" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-deep)', color: 'var(--meta)' }}>
               📁 Databases ({databases.length})
             </div>
             <div className="flex-1 overflow-y-auto p-2.5 space-y-0.5">
@@ -106,13 +108,17 @@ export default function DBExplorer() {
                 <button
                   key={db}
                   onClick={() => handleSelectSchema(db)}
-                  className={`w-full text-left px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2.5 transition duration-150 ${
+                  className={`w-full text-left px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2.5 transition duration-150 ${selectedSchema === db
+                    ? 'border'
+                    : ''
+                    }`}
+                  style={
                     selectedSchema === db
-                      ? 'bg-emerald-600/10 text-emerald-400 border border-emerald-500/10'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                  }`}
+                      ? { backgroundColor: 'var(--accent-muted)', color: 'var(--accent)', borderColor: 'var(--border-soft)' }
+                      : { color: 'var(--muted)' }
+                  }
                 >
-                  <Database size={13} className={selectedSchema === db ? 'text-emerald-400' : 'text-gray-500'} />
+                  <Database size={13} style={{ color: selectedSchema === db ? 'var(--accent)' : 'var(--meta)' }} />
                   <span className="truncate">{db}</span>
                 </button>
               ))}
@@ -120,35 +126,35 @@ export default function DBExplorer() {
           </div>
 
           {/* 右側：Tables 列表 */}
-          <div className="w-2/3 flex flex-col bg-darkCard bg-opacity-40">
-            <div className="px-5 py-3.5 border-b border-darkBorder bg-[#0f0f12] font-bold text-[10px] tracking-wider uppercase text-gray-500 select-none">
-              📊 Tables {selectedSchema ? `(in ${selectedSchema})` : ''}
+          <div className="w-2/3 flex flex-col" style={{ backgroundColor: 'var(--surface)' }}>
+            <div className="px-5 py-3.5 border-b font-bold text-[10px] tracking-wider uppercase select-none" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-deep)', color: 'var(--meta)' }}>
+              Tables {selectedSchema ? `(in ${selectedSchema})` : ''}
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 font-mono text-xs">
               {selectedSchema ? (
                 isTablesLoading ? (
-                  <div className="h-full flex items-center justify-center text-gray-400">
-                    <RefreshCw size={20} className="animate-spin text-emerald-400" />
+                  <div className="h-full flex items-center justify-center" style={{ color: 'var(--muted)' }}>
+                    <RefreshCw size={20} className="animate-spin" style={{ color: 'var(--accent)' }} />
                   </div>
                 ) : tables.length > 0 ? (
                   <div className="space-y-3">
-                    <div className="text-gray-400 font-bold mb-3 select-none flex items-center gap-1.5 border-b border-darkBorder pb-2 text-[11px]">
-                      <Table size={12} className="text-emerald-400" /> {t("資料庫")} '{selectedSchema}' {t("的資料表：")}
+                    <div className="font-bold mb-3 select-none flex items-center gap-1.5 border-b pb-2 text-[11px]" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
+                      <Table size={12} style={{ color: 'var(--accent)' }} /> {t("資料庫")} '{selectedSchema}' {t("的資料表：")}
                     </div>
-                    <div className="divide-y divide-darkBorder/40 max-h-[60vh] overflow-y-auto">
+                    <div className="max-h-[60vh] overflow-y-auto" style={{ borderTopColor: 'var(--border)', borderTopWidth: 1, borderTopStyle: 'solid' }}>
                       {tables.map((tb, idx) => {
                         const name = tb.split('  ')[0];
                         const rowInfo = tb.split('  ')[1] || '';
-                        
+
                         return (
-                          <div key={idx} className="py-2.5 px-2 hover:bg-white/[0.015] rounded transition flex items-center justify-between text-gray-300">
+                          <div key={idx} className="py-2.5 px-2 rounded transition flex items-center justify-between" style={{ color: 'var(--fg-2)', borderBottomColor: 'var(--border-soft)', borderBottomWidth: 1, borderBottomStyle: 'solid' }}>
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-600 select-none text-[10px]">{String(idx + 1).padStart(2, '0')}.</span>
-                              <span className="text-gray-200 text-xs font-semibold">{name}</span>
+                              <span className="select-none text-[10px]" style={{ color: 'var(--meta)' }}>{String(idx + 1).padStart(2, '0')}.</span>
+                              <span className="text-xs font-semibold" style={{ color: 'var(--fg-2)' }}>{name}</span>
                             </div>
                             {rowInfo.includes('rows') && (
-                              <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/10 px-2 py-0.5 rounded-full font-sans font-bold">
+                              <span className="text-[10px] px-2 py-0.5 rounded-full font-sans font-bold" style={{ color: 'var(--accent)', backgroundColor: 'var(--accent-muted)', borderColor: 'var(--border-soft)', borderWidth: 1, borderStyle: 'solid' }}>
                                 {rowInfo}
                               </span>
                             )}
@@ -158,12 +164,12 @@ export default function DBExplorer() {
                     </div>
                   </div>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-gray-500 italic select-none text-xs">
+                  <div className="h-full flex items-center justify-center italic select-none text-xs" style={{ color: 'var(--meta)' }}>
                     {t("（此資料庫沒有資料表）")}
                   </div>
                 )
               ) : (
-                <div className="h-full flex items-center justify-center text-gray-500 italic select-none text-xs">
+                <div className="h-full flex items-center justify-center italic select-none text-xs" style={{ color: 'var(--meta)' }}>
                   {t("請選擇左側的資料庫以檢視資料表")}
                 </div>
               )}
