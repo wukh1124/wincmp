@@ -44,7 +44,7 @@ func (a *App) GetDetailedResources() (resource.DetailedResources, error) {
 
 // CheckPortConflicts 檢查核心服務端口是否被佔用
 func (a *App) CheckPortConflicts() (map[string]bool, error) {
-	ports := []int{80, 443}
+	var ports []int
 
 	// MariaDB Port
 	dbPort := a.appCfg.Global.MariaDBPort
@@ -67,9 +67,7 @@ func (a *App) CheckPortConflicts() (map[string]bool, error) {
 	conflicts := make(map[string]bool)
 	for _, p := range ports {
 		isRunning := false
-		if p == 80 || p == 443 {
-			isRunning = a.procMgr.IsRunning("caddy")
-		} else if p == dbPort {
+		if p == dbPort {
 			isRunning = a.IsMariaDBRunning()
 		} else if p == smtpPort || p == httpPort {
 			isRunning = a.procMgr.IsRunning("mailpit")
@@ -113,7 +111,7 @@ func (a *App) SaveConfig(newCfg *config.WincmpConfig) error {
 				continue
 			}
 			if !hosts.IsValidDomain(domTrimmed) {
-				return fmt.Errorf("%s", i18n.Tfmt("網域 '%s' 格式不正確。僅能包含英數字、連字號(-)與點(.)，且不能包含底線、埠號或路徑。", domTrimmed))
+				return fmt.Errorf("%s", i18n.Tfmt("網域 '%s' 格式不正確。僅能包含英數字、連字號(-)、底線(_)與點(.)，且不能包含埠號或路徑。", domTrimmed))
 			}
 		}
 	}
@@ -131,6 +129,25 @@ func (a *App) SaveConfig(newCfg *config.WincmpConfig) error {
 
 	return nil
 }
+
+// SaveQuickSettings 快速儲存主題、語言與字體大小設定，避免與其他設定頁草稿衝突
+func (a *App) SaveQuickSettings(theme string, language string, fontSize string) error {
+	a.appCfg.Global.Theme = theme
+	a.appCfg.Global.Language = language
+	a.appCfg.Global.FontSize = fontSize
+	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
+
+	if err := a.appCfg.Save(cfgPath); err != nil {
+		return fmt.Errorf(i18n.T("無法儲存設定檔: %w"), err)
+	}
+
+	// 更新後端語系並同步刷新系統托盤選單
+	i18n.SetLanguage(language)
+	a.updateTrayMenu()
+
+	return nil
+}
+
 
 // ScanServices 重新掃描 bin/ 目錄並更新二進位服務版本資訊
 func (a *App) ScanServices() (*scanner.ScanResult, error) {
@@ -404,12 +421,25 @@ func (a *App) StartProjectRuntime(projectName string) error {
 	// 2. 推導執行路徑 (Bundled Runtime 優先，否則尋找系統 PATH)
 	exePath := ""
 	resolvedRT := proj.RuntimeType
+	hasNode := len(a.scanRes.NodeList) > 0
 	hasBun := len(a.scanRes.BunList) > 0
 	if resolvedRT == "auto" {
-		if hasBun {
-			resolvedRT = "bun"
+		if proj.UseWinCMPBin {
+			if hasNode {
+				resolvedRT = "node"
+			} else if hasBun {
+				resolvedRT = "bun"
+			} else {
+				resolvedRT = "node"
+			}
 		} else {
-			resolvedRT = "node"
+			if _, err := exec.LookPath("node"); err == nil {
+				resolvedRT = "node"
+			} else if _, err := exec.LookPath("bun"); err == nil {
+				resolvedRT = "bun"
+			} else {
+				resolvedRT = "node"
+			}
 		}
 	}
 
@@ -625,7 +655,7 @@ func (a *App) triggerHostsUpdate() {
 	}
 
 	if len(invalidDomains) > 0 {
-		a.handleLog("system", i18n.Tfmt("⚠️ 以下網域含非法字元(含底線)，已跳過: %v", invalidDomains))
+		a.handleLog("system", i18n.Tfmt("⚠️ 以下網域含非法字元，已跳過: %v", invalidDomains))
 	}
 
 	if len(validMissing) == 0 {

@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 
-let currentLanguage = 'zh-TW';
+function detectBrowserLanguage(): string {
+  const lang = navigator.language || (navigator as any).userLanguage || 'zh-TW';
+  if (lang.toLowerCase().startsWith('zh')) {
+    return 'zh-TW';
+  }
+  return 'en-US';
+}
+
+let currentLanguage = detectBrowserLanguage();
 const listeners = new Set<() => void>();
 
 export const getLanguage = () => currentLanguage;
@@ -50,7 +58,9 @@ export const enTranslations: Record<string, string> = {
   "打開 Logs 控制台": "Expand Logs Console",
   "系統提示": "System Notice",
   "系統確認": "System Confirmation",
-  "您有尚未儲存的設定變更，確定要離開此頁面嗎？": "You have unsaved settings. Are you sure you want to leave?",
+  "您有尚未儲存的設定變更，在離開前是否要先保存？": "You have unsaved settings. Would you like to save them before leaving?",
+  "否，不保存立即離開": "No, leave without saving",
+  "是，保存後離開": "Yes, save and leave",
   "確定": "OK",
   "取消": "Cancel",
 
@@ -86,7 +96,7 @@ export const enTranslations: Record<string, string> = {
   "系統設定檔案快速捷徑": "System Configurations Shortcuts",
   "可以在這裡直接使用系統預設編輯器開啟核心設定檔，進行進階手動編輯：": "Open core configuration files directly with system default editor for advanced editing:",
   "Hosts 檔案": "Hosts File",
-  "php.ini 設定": "php.ini Configuration",
+  "php.ini 設定": "php.ini Config",
   "WinCMP Json": "WinCMP JSON",
   "載入設定中...": "Loading configurations...",
   "設定儲存成功！": "Settings saved successfully!",
@@ -110,6 +120,7 @@ export const enTranslations: Record<string, string> = {
   "管理 Caddy, MariaDB, PHP-CGI 與背景開發服務": "Manage Caddy, MariaDB, PHP-CGI and background runtimes",
   "重新掃描服務": "Rescan Services",
   "掃描中...": "Scanning...",
+  "系統狀態概覽": "System Status Overview",
   "依賴元件狀態": "Dependencies Status",
   "已就緒": "Ready",
   "所有核心依賴配置正常": "All core dependencies configured normally",
@@ -363,7 +374,7 @@ export const enTranslations: Record<string, string> = {
   // DBExplorer.tsx
   "載入失敗": "Load Failed",
   "開啟 HeidiSQL 失敗": "Failed to open HeidiSQL",
-  "資料庫瀏覽器 (DB Explorer)": "Database Explorer (DB Explorer)",
+  "資料庫瀏覽器": "Database Explorer",
   "內建極簡 Schema / 資料表結構速覽，或一鍵透過外部工具管理": "Built-in basic schema / table structure viewer, or one-click external tool access",
   "重新整理": "Refresh",
   "Open in HeidiSQL": "Open in HeidiSQL",
@@ -376,7 +387,6 @@ export const enTranslations: Record<string, string> = {
   "正在載入系統與服務資源數據...": "Loading system and service resources data...",
   "載入資源監控失敗": "Failed to load resource monitor",
   "重新嘗試": "Retry",
-  "資源監控 (Resource Monitor)": "Resource Monitor",
   "即時監控系統總體、主程式、Web 視窗介面及各背景服務的 CPU 與 RAM 使用狀況": "Real-time tracking of CPU and RAM usage for the system, core engine, UI render engine and background services",
   "手動整理": "Refresh",
   "整理中...": "Refreshing...",
@@ -385,7 +395,7 @@ export const enTranslations: Record<string, string> = {
   "WinCMP 核心 (Go 後端)": "WinCMP Core Engine (Go Backend)",
   "CPU 佔用率": "CPU Usage",
   "Web 視窗介面 (WebView2)": "UI Window Interface (WebView2)",
-  "啟動中的依賴服務 (Services Stack)": "Running Core Services (Services Stack)",
+  "啟動中的依賴服務": "Running Core Services",
   "服務名稱": "Service Name",
   "狀態": "Status",
   "進程 ID (PIDs)": "Process IDs (PIDs)",
@@ -440,7 +450,19 @@ export const enTranslations: Record<string, string> = {
   "版本更新說明": "Release Notes",
   "新版本更新說明": "New Version Release Notes",
   "💡 提示：如果因防毒軟體攔截或系統權限不足導致自動更新失敗，建議您前往 GitHub 手動下載最新版本的 ZIP 壓縮包，解壓覆蓋即可。": "💡 Tip: If auto-update fails due to antivirus blocking or insufficient permissions, we recommend downloading the latest ZIP package from GitHub and replacing it manually.",
-  "手動下載 ZIP 更新": "Manual ZIP Download"
+  "手動下載 ZIP 更新": "Manual ZIP Download",
+
+  // Theme Settings
+  "外觀主題 (Theme)": "Appearance Theme",
+  "選擇您偏好的視覺風格，切換後立即套用。": "Choose your preferred visual style. Changes apply immediately.",
+  "找不到匹配的專案": "No matching projects found",
+
+  // Font Settings
+  "字型大小": "Font Size",
+  "字型": "Font",
+  "小": "Small",
+  "中": "Medium",
+  "大": "Large",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

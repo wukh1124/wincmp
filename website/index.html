@@ -38,22 +38,43 @@
                 <a href="#architecture" class="nav-link" data-i18n="nav_architecture">Architecture</a>
                 <a href="#changelog" class="nav-link" data-i18n="nav_changelog">Changelog</a>
 
-                <!-- 語言切換按鈕 -->
-                <button class="nav-btn-lang" id="lang-switch-btn">
-                    <i data-lucide="languages"></i>
-                    <span id="lang-btn-text">繁體中文</span>
-                </button>
+                <!-- 導覽列功能按鈕組 -->
+                <div class="nav-tools">
+                    <!-- 語言切換按鈕 -->
+                    <button class="nav-btn-icon" id="lang-switch-btn" aria-label="切換語言" title="切換語言">
+                        <i data-lucide="languages"></i>
+                    </button>
 
-                <a href="https://github.com/wukh1124/wincmp" target="_blank" class="nav-btn-github" id="github-nav-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-github">
-                        <path
-                            d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
-                        <path d="M9 18c-4.51 2-5-2-7-2" />
-                    </svg>
-                    <span>GitHub</span>
-                </a>
+                    <!-- 主題切換按鈕 -->
+                    <button class="nav-btn-icon nav-btn-theme" id="theme-switch-btn" aria-label="切換主題" title="切換主題">
+                        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="4" />
+                            <path d="M12 2v2" />
+                            <path d="M12 20v2" />
+                            <path d="m4.93 4.93 1.41 1.41" />
+                            <path d="m17.66 17.66 1.41 1.41" />
+                            <path d="M2 12h2" />
+                            <path d="M20 12h2" />
+                            <path d="m6.34 17.66-1.41 1.41" />
+                            <path d="m19.07 4.93-1.41 1.41" />
+                        </svg>
+                        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                        </svg>
+                    </button>
+
+                    <!-- GitHub 連結 -->
+                    <a href="https://github.com/wukh1124/wincmp" target="_blank" class="nav-btn-icon" id="github-nav-btn" aria-label="GitHub" title="GitHub">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+                            <path d="M9 18c-4.51 2-5-2-7-2" />
+                        </svg>
+                    </a>
+                </div>
             </nav>
         </div>
     </header>
@@ -182,6 +203,16 @@
                             hosts file. Due to Windows security protection, this writing and backup feature requires UAC
                             elevation.</p>
                     </div>
+                    <!-- 卡片 7 -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i data-lucide="package-open"></i>
+                        </div>
+                        <h3 class="feature-card-title" data-i18n="feat_7_title">Portable Single-EXE</h3>
+                        <p class="feature-card-desc" data-i18n="feat_7_desc">Runs via a single executable without
+                            installation. Migrate easily by taking the 'conf/wincmp.json' config and '/bin' directory to
+                            any new location.</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -242,9 +273,9 @@
         <section id="comparison" class="comparison-section">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title" data-i18n="compare_title">Local Development Environments</h2>
+                    <h2 class="section-title" data-i18n="compare_title">WinCMP Version Comparison</h2>
                     <p class="section-subtitle" data-i18n="compare_subtitle">Hardcore metrics comparison between WinCMP
-                        and other popular local web environments on Windows:</p>
+                        v1 and v2 on Windows:</p>
                 </div>
 
                 <div class="table-responsive">
@@ -252,46 +283,55 @@
                         <thead>
                             <tr>
                                 <th data-i18n="compare_head_metric">Metric</th>
-                                <th class="highlight-column" data-i18n="compare_head_wincmp">WinCMP v2 🚀</th>
+                                <th data-i18n="compare_head_v1">WinCMP v1 (Fyne)</th>
+                                <th class="highlight-column" data-i18n="compare_head_v2">WinCMP v2 (Wails) 🚀</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_1_name">Architecture</td>
-                                <td class="highlight-column" data-i18n="compare_row_1_val_1">Go 1.26 + Wails v2 + React
+                                <td data-i18n="compare_row_1_val_1">Go + Fyne (Native GUI)</td>
+                                <td class="highlight-column" data-i18n="compare_row_1_val_2">Go 1.26 + Wails v2 + React
                                     18</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_2_name">Startup Speed</td>
-                                <td class="highlight-column" data-i18n="compare_row_2_val_1">Tends to be faster (Go
-                                    Core)</td>
+                                <td data-i18n="compare_row_2_val_1">Slow (Fyne cold start lag)</td>
+                                <td class="highlight-column" data-i18n="compare_row_2_val_2">Instant (Optimized Go core)
+                                </td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_3_name">Idle RAM</td>
-                                <td class="highlight-column" data-i18n="compare_row_3_val_1">Lower</td>
+                                <td data-i18n="compare_row_3_val_1">Medium (~80-120MB)</td>
+                                <td class="highlight-column" data-i18n="compare_row_3_val_2">Low (~30-50MB)</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_4_name">Privilege</td>
-                                <td class="highlight-column" data-i18n="compare_row_4_val_1">User Space (No Admin)</td>
+                                <td data-i18n="compare_row_4_val_1">Requires Admin</td>
+                                <td class="highlight-column" data-i18n="compare_row_4_val_2">User Space (No Admin)</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_5_name">Hosts Control</td>
-                                <td class="highlight-column" data-i18n="compare_row_5_val_1">Yes (UAC check with
+                                <td data-i18n="compare_row_5_val_1">Yes (No backup)</td>
+                                <td class="highlight-column" data-i18n="compare_row_5_val_2">Yes (UAC check with
                                     auto-backup)</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_6_name">Terminal</td>
-                                <td class="highlight-column" data-i18n="compare_row_6_val_1">Built-in xterm.js drawer
-                                </td>
+                                <td data-i18n="compare_row_6_val_1">None</td>
+                                <td class="highlight-column" data-i18n="compare_row_6_val_2">Built-in ConPTY + xterm.js
+                                    drawer</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_7_name">Email Sandbox</td>
-                                <td class="highlight-column" data-i18n="compare_row_7_val_1">Built-in Mailpit (Zero
-                                    configuration)</td>
+                                <td data-i18n="compare_row_7_val_1">None</td>
+                                <td class="highlight-column" data-i18n="compare_row_7_val_2">One-click Mailpit download
+                                </td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_8_name">Config Apply</td>
-                                <td class="highlight-column" data-i18n="compare_row_8_val_1">Auto Hot Reload (Zero
+                                <td data-i18n="compare_row_8_val_1">Manual restart required</td>
+                                <td class="highlight-column" data-i18n="compare_row_8_val_2">Auto Hot Reload (Zero
                                     Downtime)</td>
                             </tr>
                         </tbody>
@@ -346,9 +386,14 @@
                         <p data-i18n="changelog_loading">Fetching latest changelog from GitHub...</p>
                     </div>
                     <div class="changelog-content markdown-body" id="changelog-content"></div>
-                    <div class="changelog-footer" style="margin-top: 30px; text-align: center; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 20px;">
-                        <a href="https://github.com/wukh1124/wincmp/releases" target="_blank" class="changelog-more-link" style="color: var(--primary-color); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;" data-i18n="changelog_view_more">
-                            View all releases on GitHub <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+                    <div class="changelog-footer"
+                        style="margin-top: 30px; text-align: center; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 20px;">
+                        <a href="https://github.com/wukh1124/wincmp/releases" target="_blank"
+                            class="changelog-more-link"
+                            style="color: var(--primary-color); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;"
+                            data-i18n="changelog_view_more">
+                            View all releases on GitHub <i data-lucide="external-link"
+                                style="width: 16px; height: 16px;"></i>
                         </a>
                     </div>
                 </div>
@@ -365,8 +410,7 @@
             <div class="footer-right">
                 <p class="copyright">Licensed under the <a href="https://opensource.org/license/mit/"
                         target="_blank">MIT License</a>.</p>
-                <p class="powered-by">Made by <a href="https://github.com/wukh1124" target="_blank">wukh1124</a>
-                    & 小愛</p>
+                <p class="powered-by">Made by <a href="https://github.com/wukh1124" target="_blank">wukh1124</a></p>
             </div>
         </div>
     </footer>

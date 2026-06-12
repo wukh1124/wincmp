@@ -21,7 +21,8 @@ Inspired by XAMPP and Laragon, WinCMP aims to provide a more lightweight, **port
 
 ## ✨ Features
 
-- 🪶 **Extremely Lightweight**: Statically compiled in Go + Wails, leveraging the native OS web engine (WebView2) without Electron dependencies.
+- 🪶 **Extremely Lightweight & Single Executable**: Statically compiled in Go + Wails. Runs entirely from a single `wincmp.exe` without extra setup, automatically generating default config files on startup.
+- 📦 **Fully Portable & Easy Migration**: Easily migrate your workspace by copying the core `conf/wincmp.json` and the `/bin` directory. Fully portable and ready to run on any Windows machine instantly.
 - 🛡️ **No Admin Privileges Needed for Core Services**: Fully supports running under restricted environments without modifying system environment variables or writing to the registry. *(Note: Automatic writing to the Windows `hosts` file for custom domains is optional and requires Administrator elevation/UAC prompt).*
 - 🎨 **Modern UI/UX**: Premium Dark Professional theme with smooth sidebar navigation, real-time status monitoring, and interactive micro-animations.
 - 🔄 **PHP Multi-Process Load Balancing**: Leverages Caddy's upstream mechanism to run multiple FastCGI processes for each PHP version.
@@ -167,6 +168,17 @@ node scripts/generate-release-json.js
 - **Advanced Service Manager**: HeidiSQL integration (preview & fast connection), automated downloader for service executables (Caddy/PHP/MariaDB multi-version).
 
 ---
+
+## 🤝 Acknowledgments (Credits)
+
+WinCMP wouldn't be possible without the inspiration and support of these fantastic open-source projects:
+- **Core Technologies**:
+  - [Go 1.26+](https://go.dev/) — High-performance backend engine
+  - [Wails v2](https://wails.io/) — Lightweight framework for desktop apps
+  - [React 18](https://react.dev/) — Fluid and powerful frontend library
+  - [Windows ConPTY](https://learn.microsoft.com/en-us/windows/console/pseudoconsole) & [xterm.js](https://xtermjs.org/) — Immersive built-in terminal experience
+- **Design & Themes**:
+  - Special thanks to the [Open Design](https://github.com/) community for providing visual guidelines and design tokens for the premium Dark Professional theme.
 
 ## 📄 License
 

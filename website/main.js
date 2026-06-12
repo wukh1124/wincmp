@@ -2,6 +2,33 @@ document.addEventListener('DOMContentLoaded', () => {
     let cachedReleaseData = null;
 
     // ==========================================================================
+    // 0. 主題切換邏輯 (Theme Switching)
+    // ==========================================================================
+    const themeBtn = document.getElementById('theme-switch-btn');
+
+    function applyTheme(theme) {
+        if (theme === 'sketch') {
+            document.documentElement.setAttribute('data-theme', 'sketch');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+        localStorage.setItem('wincmp_theme', theme);
+    }
+
+    // 載入時恢復已儲存的主題偏好，預設為 'sketch' (亮色手繪風)
+    const savedTheme = localStorage.getItem('wincmp_theme') || 'sketch';
+    applyTheme(savedTheme);
+
+    // 監聽主題切換按鈕
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const nextTheme = currentTheme === 'sketch' ? 'dark' : 'sketch';
+            applyTheme(nextTheme);
+        });
+    }
+
+    // ==========================================================================
     // 1. 多國語言字典與核心切換邏輯 (i18n)
     // ==========================================================================
     const translations = {
@@ -13,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
             nav_architecture: "Architecture",
             nav_changelog: "Changelog",
             lang_btn_text: "繁體中文",
+            theme_btn_dark: "Dark",
+            theme_btn_sketch: "Sketch",
             hero_badge_prefix: "Latest Version:",
             hero_title: "Extreme Lightweight & Portable<br><span class=\"gradient-text\">Local Dev Control Panel</span> for Windows",
             hero_subtitle: "Integrated with <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> and interactive terminal. Core development services run entirely without admin privileges. Fast, lightweight, and hassle-free!",
@@ -32,6 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
             feat_5_desc: "Supports Node.js, Bun, Python, and Go frameworks. Easily toggle between running in the background or spawning inside a separate terminal window.",
             feat_6_title: "Hosts Sync & Backup (Needs Admin)",
             feat_6_desc: "Easily sync custom domains to the Windows hosts file. Due to Windows security protection, this writing and backup feature requires UAC elevation.",
+            feat_7_title: "Portable Single-EXE",
+            feat_7_desc: "Runs via a single executable without installation. Migrate easily by taking the 'conf/wincmp.json' config and '/bin' directory to any new location.",
             gallery_title: "Intuitive & Modern User Interface",
             gallery_subtitle: "Every screen is carefully polished with smooth transitions and real-time status monitoring. Beautiful and powerful!",
             gallery_tab_dashboard: "Dashboard",
@@ -41,25 +72,35 @@ document.addEventListener('DOMContentLoaded', () => {
             gallery_tab_resource: "Resource Monitor",
             gallery_tab_settings: "Preferences",
             gallery_tab_dependencies: "Dependency Downloader",
-            compare_title: "WinCMP Specifications",
-            compare_subtitle: "WinCMP core specifications and hardcore metrics on Windows:",
+            compare_title: "WinCMP Version Comparison",
+            compare_subtitle: "Hardcore metrics comparison between WinCMP v1 and v2 on Windows:",
             compare_head_metric: "Metric",
+            compare_head_v1: "WinCMP v1 (Fyne)",
+            compare_head_v2: "WinCMP v2 (Wails) 🚀",
             compare_row_1_name: "Architecture",
-            compare_row_1_val_1: "Go 1.26 + Wails v2 + React 18",
+            compare_row_1_val_1: "Go 1.20 + Fyne 2.3 (Native GUI)",
+            compare_row_1_val_2: "Go 1.26 + Wails v2 + React 18",
             compare_row_2_name: "Startup Speed",
-            compare_row_2_val_1: "Tends to be faster (Go Core)",
+            compare_row_2_val_1: "Slow (Fyne cold start lag)",
+            compare_row_2_val_2: "Instant (Optimized Go core)",
             compare_row_3_name: "Idle RAM",
-            compare_row_3_val_1: "Lower",
+            compare_row_3_val_1: "Medium (~80-120MB)",
+            compare_row_3_val_2: "Low (~30-50MB)",
             compare_row_4_name: "Privilege",
-            compare_row_4_val_1: "User Space (No Admin)",
+            compare_row_4_val_1: "Requires Admin",
+            compare_row_4_val_2: "User Space (No Admin)",
             compare_row_5_name: "Hosts Control",
-            compare_row_5_val_1: "Yes (UAC check with auto-backup)",
+            compare_row_5_val_1: "Yes (No backup)",
+            compare_row_5_val_2: "Yes (UAC check with auto-backup)",
             compare_row_6_name: "Terminal",
-            compare_row_6_val_1: "Built-in xterm.js drawer",
+            compare_row_6_val_1: "None",
+            compare_row_6_val_2: "Built-in ConPTY + xterm.js drawer",
             compare_row_7_name: "Email Sandbox",
-            compare_row_7_val_1: "Built-in Mailpit (Zero configuration)",
+            compare_row_7_val_1: "None",
+            compare_row_7_val_2: "One-click Mailpit download",
             compare_row_8_name: "Config Apply",
-            compare_row_8_val_1: "Auto Hot Reload (Zero Downtime)",
+            compare_row_8_val_1: "Manual restart required",
+            compare_row_8_val_2: "Auto Hot Reload (Zero Downtime)",
             compare_table_note: "* Note: RAM usage refers to the Control Panel UI itself in idle state.",
             arch_title: "WinCMP Architecture",
             arch_subtitle: "Here is a glimpse of how the backend is designed for high performance and isolation:",
@@ -68,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             arch_card_2_title: "Smart Ports & Seamless Reload",
             arch_card_2_desc: "WinCMP automatically manages ports to prevent conflicts when running multiple PHP/Node versions. Any configuration changes are applied instantly in the background via Caddy's hot-reload, ensuring zero downtime.",
             changelog_title: "Latest Updates",
-            changelog_subtitle: "See what new features and fixes have been added recently!",
+            changelog_subtitle: "See what new features and fixes have been added recently",
             changelog_loading: "Fetching latest changelog from GitHub...",
             changelog_view_more: "View all releases on GitHub",
             footer_desc: "WinCMP gratefully integrates and acknowledges open-source projects including Caddy, MariaDB, PHP, Mailpit, Node.js, Composer, HeidiSQL, Wails, and React."
@@ -81,6 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
             nav_architecture: "架構原理",
             nav_changelog: "更新日誌",
             lang_btn_text: "English",
+            theme_btn_dark: "Dark",
+            theme_btn_sketch: "Sketch",
             hero_badge_prefix: "最新版本:",
             hero_title: "專為 Windows 打造的<br><span class=\"gradient-text\">極致輕量免安裝</span>開發面板",
             hero_subtitle: "整合 <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> 與專案互動終端。核心開發服務啟動免管理員權限，極速、輕量、無負擔！",
@@ -100,6 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
             feat_5_desc: "支援 Node.js、Bun、Python、Go 等多種 Framework (Next.js/Nuxt/Astro/FastAPI/Go API)，並貼心提供「背景默默執行」與「獨立終端執行」雙模式。",
             feat_6_title: "Hosts 備份與更新 (需要 Admin)",
             feat_6_desc: "支援點擊一鍵同步自訂域名到 Windows Hosts 檔案。由於系統安全防護，此寫入與自動備份功能需要彈出管理員 (UAC) 提權確認。",
+            feat_7_title: "單檔運作與綠色便攜",
+            feat_7_desc: "只需單個 executable 即可獨立運作，啟動時自動生成設定檔。遷移時只需將核心的 'conf/wincmp.json' 設定檔和整個 '/bin' 目錄帶走即可在其他地方運行。",
             gallery_title: "直觀、美觀的現代介面",
             gallery_subtitle: "每一處 UI 都經過的細心打磨，具備流暢的微動畫與實時狀態監控，好看又好用！",
             gallery_tab_dashboard: "主控台",
@@ -109,26 +154,35 @@ document.addEventListener('DOMContentLoaded', () => {
             gallery_tab_resource: "資源佔用監控",
             gallery_tab_settings: "偏好設定",
             gallery_tab_dependencies: "依賴下載器",
-            compare_title: "WinCMP 技術規格",
-            compare_subtitle: "整理 WinCMP 核心規格與硬派技術指標：",
+            compare_title: "WinCMP 版本對比",
+            compare_subtitle: "WinCMP v1 與 v2 在 Windows 上的各項硬派技術指標對比：",
             compare_head_metric: "項目",
-            compare_head_wincmp: "WinCMP",
+            compare_head_v1: "WinCMP v1 (Fyne)",
+            compare_head_v2: "WinCMP v2 (Wails) 🚀",
             compare_row_1_name: "底層架構",
-            compare_row_1_val_1: "Go 1.26 + Wails v2 + React 18",
+            compare_row_1_val_1: "Go 1.20 + Fyne 2.3 (原生 GUI)",
+            compare_row_1_val_2: "Go 1.26 + Wails v2 + React 18",
             compare_row_2_name: "啟動速度",
-            compare_row_2_val_1: "傾向更快 (Go 核心)",
+            compare_row_2_val_1: "較慢 (Fyne 冷啟動延遲)",
+            compare_row_2_val_2: "極速 (優化 Go 核心)",
             compare_row_3_name: "記憶體佔用",
-            compare_row_3_val_1: "較低",
+            compare_row_3_val_1: "中等 (~80-120MB)",
+            compare_row_3_val_2: "極低 (~30-50MB)",
             compare_row_4_name: "啟動權限",
-            compare_row_4_val_1: "用戶空間 (免管理員權限)",
+            compare_row_4_val_1: "需要管理員權限",
+            compare_row_4_val_2: "用戶空間 (免管理員權限)",
             compare_row_5_name: "Hosts 管理",
-            compare_row_5_val_1: "支援 (需 UAC 提權，自動備份防鎖死)",
+            compare_row_5_val_1: "支援 (無自動備份)",
+            compare_row_5_val_2: "支援 (需 UAC 提權，自動備份防鎖死)",
             compare_row_6_name: "內建終端",
-            compare_row_6_val_1: "內建 ConPTY + xterm.js 抽屜終端",
+            compare_row_6_val_1: "無",
+            compare_row_6_val_2: "內建 ConPTY + xterm.js 抽屜終端",
             compare_row_7_name: "郵件測試",
-            compare_row_7_val_1: "內建 Mailpit (免設定開箱即用)",
+            compare_row_7_val_1: "無",
+            compare_row_7_val_2: "可一鍵下載 Mailpit",
             compare_row_8_name: "配置生效",
-            compare_row_8_val_1: "自動熱重載 (零停機)",
+            compare_row_8_val_1: "需要手動重啟",
+            compare_row_8_val_2: "自動熱重載 (零停機)",
             compare_table_note: "* 註：記憶體佔用指控制面板主程式本身的閒置狀態。",
             arch_title: "WinCMP 底層運作原理",
             arch_subtitle: "後端寫了許多巧思，確保極致的效能與乾淨的環境隔離：",
@@ -137,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
             arch_card_2_title: "智慧連接埠與無縫重載",
             arch_card_2_desc: "WinCMP 會自動管理並分配服務連接埠，避免多個 PHP 或 Node 版本同時執行時發生衝突。調整設定時，系統會在背景即時套用變更，過程完全不需重啟伺服器，保證網頁連線不中斷！",
             changelog_title: "最新版本更新日誌",
-            changelog_subtitle: "看看最近幫 WinCMP 增加了什麼厲害的新魔法吧！",
+            changelog_subtitle: "查看最近 WinCMP 的更新和修正項目",
             changelog_loading: "正在從 GitHub 獲取最新發布日誌...",
             changelog_view_more: "前往 GitHub 查看所有歷史發布與日誌",
             footer_desc: "WinCMP 整合並致敬優秀的開源生態組件，包括 Caddy, MariaDB, PHP, Mailpit, Node.js, Composer, HeidiSQL, Wails 與 React。"
@@ -158,12 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 儲存偏好
         localStorage.setItem('wincmp_lang', lang);
-
-        // 更新語言切換按鈕文字
-        const langBtnText = document.getElementById('lang-btn-text');
-        if (langBtnText) {
-            langBtnText.innerText = translations[lang]['lang_btn_text'];
-        }
 
         // 重新初始化 Lucide 圖示 (避免動態重寫後圖示消失)
         if (window.lucide) {
@@ -293,10 +341,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ==========================================================================
-    // 4. 初始化語系與發布讀取
-    // ==========================================================================
-    const savedLang = localStorage.getItem('wincmp_lang') || 'en';
+    function detectBrowserLanguage() {
+        const lang = navigator.language || navigator.userLanguage || 'en';
+        if (lang.toLowerCase().startsWith('zh')) {
+            return 'zh';
+        }
+        return 'en';
+    }
+
+    const savedLang = localStorage.getItem('wincmp_lang') || detectBrowserLanguage();
     switchLanguage(savedLang);
     getLatestRelease();
 
@@ -305,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
     const navbar = document.getElementById('navbar');
     const navToggle = document.getElementById('nav-toggle');
-    const navLinks = document.querySelectorAll('.nav-link, #lang-switch-btn, #github-nav-btn');
+    const navLinks = document.querySelectorAll('.nav-link, #lang-switch-btn, #theme-switch-btn, #github-nav-btn');
 
     if (navToggle && navbar) {
         navToggle.addEventListener('click', () => {

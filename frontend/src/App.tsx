@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages, Type } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -8,15 +8,35 @@ import ResourceMonitor from './components/ResourceMonitor';
 import TerminalLogs from './components/TerminalLogs';
 import VersionUpdate from './components/VersionUpdate';
 import { EventsOn } from '../wailsjs/runtime/runtime';
-import { GetAppVersion, IsAdmin, GetConfig } from '../wailsjs/go/main/App';
+import { GetAppVersion, IsAdmin, GetConfig, SaveQuickSettings } from '../wailsjs/go/main/App';
 import logo from './assets/images/icon.svg';
-import { t, setLanguage, useLanguage } from './i18n';
+import { t, setLanguage, useLanguage, getLanguage } from './i18n';
+import { useTheme, THEMES } from './components/ThemeContext';
 
-// 用於追蹤在本次 App 生命週期中是否已觸發過 Projects 自動收合 sidebar
+// 追蹤在本次 App 生命週期中是否已觸發過 Projects 自動收合 sidebar
 let projectsCollapsedTriggered = false;
 
+// 防抖儲存主題、語言與字體大小設定的定時器
+let quickSaveTimer: any = null;
+
+const saveQuickSettingsDebounced = (theme: string, lang: string, fontSize: string) => {
+  if (quickSaveTimer) {
+    clearTimeout(quickSaveTimer);
+  }
+  quickSaveTimer = setTimeout(async () => {
+    try {
+      await SaveQuickSettings(theme, lang, fontSize);
+      // 發送事件通知 Settings 頁面同步最新後端設定
+      window.dispatchEvent(new CustomEvent('wincmp_config_synced'));
+    } catch (err) {
+      console.error("快速儲存設定失敗:", err);
+    }
+  }, 1500);
+};
+
 export default function App() {
-  useLanguage(); // 訂閱語系變更
+  useLanguage();
+  const { theme, setTheme, fontSize, setFontSize, fontSizes } = useTheme();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'resources' | 'settings' | 'logs' | 'update'>('dashboard');
   const [showLogs, setShowLogs] = useState(false);
@@ -24,8 +44,23 @@ export default function App() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [customAlert, setCustomAlert] = useState<{ isOpen: boolean; message: string; resolve?: () => void }>({ isOpen: false, message: '' });
   const [customConfirm, setCustomConfirm] = useState<{ isOpen: boolean; message: string; resolve?: (value: boolean) => void }>({ isOpen: false, message: '' });
+  const [unsavedConfirm, setUnsavedConfirm] = useState<{
+    isOpen: boolean;
+    resolve?: (value: 'save' | 'discard' | 'cancel') => void;
+  }>({ isOpen: false });
 
-  // 新增版本號、管理員狀態與搜尋專案相關的 state
+  const askUnsavedSettings = () => {
+    return new Promise<'save' | 'discard' | 'cancel'>((resolve) => {
+      setUnsavedConfirm({
+        isOpen: true,
+        resolve: (val) => {
+          setUnsavedConfirm({ isOpen: false, resolve: undefined });
+          resolve(val);
+        }
+      });
+    });
+  };
+
   const [isAdmin, setIsAdmin] = useState(false);
   const [appVersion, setAppVersion] = useState('v2.0.0');
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,15 +71,41 @@ export default function App() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. 初始化讀取版本與管理員權限及語系
+  // 1. 初始化讀取版本與管理員權限及語系、主題，並掛載全域防抖儲存函式
   useEffect(() => {
+    (window as any).saveQuickSettingsDebounced = saveQuickSettingsDebounced;
+
     GetAppVersion().then(setAppVersion).catch((err: any) => console.error("獲取版本失敗:", err));
     IsAdmin().then(setIsAdmin).catch((err: any) => console.error("獲取管理員權限失敗:", err));
     GetConfig().then((cfg: any) => {
-      if (cfg && cfg.global && cfg.global.language) {
-        setLanguage(cfg.global.language);
+      if (cfg && cfg.global) {
+        // 語言回退：若無此值，則預設為系統語言
+        const lang = cfg.global.language;
+        if (lang) {
+          setLanguage(lang);
+        } else {
+          setLanguage(getLanguage());
+        }
+
+        // 主題回退：若無此值或格式有誤，則預設回退至 'xai'
+        const validThemes = ['xai', 'claude', 'sketch'];
+        const savedTheme = cfg.global.theme;
+        if (savedTheme && validThemes.includes(savedTheme)) {
+          setTheme(savedTheme);
+        } else {
+          setTheme('xai');
+        }
+
+        // 字型大小回退：若無此值或格式有誤，則預設為 'small'
+        const validFontSizes = ['small', 'medium', 'large'];
+        const savedFontSize = cfg.global.font_size;
+        if (savedFontSize && validFontSizes.includes(savedFontSize)) {
+          setFontSize(savedFontSize);
+        } else {
+          setFontSize('small');
+        }
       }
-    }).catch((err: any) => console.error("獲取語系失敗:", err));
+    }).catch((err: any) => console.error("獲取語系、主題與字型大小失敗:", err));
   }, []);
 
   // 2. 監聽 Ctrl+K 快速鍵聚焦搜尋框
@@ -73,17 +134,25 @@ export default function App() {
   const handleTabChange = async (tabId: typeof activeTab) => {
     if (activeTab === 'settings' && tabId !== 'settings') {
       if ((window as any).isSettingsDirty) {
-        const confirmLeave = await (window as any).customConfirm(t("您有尚未儲存的設定變更，確定要離開此頁面嗎？"));
-        if (!confirmLeave) {
+        const choice = await askUnsavedSettings();
+        if (choice === 'cancel') {
           return;
+        }
+        if (choice === 'save') {
+          try {
+            if ((window as any).saveSettings) {
+              await (window as any).saveSettings(true);
+            }
+          } catch (err) {
+            console.error("離開前自動儲存設定失敗:", err);
+            return;
+          }
         }
       }
     }
-    // 離開設定頁面時確保重置 dirty state
     (window as any).isSettingsDirty = false;
     setActiveTab(tabId);
 
-    // 首次進入 Projects 頁面且專案內容不為空時，自動收合側邊欄
     if (tabId === 'projects' && !projectsCollapsedTriggered) {
       projectsCollapsedTriggered = true;
       GetConfig().then((cfg: any) => {
@@ -94,7 +163,7 @@ export default function App() {
     }
   };
 
-  // 覆寫與註冊漂亮的自訂彈窗，避免 wails.localhost 標題
+  // 覆寫與註冊漂亮的自訂彈窗
   useEffect(() => {
     (window as any).customAlert = (message: any) => {
       return new Promise<void>((resolve) => {
@@ -127,74 +196,44 @@ export default function App() {
     };
   }, []);
 
-  const toggleSidebar = () => {
-    setIsCollapsed(prev => !prev);
-  };
-
-  const handleToggleLogs = () => {
-    setShowLogs(prev => !prev);
-  };
+  const toggleSidebar = () => setIsCollapsed(prev => !prev);
+  const handleToggleLogs = () => setShowLogs(prev => !prev);
 
   // 訂閱 Go 端推送的 CPU / RAM 資源佔用
   useEffect(() => {
     const handleResourceUpdate = (data: any) => {
       if (data) {
-        setSystemResources({
-          cpu: data.cpu || 0,
-          memory: data.memory || 0
-        });
+        setSystemResources({ cpu: data.cpu || 0, memory: data.memory || 0 });
       }
     };
-
     const unsubscribe = EventsOn('resource_usage', handleResourceUpdate);
-
-    return () => {
-      unsubscribe();
-    };
+    return () => { unsubscribe(); };
   }, []);
 
-  // 訂閱 Go 端推送的版本更新通知
+  // 訂閱版本更新通知
   useEffect(() => {
-    const handleUpdateAvailable = (data: any) => {
-      setHasUpdate(true);
-    };
-
+    const handleUpdateAvailable = () => setHasUpdate(true);
     const unsubscribe = EventsOn('update_available', handleUpdateAvailable);
-
-    return () => {
-      unsubscribe();
-    };
+    return () => { unsubscribe(); };
   }, []);
 
-  // 監聽手動啟動服務時的自動展開日誌事件
+  // 監聽自動展開日誌事件
   useEffect(() => {
-    const handleAutoExpand = () => {
-      setShowLogs(true);
-    };
+    const handleAutoExpand = () => setShowLogs(true);
     window.addEventListener('wincmp_auto_expand_logs', handleAutoExpand);
-    return () => {
-      window.removeEventListener('wincmp_auto_expand_logs', handleAutoExpand);
-    };
+    return () => window.removeEventListener('wincmp_auto_expand_logs', handleAutoExpand);
   }, []);
 
   const renderActiveComponent = () => {
     switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'projects':
-        return <Projects highlightedProjectName={highlightedProjectName} clearHighlight={() => setHighlightedProjectName(null)} />;
-      case 'db_explorer':
-        return <DBExplorer />;
-      case 'resources':
-        return <ResourceMonitor />;
-      case 'settings':
-        return <Settings />;
-      case 'logs':
-        return <TerminalLogs />;
-      case 'update':
-        return <VersionUpdate />;
-      default:
-        return <Dashboard />;
+      case 'dashboard': return <Dashboard />;
+      case 'projects': return <Projects highlightedProjectName={highlightedProjectName} clearHighlight={() => setHighlightedProjectName(null)} />;
+      case 'db_explorer': return <DBExplorer />;
+      case 'resources': return <ResourceMonitor />;
+      case 'settings': return <Settings />;
+      case 'logs': return <TerminalLogs />;
+      case 'update': return <VersionUpdate />;
+      default: return <Dashboard />;
     }
   };
 
@@ -208,77 +247,198 @@ export default function App() {
     { id: 'logs', label: t('終端日誌'), icon: <Terminal size={15} /> }
   ] as const;
 
-  return (
-    <div className="flex h-screen w-screen bg-darkBg text-gray-200 overflow-hidden font-sans select-none">
+  const cycleTheme = () => {
+    const idx = THEMES.findIndex(th => th.id === theme);
+    const next = THEMES[(idx + 1) % THEMES.length];
+    setTheme(next.id);
+    if ((window as any).saveQuickSettingsDebounced) {
+      (window as any).saveQuickSettingsDebounced(next.id, getLanguage(), fontSize);
+    }
+  };
 
-      {/* 1. 左側導航 Sidebar */}
-      <aside className={`bg-[#0c0c0e] border-r border-darkBorder flex flex-col justify-between select-none transition-all duration-300 ease-in-out ${isCollapsed ? 'w-16' : 'w-64'}`}>
+  const cycleFontSize = () => {
+    const idx = fontSizes.findIndex(fs => fs.id === fontSize);
+    const next = fontSizes[(idx + 1) % fontSizes.length];
+    setFontSize(next.id);
+    if ((window as any).saveQuickSettingsDebounced) {
+      (window as any).saveQuickSettingsDebounced(theme, getLanguage(), next.id);
+    }
+  };
+
+  const LANGS = ['zh-TW', 'en-US'] as const;
+  const cycleLanguage = () => {
+    const idx = LANGS.indexOf(getLanguage() as typeof LANGS[number]);
+    const next = LANGS[(idx + 1) % LANGS.length];
+    setLanguage(next);
+    if ((window as any).saveQuickSettingsDebounced) {
+      (window as any).saveQuickSettingsDebounced(theme, next, fontSize);
+    }
+  };
+
+  return (
+    <div className="flex h-screen w-screen overflow-hidden select-none" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg)' }}>
+
+      {/* ─── Sidebar ──────────────────────────────────────────── */}
+      <aside
+        className="flex flex-col justify-between select-none transition-all duration-300 ease-in-out border-r"
+        style={{
+          width: isCollapsed ? 64 : 256,
+          background: 'var(--sidebar-bg)',
+          borderColor: 'var(--border)',
+        }}
+      >
         <div>
-          {/* Logo & 標題 */}
-          <div className={`py-5 border-b border-darkBorder flex items-center transition-all duration-300 ${isCollapsed ? 'px-4 flex-col gap-3 justify-center' : 'px-6 gap-3 justify-between'}`}>
+          {/* Logo & Title */}
+          <div
+            className="py-5 border-b flex items-center transition-all duration-300"
+            style={{
+              borderColor: 'var(--border)',
+              padding: isCollapsed ? '20px 12px' : '20px 20px',
+              flexDirection: isCollapsed ? 'column' : 'row',
+              gap: isCollapsed ? 12 : 12,
+              justifyContent: isCollapsed ? 'center' : 'space-between',
+            }}
+          >
             <div className="flex items-center gap-3 overflow-hidden">
-              <img src={logo} alt="WinCMP Logo" className="w-8 h-8 rounded-lg shadow-md shadow-blue-500/10 object-contain flex-shrink-0" />
+              <img src={logo} alt="WinCMP Logo" className="w-8 h-8 rounded-lg object-contain flex-shrink-0" style={{ boxShadow: 'var(--shadow-sm)' }} />
               {!isCollapsed && (
                 <div className="transition-opacity duration-300 opacity-100 whitespace-nowrap">
-                  <span className="font-bold text-gray-100 tracking-wide block">WinCMP</span>
-                  <span className="text-[10px] text-gray-500 block font-semibold uppercase tracking-wider">Local Dev Panel</span>
+                  <span className="font-bold tracking-wide block" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>WinCMP</span>
+                  <span className="text-[10px] block font-semibold uppercase tracking-wider" style={{ color: 'var(--muted)' }}>Local Dev Panel</span>
                 </div>
               )}
             </div>
             <button
               onClick={toggleSidebar}
-              className={`p-1.5 rounded-md text-gray-500 hover:text-gray-200 hover:bg-white/5 transition-colors ${isCollapsed ? 'w-8 h-8 flex items-center justify-center' : ''}`}
+              className="p-1.5 rounded-md transition-colors"
+              style={{ color: 'var(--muted)' }}
               title={isCollapsed ? t('展開側邊欄') : t('收起側邊欄')}
             >
               {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
             </button>
           </div>
 
-          {/* 選單列表 */}
-          <nav className={`pt-4 space-y-1 transition-all duration-300 ${isCollapsed ? 'px-2' : 'p-3'}`}>
-            {menuItems.map(item => (
-              <button
-                key={item.id}
-                onClick={() => handleTabChange(item.id)}
-                title={isCollapsed ? item.label.split(' ')[0] : undefined}
-                className={`w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 relative ${isCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
-                  } ${activeTab === item.id
-                    ? 'bg-blue-600/10 text-blue-400 border-l-[3px] border-blue-500 rounded-r-lg'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border-l-[3px] border-transparent rounded-r-lg'
-                  }`}
-              >
-                <span className={`flex-shrink-0 ${activeTab === item.id ? 'text-blue-400' : 'text-gray-400'}`}>
-                  {item.icon}
-                </span>
-                {!isCollapsed && <span className="whitespace-nowrap transition-opacity duration-300">{item.label}</span>}
-                {item.id === 'update' && hasUpdate && (
-                  <span className={`w-2 h-2 bg-red-500 rounded-full absolute ${isCollapsed ? 'top-1.5 right-1.5' : 'right-4 top-1/2 -translate-y-1/2'}`} />
-                )}
-              </button>
-            ))}
+          {/* Menu */}
+          <nav className="pt-4 space-y-1 transition-all duration-300" style={{ padding: isCollapsed ? '16px 8px' : '16px 12px' }}>
+            {menuItems.map(item => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleTabChange(item.id)}
+                  title={isCollapsed ? item.label : undefined}
+                  className="w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 relative"
+                  style={{
+                    justifyContent: isCollapsed ? 'center' : 'flex-start',
+                    padding: isCollapsed ? '10px 0' : '10px 16px',
+                    gap: isCollapsed ? 0 : 12,
+                    color: isActive ? 'var(--sidebar-active-fg)' : 'var(--fg-2)',
+                    background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
+                    borderLeft: isActive ? `3px solid var(--sidebar-active-border)` : '3px solid transparent',
+                    borderRadius: '0 8px 8px 0',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  <span className="flex-shrink-0" style={{ color: isActive ? 'var(--sidebar-active-fg)' : 'var(--muted)' }}>
+                    {item.icon}
+                  </span>
+                  {!isCollapsed && <span className="whitespace-nowrap transition-opacity duration-300">{item.label}</span>}
+                  {item.id === 'update' && hasUpdate && (
+                    <span
+                      className="w-2 h-2 rounded-full absolute"
+                      style={{
+                        background: 'var(--status-error)',
+                        top: isCollapsed ? 6 : '50%',
+                        right: isCollapsed ? 6 : 16,
+                        transform: isCollapsed ? 'none' : 'translateY(-50%)',
+                      }}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </nav>
         </div>
 
-        {/* 底部系統監控狀態 */}
-        <div className={`border-t border-darkBorder bg-black bg-opacity-20 transition-all duration-300 ${isCollapsed ? 'p-2 py-4 flex flex-col items-center gap-4' : 'p-4 space-y-3'}`}>
+        {/* Bottom: System Monitor + Theme Switcher */}
+        <div
+          className="border-t transition-all duration-300"
+          style={{
+            borderColor: 'var(--border)',
+            background: 'var(--surface)',
+            padding: isCollapsed ? '8px' : '16px',
+          }}
+        >
+          {/* 快速設定按鈕組：展開時橫向排列以節省垂直空間，收合時垂直排列 */}
+          <div className={isCollapsed ? "flex flex-col gap-2 mb-3" : "flex flex-row gap-1.5 mb-3"}>
+            {/* Language Quick Switch */}
+            <button
+              onClick={cycleLanguage}
+              className={`flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              style={{
+                color: 'var(--fg-2)',
+                background: 'var(--surface-warm)',
+                border: '1px solid var(--border-soft)',
+              }}
+              title={`Language: ${getLanguage() === 'zh-TW' ? '繁體中文' : 'English'}`}
+            >
+              <Languages size={13} style={{ color: 'var(--accent)' }} />
+              {!isCollapsed && <span style={{ fontFamily: 'var(--font-mono)' }}>{getLanguage() === 'zh-TW' ? 'EN' : '繁'}</span>}
+            </button>
+
+            {/* Theme Quick Switch */}
+            <button
+              onClick={cycleTheme}
+              className={`flex items-center gap-1.5 py-2 px-2 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              style={{
+                color: 'var(--fg-2)',
+                background: 'var(--surface-warm)',
+                border: '1px solid var(--border-soft)',
+              }}
+              title={`Theme: ${theme}`}
+            >
+              <Palette size={13} style={{ color: 'var(--accent)' }} />
+              {!isCollapsed && <span className="truncate" style={{ fontFamily: 'var(--font-mono)' }}>{theme.toUpperCase()}</span>}
+            </button>
+
+            {/* Font Size Quick Switch */}
+            <button
+              onClick={cycleFontSize}
+              className={`flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              style={{
+                color: 'var(--fg-2)',
+                background: 'var(--surface-warm)',
+                border: '1px solid var(--border-soft)',
+              }}
+              title={`${t('字型大小')}: ${t(fontSize === 'small' ? '小' : fontSize === 'medium' ? '中' : '大')}`}
+            >
+              <Type size={13} style={{ color: 'var(--accent)' }} />
+              {!isCollapsed && (
+                <span style={{ fontFamily: 'var(--font-mono)' }}>
+                  {fontSize === 'small' ? 'S' : fontSize === 'medium' ? 'M' : 'L'}
+                </span>
+              )}
+            </button>
+          </div>
+
           {!isCollapsed ? (
             <>
-              <div className="font-semibold text-[10px] text-gray-500 select-none uppercase tracking-wider">
+              <div className="font-semibold text-[10px] select-none uppercase tracking-wider" style={{ color: 'var(--meta)' }}>
                 {t("系統監控 (WinCMP Core)")}
               </div>
-              <div className="space-y-2.5 text-xs">
+              <div className="space-y-2.5 text-xs mt-2">
                 {/* CPU */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400 flex items-center gap-1.5">
-                      <Cpu size={12} className="text-blue-400" /> {t("CPU 佔用")}
+                    <span className="flex items-center gap-1.5" style={{ color: 'var(--fg-2)' }}>
+                      <Cpu size={12} style={{ color: 'var(--status-info)' }} /> {t("CPU 佔用")}
                     </span>
-                    <span className="font-semibold text-gray-300">{systemResources.cpu.toFixed(1)}%</span>
+                    <span className="font-semibold" style={{ color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}>{systemResources.cpu.toFixed(1)}%</span>
                   </div>
-                  <div className="w-full h-1 bg-darkInput rounded-full overflow-hidden">
+                  <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
                     <div
-                      style={{ width: `${Math.min(systemResources.cpu * 5, 100)}%` }}
-                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(systemResources.cpu * 5, 100)}%`, background: 'var(--status-info)' }}
+                      className="h-full rounded-full transition-all duration-500"
                     />
                   </div>
                 </div>
@@ -286,15 +446,15 @@ export default function App() {
                 {/* RAM */}
                 <div className="space-y-1 pt-0.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400 flex items-center gap-1.5">
-                      <HardDrive size={12} className="text-indigo-400" /> {t("記憶體 (RAM)")}
+                    <span className="flex items-center gap-1.5" style={{ color: 'var(--fg-2)' }}>
+                      <HardDrive size={12} style={{ color: 'var(--status-ok)' }} /> {t("記憶體 (RAM)")}
                     </span>
-                    <span className="font-semibold text-gray-300">{systemResources.memory} MB</span>
+                    <span className="font-semibold" style={{ color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}>{systemResources.memory} MB</span>
                   </div>
-                  <div className="w-full h-1 bg-darkInput rounded-full overflow-hidden">
+                  <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: 'var(--input-bg)' }}>
                     <div
-                      style={{ width: `${Math.min(systemResources.memory / 2, 100)}%` }}
-                      className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(systemResources.memory / 2, 100)}%`, background: 'var(--status-ok)' }}
+                      className="h-full rounded-full transition-all duration-500"
                     />
                   </div>
                 </div>
@@ -302,27 +462,31 @@ export default function App() {
             </>
           ) : (
             <div className="space-y-3 text-center w-full">
-              {/* CPU collapsed */}
               <div className="flex flex-col items-center gap-1 cursor-help" title={`${t("CPU 佔用")}: ${systemResources.cpu.toFixed(1)}%`}>
-                <Cpu size={14} className="text-blue-400 animate-pulse" style={{ animationDuration: '3s' }} />
-                <span className="text-[9px] font-semibold text-gray-400">{systemResources.cpu.toFixed(0)}%</span>
+                <Cpu size={14} className="animate-pulse" style={{ color: 'var(--status-info)', animationDuration: '3s' }} />
+                <span className="text-[9px] font-semibold" style={{ color: 'var(--fg-2)', fontFamily: 'var(--font-mono)' }}>{systemResources.cpu.toFixed(0)}%</span>
               </div>
-
-              {/* RAM collapsed */}
               <div className="flex flex-col items-center gap-1 cursor-help" title={`${t("記憶體 (RAM)")}: ${systemResources.memory} MB`}>
-                <HardDrive size={14} className="text-indigo-400" />
-                <span className="text-[9px] font-semibold text-gray-400">{systemResources.memory}M</span>
+                <HardDrive size={14} style={{ color: 'var(--status-ok)' }} />
+                <span className="text-[9px] font-semibold" style={{ color: 'var(--fg-2)', fontFamily: 'var(--font-mono)' }}>{systemResources.memory}M</span>
               </div>
             </div>
           )}
         </div>
       </aside>
 
-      {/* 2. 右側主要內容區 */}
+      {/* ─── Main Content ─────────────────────────────────────── */}
       <main className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Topbar 搜尋與連線狀態列 */}
-        <header className="relative z-30 h-14 border-b border-darkBorder bg-darkCard/25 backdrop-blur-md px-6 flex items-center justify-between select-none">
+        {/* Topbar */}
+        <header
+          className="relative z-30 h-14 border-b px-6 flex items-center justify-between select-none"
+          style={{
+            borderColor: 'var(--border)',
+            background: 'var(--card)',
+            backdropFilter: 'blur(12px)',
+          }}
+        >
           <div className="flex items-center gap-3 w-64">
             <div className="relative w-full">
               <input
@@ -330,26 +494,33 @@ export default function App() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => {
-                  setIsSearchFocused(true);
-                  refreshProjectsList();
-                }}
-                onBlur={() => {
-                  // 延遲關閉，好讓 onMouseDown 能被優先觸發
-                  setTimeout(() => setIsSearchFocused(false), 200);
-                }}
+                onFocus={() => { setIsSearchFocused(true); refreshProjectsList(); }}
+                onBlur={() => { setTimeout(() => setIsSearchFocused(false), 200); }}
                 placeholder={t("搜尋專案名稱、網域或路徑... (Ctrl+K)")}
-                className="w-full bg-darkInput/40 border border-darkBorder rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 outline-none focus:border-blue-500 transition duration-150"
+                className="w-full rounded-lg pl-8 pr-3 py-1.5 text-xs outline-none transition duration-150"
+                style={{
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--input-border)',
+                  color: 'var(--fg)',
+                  fontFamily: 'var(--font-body)',
+                }}
               />
-              <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500">
+              <div className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--muted)' }}>
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
 
-              {/* 搜尋結果下拉選單 */}
+              {/* Search Results Dropdown */}
               {isSearchFocused && searchQuery && (
-                <div className="absolute z-[9999] left-0 right-0 mt-1 bg-[#0c0c0e] border border-darkBorder rounded-lg shadow-2xl max-h-60 overflow-y-auto divide-y divide-darkBorder/40">
+                <div
+                  className="absolute z-[9999] left-0 right-0 mt-1 rounded-lg max-h-60 overflow-y-auto divide-y divide-[var(--border-soft)]"
+                  style={{
+                    background: 'var(--sidebar-bg)',
+                    border: '1px solid var(--border)',
+                    boxShadow: 'var(--shadow-lg)',
+                  }}
+                >
                   {(() => {
                     const q = searchQuery.toLowerCase();
                     const filtered = config?.projects?.filter((proj: any) => {
@@ -369,16 +540,17 @@ export default function App() {
                             setHighlightedProjectName(proj.name);
                             setSearchQuery('');
                           }}
-                          className="p-2.5 hover:bg-blue-600/10 cursor-pointer flex flex-col gap-0.5 text-left"
+                          className="p-2.5 cursor-pointer flex flex-col gap-0.5 text-left"
+                          style={{ '--hover-bg': 'var(--status-info-bg)' } as any}
                         >
-                          <div className="text-xs font-bold text-gray-200">{proj.name}</div>
-                          <div className="text-[10px] text-gray-500 font-mono truncate">{proj.root_path}</div>
-                          <div className="text-[10px] text-blue-400 font-mono truncate">{proj.domains?.join(', ')}</div>
+                          <div className="text-xs font-bold" style={{ color: 'var(--fg)' }}>{proj.name}</div>
+                          <div className="text-[10px] truncate" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{proj.root_path}</div>
+                          <div className="text-[10px] truncate" style={{ color: 'var(--status-info)', fontFamily: 'var(--font-mono)' }}>{proj.domains?.join(', ')}</div>
                         </div>
                       ));
                     } else {
                       return (
-                        <div className="p-3 text-[11px] text-gray-500 text-center">{t("找不到匹配的專案 😭")}</div>
+                        <div className="p-3 text-[11px] text-center" style={{ color: 'var(--muted)' }}>{t("找不到匹配的專案")}</div>
                       );
                     }
                   })()}
@@ -386,53 +558,55 @@ export default function App() {
               )}
             </div>
           </div>
+
           <div className="flex items-center gap-4">
-            {/* 管理員權限指示徽章 */}
+            {/* Admin Badge */}
             <div
-              className={`flex items-center gap-1.5 text-xs font-semibold cursor-help select-none ${isAdmin ? 'text-blue-400' : 'text-amber-500'
-                }`}
-              title={
-                isAdmin
-                  ? t('已取得系統管理員權限，可自動配置 Hosts 網域別名')
-                  : t('無管理員權限：可能無法自動修改 Hosts 檔，需手動管理網域別名')
-              }
+              className="flex items-center gap-1.5 text-xs font-semibold cursor-help select-none"
+              style={{ color: isAdmin ? 'var(--status-info)' : 'var(--status-warn)' }}
+              title={isAdmin ? t('已取得系統管理員權限，可自動配置 Hosts 網域別名') : t('無管理員權限：可能無法自動修改 Hosts 檔，需手動管理網域別名')}
             >
-              <Shield size={12} className={isAdmin ? 'text-blue-400' : 'text-amber-500'} />
+              <Shield size={12} />
               <span>{isAdmin ? t('管理員模式') : t('限制模式')}</span>
             </div>
-            <div className="h-3 w-[1px] bg-darkBorder" />
+            <div className="h-3 w-[1px]" style={{ background: 'var(--border)' }} />
 
-            {/* 連線狀態指示燈 */}
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+            {/* Connection Status */}
+            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--fg-2)' }}>
               <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: 'var(--status-ok)' }}></span>
               </span>
               <span>{t("Go 核心已連線")}</span>
             </div>
-            <div className="h-3 w-[1px] bg-darkBorder" />
-            <span className="text-[10px] text-gray-500 font-semibold tracking-wide">{appVersion}</span>
+            <div className="h-3 w-[1px]" style={{ background: 'var(--border)' }} />
+            <span className="text-[10px] font-semibold tracking-wide" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{appVersion}</span>
           </div>
         </header>
 
-        {/* 上半部：當前分頁 */}
+        {/* Main Tab Content */}
         <div className="flex-1 overflow-hidden relative">
           {renderActiveComponent()}
         </div>
 
-        {/* 控制日誌的收放欄 */}
+        {/* Log Toggle Bar */}
         {activeTab !== 'logs' && (
-          <div className="h-9 border-t border-darkBorder bg-[#0e0e11] px-6 flex justify-between items-center select-none text-[11px]">
+          <div
+            className="h-9 border-t px-6 flex justify-between items-center select-none text-[11px]"
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-deep)' }}
+          >
             <button
               onClick={handleToggleLogs}
-              className="flex items-center gap-1.5 font-semibold text-gray-400 hover:text-gray-200 transition"
+              className="flex items-center gap-1.5 font-semibold transition"
+              style={{ color: 'var(--fg-2)' }}
             >
-              <Terminal size={11} className="text-blue-400" />
+              <Terminal size={11} style={{ color: 'var(--status-info)' }} />
               <span>{showLogs ? t('收起 Logs 控制台') : t('打開 Logs 控制台')}</span>
             </button>
             <button
               onClick={handleToggleLogs}
-              className="p-1 rounded-md text-gray-400 hover:text-gray-200 hover:bg-white/5 transition flex items-center justify-center"
+              className="p-1 rounded-md transition flex items-center justify-center"
+              style={{ color: 'var(--fg-2)' }}
               title={showLogs ? t('收起 Logs 控制台') : t('打開 Logs 控制台')}
             >
               {showLogs ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
@@ -440,30 +614,31 @@ export default function App() {
           </div>
         )}
 
-        {/* 下半部：即時日誌區 */}
+        {/* Inline Logs Panel */}
         {activeTab !== 'logs' && showLogs && (
-          <div className="h-[35%] min-h-[150px] border-t border-darkBorder bg-darkBg overflow-hidden">
+          <div className="h-[35%] min-h-[150px] border-t overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}>
             <TerminalLogs />
           </div>
         )}
       </main>
 
-      {/* 全域自訂 Alert Modal */}
+      {/* ─── Alert Modal ──────────────────────────────────────── */}
       {customAlert.isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200 select-none">
-          <div className="w-full max-w-sm bg-darkCard border border-darkBorder rounded-xl shadow-2xl overflow-hidden p-5 flex flex-col space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-2.5 text-blue-400 font-bold text-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(2px)' }}>
+          <div className="w-full max-w-sm rounded-xl overflow-hidden p-5 flex flex-col space-y-4 animate-slide-in" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
+            <div className="flex items-center gap-2.5 font-bold text-sm" style={{ color: 'var(--status-info)' }}>
               <span className="text-base">🔔</span>
               <span>{t("系統提示")}</span>
             </div>
-            <p className="text-xs text-gray-300 leading-relaxed break-all whitespace-pre-line">{customAlert.message}</p>
+            <p className="text-xs leading-relaxed break-all whitespace-pre-line" style={{ color: 'var(--fg-2)' }}>{customAlert.message}</p>
             <div className="flex justify-end pt-1">
               <button
                 onClick={() => {
                   if (customAlert.resolve) customAlert.resolve();
                   else setCustomAlert({ isOpen: false, message: '' });
                 }}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-500/10 active:scale-[0.98] transition duration-150"
+                className="px-4 py-1.5 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+                style={{ background: 'var(--status-info)', color: '#fff' }}
               >
                 {t("確定")}
               </button>
@@ -472,22 +647,23 @@ export default function App() {
         </div>
       )}
 
-      {/* 全域自訂 Confirm Modal */}
+      {/* ─── Confirm Modal ────────────────────────────────────── */}
       {customConfirm.isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px] animate-in fade-in duration-200 select-none">
-          <div className="w-full max-w-sm bg-darkCard border border-darkBorder rounded-xl shadow-2xl overflow-hidden p-5 flex flex-col space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-2.5 text-blue-400 font-bold text-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(2px)' }}>
+          <div className="w-full max-w-sm rounded-xl overflow-hidden p-5 flex flex-col space-y-4 animate-slide-in" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
+            <div className="flex items-center gap-2.5 font-bold text-sm" style={{ color: 'var(--status-info)' }}>
               <span className="text-base">❓</span>
               <span>{t("系統確認")}</span>
             </div>
-            <p className="text-xs text-gray-300 leading-relaxed break-all whitespace-pre-line">{customConfirm.message}</p>
+            <p className="text-xs leading-relaxed break-all whitespace-pre-line" style={{ color: 'var(--fg-2)' }}>{customConfirm.message}</p>
             <div className="flex justify-end gap-2.5 pt-1">
               <button
                 onClick={() => {
                   if (customConfirm.resolve) customConfirm.resolve(false);
                   else setCustomConfirm({ isOpen: false, message: '' });
                 }}
-                className="px-4 py-1.5 bg-darkInput border border-darkBorder hover:bg-darkBorder text-gray-300 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+                className="px-4 py-1.5 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
               >
                 {t("取消")}
               </button>
@@ -496,9 +672,48 @@ export default function App() {
                   if (customConfirm.resolve) customConfirm.resolve(true);
                   else setCustomConfirm({ isOpen: false, message: '' });
                 }}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-500/10 active:scale-[0.98] transition duration-150"
+                className="px-4 py-1.5 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+                style={{ background: 'var(--status-info)', color: '#fff' }}
               >
                 {t("確定")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Unsaved Settings Confirm Modal ────────────────────── */}
+      {unsavedConfirm.isOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(2px)' }}>
+          <div className="w-full max-w-md rounded-xl overflow-hidden p-5 flex flex-col space-y-4 animate-slide-in" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
+            <div className="flex items-center gap-2.5 font-bold text-sm" style={{ color: 'var(--status-warn || #e6a23c)' }}>
+              <span className="text-base">⚠️</span>
+              <span>{t("系統提示")}</span>
+            </div>
+            <p className="text-xs leading-relaxed break-all whitespace-pre-line" style={{ color: 'var(--fg-2)' }}>
+              {t("您有尚未儲存的設定變更，在離開前是否要先保存？")}
+            </p>
+            <div className="flex justify-end gap-2.5 pt-1">
+              <button
+                onClick={() => unsavedConfirm.resolve?.('cancel')}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
+              >
+                {t("取消")}
+              </button>
+              <button
+                onClick={() => unsavedConfirm.resolve?.('discard')}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+                style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}
+              >
+                {t("否，不保存立即離開")}
+              </button>
+              <button
+                onClick={() => unsavedConfirm.resolve?.('save')}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+                style={{ background: 'var(--accent)', color: 'var(--accent-on)' }}
+              >
+                {t("是，保存後離開")}
               </button>
             </div>
           </div>

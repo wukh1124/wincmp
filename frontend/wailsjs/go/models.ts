@@ -42,6 +42,7 @@ export namespace config {
 	    run_on_boot: boolean;
 	    theme: string;
 	    language: string;
+	    font_size: string;
 	    last_service_state?: LastServiceState;
 	    log_level: string;
 	    log_to_console: boolean;
@@ -77,6 +78,7 @@ export namespace config {
 	        this.run_on_boot = source["run_on_boot"];
 	        this.theme = source["theme"];
 	        this.language = source["language"];
+	        this.font_size = source["font_size"];
 	        this.last_service_state = this.convertValues(source["last_service_state"], LastServiceState);
 	        this.log_level = source["log_level"];
 	        this.log_to_console = source["log_to_console"];
@@ -368,6 +370,8 @@ export namespace scanner {
 	    BunList: ServiceInfo[];
 	    PHPList: PHPVersionInfo[];
 	    SkippedPHP: string[];
+	    has_global_node: boolean;
+	    has_global_bun: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new ScanResult(source);
@@ -384,6 +388,8 @@ export namespace scanner {
 	        this.BunList = this.convertValues(source["BunList"], ServiceInfo);
 	        this.PHPList = this.convertValues(source["PHPList"], PHPVersionInfo);
 	        this.SkippedPHP = source["SkippedPHP"];
+	        this.has_global_node = source["has_global_node"];
+	        this.has_global_bun = source["has_global_bun"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

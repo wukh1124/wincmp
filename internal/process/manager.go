@@ -10,6 +10,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"golang.org/x/sys/windows"
 )
 
 // ServiceState 表示一個被管理的服務狀態
@@ -22,6 +24,7 @@ type ServiceState struct {
 	StartTime time.Time
 	Ctx       context.Context
 	Cancel    context.CancelFunc
+	JobHandle windows.Handle // 該服務專屬的 Windows Job Object
 }
 
 // LogFunc 用於傳送日誌到 UI 的回調函數型別
@@ -176,6 +179,32 @@ func (m *Manager) register(serviceKey, name, exePath string, cmds []*exec.Cmd) {
 	m.mu.Unlock()
 }
 
+// registerWithJob 註冊一個帶有 Job Object 的新服務狀態
+func (m *Manager) registerWithJob(serviceKey, name, exePath string, cmds []*exec.Cmd, job windows.Handle) {
+	pids := make([]int, len(cmds))
+	for i, cmd := range cmds {
+		if cmd.Process != nil {
+			pids[i] = cmd.Process.Pid
+		}
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	m.mu.Lock()
+	m.services[serviceKey] = &ServiceState{
+		Name:      name,
+		Running:   true,
+		ExePath:   exePath,
+		Commands:  cmds,
+		PIDs:      pids,
+		StartTime: time.Now(),
+		Ctx:       ctx,
+		Cancel:    cancel,
+		JobHandle: job,
+	}
+	m.mu.Unlock()
+}
+
 // UpdatePIDs 手動更新指定服務的 PID 列表（用於啟動後才能確定的進程）
 func (m *Manager) UpdatePIDs(serviceKey string, pids []int) {
 	m.mu.Lock()
@@ -240,6 +269,10 @@ func (m *Manager) unregister(serviceKey string) {
 	if state, exists := m.services[serviceKey]; exists {
 		if state.Cancel != nil {
 			state.Cancel()
+		}
+		if state.JobHandle != 0 {
+			windows.CloseHandle(state.JobHandle)
+			state.JobHandle = 0
 		}
 		state.Running = false
 		state.Commands = nil

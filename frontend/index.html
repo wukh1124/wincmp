@@ -3,11 +3,56 @@
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>wincmp-wails</title>
+    <title>WinCMP Redesign</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+    <style>
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #1f2228;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            z-index: 9999;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .loading-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        .loading-text {
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading</div>
+    </div>
+</div>
 <script src="./src/main.tsx" type="module"></script>
 </body>
 </html>
-

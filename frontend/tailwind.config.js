@@ -7,11 +7,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        darkBg: '#09090B',
-        darkCard: '#18181B',
-        darkInput: '#121214',
-        darkBorder: '#27272A',
-      }
+        darkBg: 'var(--bg)',
+        darkCard: 'var(--card)',
+        darkInput: 'var(--input-bg)',
+        darkBorder: 'var(--border)',
+      },
+      fontFamily: {
+        display: ['var(--font-display)'],
+        body: ['var(--font-body)'],
+        mono: ['var(--font-mono)'],
+      },
     },
   },
   plugins: [],

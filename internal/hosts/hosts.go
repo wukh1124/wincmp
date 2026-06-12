@@ -17,8 +17,8 @@ const (
 	HostsFilePath = `C:\Windows\System32\drivers\etc\hosts`
 )
 
-// validDomainPattern 用於驗證域名是否只含合法字元（防止 hosts 注入攻擊）
-var validDomainPattern = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$`)
+// validDomainPattern 用於驗證域名是否只含合法字元（允許底線，以防止 hosts 注入攻擊）
+var validDomainPattern = regexp.MustCompile(`^[a-zA-Z0-9_]([a-zA-Z0-9\-_]*[a-zA-Z0-9_])?(\.[a-zA-Z0-9_]([a-zA-Z0-9\-_]*[a-zA-Z0-9_])?)*$`)
 
 // IsValidDomain 檢查域名是否只含合法字元（用於外部呼叫）
 func IsValidDomain(domain string) bool {
@@ -97,7 +97,7 @@ func UpdateHosts(domains []string) error {
 				invalidDomains = append(invalidDomains, d)
 			}
 		}
-		return fmt.Errorf("%s", i18n.Tfmt("以下域名含非法字元(含底線或主機名): %v，請手動新增至 hosts", invalidDomains))
+		return fmt.Errorf("%s", i18n.Tfmt("以下域名含非法字元: %v，請手動新增至 hosts", invalidDomains))
 	}
 
 	// 直接以追加模式開啟 hosts 檔案

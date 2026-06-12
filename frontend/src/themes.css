@@ -1,0 +1,419 @@
+/* ═══════════════════════════════════════════════════════════════
+ * WinCMP Theme System — Three Independent Designs
+ *
+ * xAI:    Dark-first monospace brutalism. #1f2228 canvas, white
+ *         as the sole voice, GeistMono display, zero shadows.
+ * Claude:  Warm cream light with terracotta accent. Clean,
+ *          modern, approachable — Anthropic's signature warmth.
+ * sketch: Hand-drawn wireframe on graph paper. Marker headlines,
+ *          sticky-note annotations, hatched placeholders, pencil
+ *          borders. Blueprint for ideas, not production polish.
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* ─── Shared tokens (applied to all themes) ─────────────────── */
+:root {
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+
+  /* Motion */
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --motion-slow: 300ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Font Size Settings */
+  --font-size-small: 16px;
+  --font-size-medium: 18px;
+  --font-size-large: 20px;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * THEME: xAI — Monochrome brutalism
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root[data-theme="xai"] {
+  /* Surface */
+  --bg: #1f2228;
+  --bg-deep: #181a1f;
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-warm: rgba(255, 255, 255, 0.05);
+  --card: rgba(255, 255, 255, 0.04);
+  --card-hover: rgba(255, 255, 255, 0.07);
+
+  /* Foreground — opacity ramp */
+  --fg: #ffffff;
+  --fg-2: rgba(255, 255, 255, 0.7);
+  --muted: rgba(255, 255, 255, 0.5);
+  --meta: rgba(255, 255, 255, 0.3);
+
+  /* Border */
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --border-soft: rgba(255, 255, 255, 0.05);
+
+  /* Accent — white IS the accent */
+  --accent: #ffffff;
+  --accent-on: #1f2228;
+  --accent-hover: rgba(255, 255, 255, 0.9);
+  --accent-muted: rgba(255, 255, 255, 0.1);
+
+  /* Status */
+  --status-ok: #22c55e;
+  --status-warn: #eab308;
+  --status-error: #ef4444;
+  --status-info: #3b82f6;
+
+  /* Semantic fills */
+  --status-ok-bg: rgba(34, 197, 94, 0.1);
+  --status-warn-bg: rgba(234, 179, 8, 0.1);
+  --status-error-bg: rgba(239, 68, 68, 0.1);
+  --status-info-bg: rgba(59, 130, 246, 0.1);
+
+  /* Typography */
+  --font-display: "GeistMono", ui-monospace, "SF Mono", "Roboto Mono", Menlo, Monaco, monospace;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "GeistMono", ui-monospace, "SF Mono", "Roboto Mono", Menlo, Monaco, monospace;
+
+  /* Elevation */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  /* Focus ring */
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.5);
+
+  /* Sidebar */
+  --sidebar-bg: #181a1f;
+  --sidebar-active-bg: rgba(59, 130, 246, 0.1);
+  --sidebar-active-fg: #60a5fa;
+  --sidebar-active-border: #3b82f6;
+
+  /* Input */
+  --input-bg: rgba(255, 255, 255, 0.04);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-focus: #3b82f6;
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --scrollbar-hover: rgba(255, 255, 255, 0.2);
+  --overlay-bg: rgba(0, 0, 0, 0.95);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * THEME: Claude — Warm cream light
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root[data-theme="claude"] {
+  /* Surface — warm cream foundation */
+  --bg: #faf9f7;
+  --bg-deep: #f0ede8;
+  --surface: #ffffff;
+  --surface-warm: #f5f2ed;
+  --card: #ffffff;
+  --card-hover: #faf8f4;
+
+  /* Foreground — warm charcoal, not pure black */
+  --fg: #1a1916;
+  --fg-2: #4a4640;
+  --muted: #8a857d;
+  --meta: #b5b0a6;
+
+  /* Border — warm grey, never cold */
+  --border: #e5e0d8;
+  --border-strong: #cdc6ba;
+  --border-soft: #eee9e2;
+
+  /* Accent — Claude terracotta / burnt sienna */
+  --accent: #c96442;
+  --accent-on: #ffffff;
+  --accent-hover: #b85535;
+  --accent-muted: rgba(201, 100, 66, 0.08);
+
+  /* Status — warm-shifted, light-mode appropriate */
+  --status-ok: #2e8b57;
+  --status-warn: #c08b30;
+  --status-error: #c0392b;
+  --status-info: #3a7cc8;
+
+  /* Semantic fills — tinted paper */
+  --status-ok-bg: rgba(46, 139, 87, 0.08);
+  --status-warn-bg: rgba(192, 139, 48, 0.08);
+  --status-error-bg: rgba(192, 57, 43, 0.08);
+  --status-info-bg: rgba(58, 124, 200, 0.08);
+
+  /* Typography */
+  --font-display: "Söhne", "Avenir Next", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, Menlo, Monaco, monospace;
+
+  /* Elevation — soft warm shadows */
+  --shadow-sm: 0 1px 3px rgba(26, 25, 22, 0.06);
+  --shadow-md: 0 4px 12px rgba(26, 25, 22, 0.08);
+  --shadow-lg: 0 8px 28px rgba(26, 25, 22, 0.1);
+
+  /* Focus ring — terracotta glow */
+  --focus-ring: 0 0 0 3px rgba(201, 100, 66, 0.25);
+
+  /* Sidebar — slightly warmer than bg-deep */
+  --sidebar-bg: #f0ede8;
+  --sidebar-active-bg: rgba(201, 100, 66, 0.08);
+  --sidebar-active-fg: #c96442;
+  --sidebar-active-border: #c96442;
+
+  /* Input */
+  --input-bg: #ffffff;
+  --input-border: #e5e0d8;
+  --input-focus: #c96442;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #d5cfc5;
+  --scrollbar-hover: #bfb8ac;
+  --overlay-bg: rgba(0, 0, 0, 0.45);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * THEME: sketch — Hand-drawn wireframe on graph paper
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root[data-theme="sketch"] {
+  /* Surface — warm paper tones */
+  --bg: #f0ebe0;
+  --bg-deep: #e8e2d4;
+  --surface: #faf7f0;
+  --surface-warm: #f5f0e4;
+  --card: #fffef8;
+  --card-hover: #fff9e8;
+
+  /* Foreground — marker ink, not pure black */
+  --fg: #2d2b28;
+  --fg-2: #555248;
+  --muted: #8a8578;
+  --meta: #b0a998;
+
+  /* Border — pencil lines */
+  --border: #c8c0b0;
+  --border-strong: #9e9585;
+  --border-soft: #dcd5c5;
+
+  /* Accent — blue marker annotation */
+  --accent: #2b6cb0;
+  --accent-on: #fffef8;
+  --accent-hover: #3578c0;
+  --accent-muted: rgba(43, 108, 176, 0.1);
+
+  /* Sticky-note accent (used via CSS vars for special surfaces) */
+  --sticky-bg: #fff4a3;
+  --sticky-fg: #4a4520;
+  --sticky-border: #e6d86a;
+  --sticky-pink: #ffcdd2;
+  --sticky-blue: #bbdefb;
+  --sticky-green: #c8e6c9;
+
+  /* Status — colored pencil strokes */
+  --status-ok: #2e7d32;
+  --status-warn: #e65100;
+  --status-error: #c62828;
+  --status-info: #1565c0;
+
+  /* Semantic fills — tinted paper */
+  --status-ok-bg: rgba(46, 125, 50, 0.08);
+  --status-warn-bg: rgba(230, 81, 0, 0.08);
+  --status-error-bg: rgba(198, 40, 40, 0.08);
+  --status-info-bg: rgba(21, 101, 192, 0.08);
+
+  /* Typography — marker for display, clean sans for body */
+  --font-display: "Comic Neue", "Caveat", cursive, sans-serif;
+  --font-body: "Nunito", "Comic Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", "Courier New", ui-monospace, monospace;
+
+  /* Elevation — paper lift, not dark shadows */
+  --shadow-sm: 1px 1px 0 #c8c0b0;
+  --shadow-md: 2px 2px 0 #c8c0b0, 3px 3px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 3px 3px 0 #c8c0b0, 4px 4px 12px rgba(0, 0, 0, 0.08);
+
+  /* Focus ring — blue marker circle */
+  --focus-ring: 0 0 0 2px #2b6cb0, 0 0 0 4px rgba(43, 108, 176, 0.2);
+
+  /* Sidebar — graph paper strip */
+  --sidebar-bg: #e8e2d4;
+  --sidebar-active-bg: rgba(43, 108, 176, 0.1);
+  --sidebar-active-fg: #2b6cb0;
+  --sidebar-active-border: #2b6cb0;
+
+  /* Input — paper field with pencil border */
+  --input-bg: #faf7f0;
+  --input-border: #c8c0b0;
+  --input-focus: #2b6cb0;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #c8c0b0;
+  --scrollbar-hover: #9e9585;
+  --overlay-bg: rgba(0, 0, 0, 0.45);
+
+  /* Sketch-specific: graph paper grid (applied via pseudo-elements) */
+  --graph-line: rgba(173, 196, 222, 0.25);
+  --graph-line-major: rgba(173, 196, 222, 0.45);
+  --graph-size: 20px;
+  --graph-major: 100px;
+
+  /* Hatching pattern for placeholders */
+  --hatch-color: rgba(140, 130, 110, 0.15);
+  --hatch-size: 8px;
+}
+
+/* ─── Sketch theme: graph paper background ─────────────────────
+ * Uses CSS `background` shorthand with !important to override
+ * the inline `backgroundColor` on the app's root <div>.
+ * The shorthand sets color + image atomically. */
+html[data-theme="sketch"] #root>div {
+  background:
+    var(--bg) repeating-linear-gradient(0deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
+    repeating-linear-gradient(90deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
+    repeating-linear-gradient(0deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px),
+    repeating-linear-gradient(90deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px) !important;
+  background-size: auto, 100px 100px, 100px 100px, 20px 20px, 20px 20px !important;
+}
+
+/* Also on html/body as fallback */
+html[data-theme="sketch"] {
+  background-color: var(--bg);
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
+    repeating-linear-gradient(90deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
+    repeating-linear-gradient(0deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px),
+    repeating-linear-gradient(90deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+}
+
+/* Sketch theme: card hatching for empty/chart placeholders */
+:root[data-theme="sketch"] .sketch-hatch,
+:root[data-theme="sketch"] .ph-img {
+  background-color: var(--surface) !important;
+  background-image:
+    repeating-linear-gradient(45deg,
+      transparent,
+      transparent calc(var(--hatch-size) - 1px),
+      var(--hatch-color) calc(var(--hatch-size) - 1px),
+      var(--hatch-color) var(--hatch-size));
+}
+
+/* Sketch theme: sticky-note surfaces */
+:root[data-theme="sketch"] .sticky-note {
+  background: var(--sticky-bg);
+  color: var(--sticky-fg);
+  border: 1px solid var(--sticky-border);
+  box-shadow: 2px 2px 0 var(--sticky-border);
+  transform: rotate(-1deg);
+  padding: 12px 16px;
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+}
+
+:root[data-theme="sketch"] .sticky-note--pink {
+  background: var(--sticky-pink);
+  border-color: #e57373;
+  box-shadow: 2px 2px 0 #e57373;
+  transform: rotate(0.5deg);
+}
+
+:root[data-theme="sketch"] .sticky-note--blue {
+  background: var(--sticky-blue);
+  border-color: #64b5f6;
+  box-shadow: 2px 2px 0 #64b5f6;
+  transform: rotate(-0.8deg);
+}
+
+/* Sketch theme: marker-style underlines for links */
+:root[data-theme="sketch"] a,
+:root[data-theme="sketch"] .sketch-link {
+  text-decoration: none;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 1px;
+  transition: border-color var(--motion-fast);
+}
+
+:root[data-theme="sketch"] a:hover,
+:root[data-theme="sketch"] .sketch-link:hover {
+  border-bottom-color: var(--accent-hover);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * Default theme (xAI) — applied when no data-theme is set
+ * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+:root:not([data-theme]) {
+  /* Surface */
+  --bg: #1f2228;
+  --bg-deep: #181a1f;
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-warm: rgba(255, 255, 255, 0.05);
+  --card: rgba(255, 255, 255, 0.04);
+  --card-hover: rgba(255, 255, 255, 0.07);
+
+  /* Foreground */
+  --fg: #ffffff;
+  --fg-2: rgba(255, 255, 255, 0.7);
+  --muted: rgba(255, 255, 255, 0.5);
+  --meta: rgba(255, 255, 255, 0.3);
+
+  /* Border */
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --border-soft: rgba(255, 255, 255, 0.05);
+
+  /* Accent */
+  --accent: #ffffff;
+  --accent-on: #1f2228;
+  --accent-hover: rgba(255, 255, 255, 0.9);
+  --accent-muted: rgba(255, 255, 255, 0.1);
+
+  /* Status */
+  --status-ok: #22c55e;
+  --status-warn: #eab308;
+  --status-error: #ef4444;
+  --status-info: #3b82f6;
+
+  --status-ok-bg: rgba(34, 197, 94, 0.1);
+  --status-warn-bg: rgba(234, 179, 8, 0.1);
+  --status-error-bg: rgba(239, 68, 68, 0.1);
+  --status-info-bg: rgba(59, 130, 246, 0.1);
+
+  /* Typography */
+  --font-display: "GeistMono", ui-monospace, "SF Mono", "Roboto Mono", Menlo, Monaco, monospace;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "GeistMono", ui-monospace, "SF Mono", "Roboto Mono", Menlo, Monaco, monospace;
+
+  /* Elevation */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.5);
+
+  /* Sidebar */
+  --sidebar-bg: #181a1f;
+  --sidebar-active-bg: rgba(59, 130, 246, 0.1);
+  --sidebar-active-fg: #60a5fa;
+  --sidebar-active-border: #3b82f6;
+
+  /* Input */
+  --input-bg: rgba(255, 255, 255, 0.04);
+  --input-border: rgba(255, 255, 255, 0.1);
+  --input-focus: #3b82f6;
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --scrollbar-hover: rgba(255, 255, 255, 0.2);
+  --overlay-bg: rgba(0, 0, 0, 0.95);
+}

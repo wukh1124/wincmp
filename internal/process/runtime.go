@@ -11,6 +11,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unsafe"
+
+	"golang.org/x/sys/windows"
 
 	net "github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
@@ -260,6 +263,62 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 		return fmt.Errorf("%s", i18n.T("無法建構啟動指令"))
 	}
 
+	// 自訂啟動指令安全性驗證 (只允許執行專案根目錄內的腳本或執行檔)
+	fields := strings.Fields(runtimeCmd)
+	if len(fields) > 0 {
+		targetExec := fields[0]
+		targetExec = strings.Trim(targetExec, `"`+`'`)
+		isPath := strings.Contains(targetExec, "/") || strings.Contains(targetExec, "\\")
+		isScriptSuffix := strings.HasSuffix(strings.ToLower(targetExec), ".bat") ||
+			strings.HasSuffix(strings.ToLower(targetExec), ".exe") ||
+			strings.HasSuffix(strings.ToLower(targetExec), ".cmd")
+
+		localCheckPath := filepath.Join(rootPath, targetExec)
+		_, localExistErr := os.Stat(localCheckPath)
+		isLocalFile := localExistErr == nil
+
+		if isPath || isScriptSuffix || isLocalFile {
+			var targetAbs string
+			var absErr error
+			if filepath.IsAbs(targetExec) {
+				targetAbs, absErr = filepath.Abs(targetExec)
+			} else {
+				targetAbs, absErr = filepath.Abs(localCheckPath)
+			}
+			if absErr != nil {
+				m.errorLog("runtime", i18n.Tfmt("[%s] 啟動路徑解析失敗", project.Name), absErr)
+				return fmt.Errorf("%s: %v", i18n.T("啟動路徑解析失敗"), absErr)
+			}
+
+			cleanRoot := filepath.Clean(rootPath)
+			cleanTarget := filepath.Clean(targetAbs)
+
+			if !strings.HasPrefix(strings.ToLower(cleanTarget), strings.ToLower(cleanRoot)) {
+				errMsg := i18n.Tfmt("⚠️ 自訂指令只能執行專案目錄下的腳本或執行檔：%s (專案根目錄：%s)", targetExec, rootPath)
+				m.errorLog("runtime", errMsg, nil)
+				return fmt.Errorf("%s", errMsg)
+			}
+		}
+	}
+
+	// 建立專案 Runtime 專屬的 Job Object
+	var job windows.Handle
+	var jobErr error
+	job, jobErr = windows.CreateJobObject(nil, nil)
+	if jobErr == nil {
+		info := windows.JOBOBJECT_EXTENDED_LIMIT_INFORMATION{
+			BasicLimitInformation: windows.JOBOBJECT_BASIC_LIMIT_INFORMATION{
+				LimitFlags: windows.JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+			},
+		}
+		_, _ = windows.SetInformationJobObject(
+			job,
+			windows.JobObjectExtendedLimitInformation,
+			uintptr(unsafe.Pointer(&info)),
+			uint32(unsafe.Sizeof(info)),
+		)
+	}
+
 	// 清理啟動指令中的危險中繼字元，防止命令注入
 	var err error
 	runtimeCmd, err = sanitizeRuntimeCommand(runtimeCmd)
@@ -367,13 +426,23 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 
 		if err := startCmd.Start(); err != nil {
 			m.errorLog("runtime", i18n.Tfmt("[%s] 啟動失敗", project.Name), err)
+			if job != 0 {
+				windows.CloseHandle(job)
+			}
 			return err
+		}
+
+		if job != 0 {
+			if hProcess, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE, false, uint32(startCmd.Process.Pid)); err == nil {
+				_ = windows.AssignProcessToJobObject(job, hProcess)
+				_ = windows.CloseHandle(hProcess)
+			}
 		}
 
 		go startCmd.Wait()
 
 		// Terminal 模式用 Port 偵測管理生命週期
-		m.registerRuntimeTerminal(serviceKey, project.Name, exePath, port)
+		m.registerRuntimeTerminal(serviceKey, project.Name, exePath, port, job)
 
 		m.log("runtime", "%s", i18n.Tfmt("✅ [%s] Terminal 模式已啟動 (Port: %d)", project.Name, port))
 		return nil
@@ -386,10 +455,20 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 
 	if err := startCmd.Start(); err != nil {
 		m.errorLog("runtime", i18n.Tfmt("[%s] 啟動失敗", project.Name), err)
+		if job != 0 {
+			windows.CloseHandle(job)
+		}
 		return err
 	}
 
-	m.register(serviceKey, runtimeLabel+" ("+project.Name+")", exePath, []*exec.Cmd{startCmd})
+	if job != 0 {
+		if hProcess, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE, false, uint32(startCmd.Process.Pid)); err == nil {
+			_ = windows.AssignProcessToJobObject(job, hProcess)
+			_ = windows.CloseHandle(hProcess)
+		}
+	}
+
+	m.registerWithJob(serviceKey, runtimeLabel+" ("+project.Name+")", exePath, []*exec.Cmd{startCmd}, job)
 
 	// 背景監聽退出事件
 	go func() {
@@ -442,7 +521,7 @@ func (m *Manager) trackRuntimePIDs(serviceKey, projectName string, port int, isT
 }
 
 // registerRuntimeTerminal 為 Terminal 模式註冊服務狀態
-func (m *Manager) registerRuntimeTerminal(serviceKey, projectName, exePath string, port int) {
+func (m *Manager) registerRuntimeTerminal(serviceKey, projectName, exePath string, port int, job windows.Handle) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	runtimeLabel := "Runtime"
@@ -456,6 +535,7 @@ func (m *Manager) registerRuntimeTerminal(serviceKey, projectName, exePath strin
 		StartTime: time.Now(),
 		Ctx:       ctx,
 		Cancel:    cancel,
+		JobHandle: job,
 	}
 	m.mu.Unlock()
 
@@ -474,7 +554,20 @@ func (m *Manager) StopRuntime(project config.ProjectConfig) error {
 	}
 	pids := state.PIDs
 	cmds := state.Commands
+	job := state.JobHandle
 	m.mu.Unlock()
+
+	// 如果有 Job Object，直接終止 Job，這會強制結束該 Job 內所有的子進程
+	if job != 0 {
+		_ = windows.TerminateJobObject(job, 0)
+		_ = windows.CloseHandle(job)
+		m.mu.Lock()
+		if s, ok := m.services[serviceKey]; ok {
+			s.JobHandle = 0
+		}
+		m.mu.Unlock()
+		m.log("runtime", "%s", i18n.Tfmt("⏹️ [%s] 已透過 Job Object 強制結束所有 Runtime 子進程", project.Name))
+	}
 
 	runtimeLabel := project.RuntimeType
 	if runtimeLabel == "" {

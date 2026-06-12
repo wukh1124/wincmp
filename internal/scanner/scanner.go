@@ -3,6 +3,7 @@ package scanner
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -37,15 +38,17 @@ type PHPVersionInfo struct {
 
 // ScanResult 掃描結果
 type ScanResult struct {
-	CaddyList    []ServiceInfo
-	ComposerList []ServiceInfo
-	HeidiSQLList []ServiceInfo
-	MariaDBList  []ServiceInfo
-	MailpitList  []ServiceInfo
-	NodeList     []ServiceInfo
-	BunList      []ServiceInfo
-	PHPList      []PHPVersionInfo
-	SkippedPHP   []string // 記錄被略過的舊 Patch 版本 (如 "8.2.28")
+	CaddyList     []ServiceInfo
+	ComposerList  []ServiceInfo
+	HeidiSQLList  []ServiceInfo
+	MariaDBList   []ServiceInfo
+	MailpitList   []ServiceInfo
+	NodeList      []ServiceInfo
+	BunList       []ServiceInfo
+	PHPList       []PHPVersionInfo
+	SkippedPHP    []string // 記錄被略過的舊 Patch 版本 (如 "8.2.28")
+	HasGlobalNode bool     `json:"has_global_node"`
+	HasGlobalBun  bool     `json:"has_global_bun"`
 }
 
 // ScanBinDir 掃描 bin/ 目錄，偵測已安裝的服務與版本
@@ -75,6 +78,14 @@ func ScanBinDir(baseDir string) (*ScanResult, error) {
 // scanBinDirInternal 實際掃描邏輯
 func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 	result := &ScanResult{}
+
+	// 檢測全域 Node 與 Bun 環境
+	if _, err := exec.LookPath("node"); err == nil {
+		result.HasGlobalNode = true
+	}
+	if _, err := exec.LookPath("bun"); err == nil {
+		result.HasGlobalBun = true
+	}
 
 	binDir := filepath.Join(baseDir, "bin")
 

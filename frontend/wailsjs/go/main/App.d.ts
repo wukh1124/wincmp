@@ -56,6 +56,8 @@ export function RestartApp():Promise<void>;
 
 export function SaveConfig(arg1:config.WincmpConfig):Promise<void>;
 
+export function SaveQuickSettings(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function ScanServices():Promise<scanner.ScanResult>;
 
 export function SelectFolder():Promise<string>;

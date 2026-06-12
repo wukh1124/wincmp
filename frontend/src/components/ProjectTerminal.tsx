@@ -3,51 +3,66 @@ import { X, RefreshCw, Terminal as TermIcon, ShieldAlert } from 'lucide-react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
-import {
-  StartTerminalSession,
-  SendTerminalInput,
-  ResizeTerminal,
-  StopTerminalSession
-} from '../../wailsjs/go/main/App';
+import { StartTerminalSession, SendTerminalInput, ResizeTerminal, StopTerminalSession } from '../../wailsjs/go/main/App';
 import { t, useLanguage } from '../i18n';
-
+import { useTheme } from './ThemeContext';
 import '@xterm/xterm/css/xterm.css';
 
-interface ProjectTerminalProps {
-  projectName: string;
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export default function ProjectTerminal({ projectName, isOpen, onClose }: ProjectTerminalProps) {
-  useLanguage(); // 訂閱語系變更
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const termInstance = useRef<Terminal | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
-  const sessionIDRef = useRef<string | null>(null);
-  const containerResizeObserver = useRef<ResizeObserver | null>(null);
-  
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
-
-  // 初始化並啟動終端
-  useEffect(() => {
-    if (!isOpen || !terminalRef.current) return;
-
-    setErrorMsg(null);
-    setIsReady(false);
-
-    let unsubOutput: (() => void) | null = null;
-    let unsubExit: (() => void) | null = null;
-
-    // 1. 初始化 xterm.js
-    const term = new Terminal({
-      cursorBlink: true,
-      fontFamily: '"Fira Code", Consolas, Menlo, Monaco, "Courier New", monospace',
-      fontSize: 12,
-      lineHeight: 1.2,
-      theme: {
-        background: '#08080a',
+// 取得 xterm.js 主題配色的輔助函式
+const getTerminalTheme = (themeId: string) => {
+  switch (themeId) {
+    case 'claude':
+      return {
+        background: '#faf9f7', // Claude 暖乳白底色
+        foreground: '#1a1916', // 暖深灰文字
+        cursor: '#c96442',     // 陶土橘游標
+        cursorAccent: '#faf9f7',
+        selectionBackground: '#e5e0d8',
+        black: '#1a1916',
+        red: '#c0392b',
+        green: '#2e8b57',
+        yellow: '#c08b30',
+        blue: '#3a7cc8',
+        magenta: '#a855f7',
+        cyan: '#06b6d4',
+        white: '#8a857d',
+        brightBlack: '#cdc6ba',
+        brightRed: '#e74c3c',
+        brightGreen: '#3cb371',
+        brightYellow: '#d4ac0d',
+        brightBlue: '#5dade2',
+        brightMagenta: '#d7bde2',
+        brightCyan: '#a9cce3',
+        brightWhite: '#ffffff'
+      };
+    case 'sketch':
+      return {
+        background: '#f0ebe0', // Sketch 手稿底色 (略帶黃感紙張)
+        foreground: '#2d2b28', // 鉛筆石墨深灰文字
+        cursor: '#2b6cb0',     // 藍色原子筆游標
+        cursorAccent: '#f0ebe0',
+        selectionBackground: '#c8c0b0',
+        black: '#2d2b28',
+        red: '#c62828',
+        green: '#2e7d32',
+        yellow: '#e65100',
+        blue: '#1565c0',
+        magenta: '#a855f7',
+        cyan: '#06b6d4',
+        white: '#8a8578',
+        brightBlack: '#b0a998',
+        brightRed: '#ef5350',
+        brightGreen: '#4caf50',
+        brightYellow: '#ff9800',
+        brightBlue: '#42a5f5',
+        brightMagenta: '#d7bde2',
+        brightCyan: '#a9cce3',
+        brightWhite: '#ffffff'
+      };
+    case 'xai':
+    default:
+      return {
+        background: '#08080a', // xAI 深色底色
         foreground: '#d4d4d8',
         cursor: '#3b82f6',
         cursorAccent: '#08080a',
@@ -68,72 +83,67 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
         brightMagenta: '#c084fc',
         brightCyan: '#22d3ee',
         brightWhite: '#ffffff'
-      }
+      };
+  }
+};
+
+interface ProjectTerminalProps { projectName: string; isOpen: boolean; onClose: () => void; }
+
+export default function ProjectTerminal({ projectName, isOpen, onClose }: ProjectTerminalProps) {
+  useLanguage();
+  const { theme } = useTheme();
+  const terminalRef = useRef<HTMLDivElement>(null);
+  const termInstance = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  const sessionIDRef = useRef<string | null>(null);
+  const containerResizeObserver = useRef<ResizeObserver | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  // 當全域主題切換時，動態更新終端機的配色選項
+  useEffect(() => {
+    if (termInstance.current) {
+      termInstance.current.options.theme = getTerminalTheme(theme);
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    if (!isOpen || !terminalRef.current) return;
+    setErrorMsg(null); setIsReady(false);
+    let unsubOutput: (() => void) | null = null;
+    let unsubExit: (() => void) | null = null;
+
+    const term = new Terminal({
+      cursorBlink: true,
+      fontFamily: '"Fira Code", Consolas, Menlo, Monaco, "Courier New", monospace',
+      fontSize: 12, lineHeight: 1.2,
+      theme: getTerminalTheme(theme)
     });
 
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
-    
     termInstance.current = term;
     fitAddonRef.current = fitAddon;
-
-    // 2. 打開 xterm.js
     term.open(terminalRef.current);
-    
-    // 渲染提示資訊
     term.writeln('\x1b[38;5;39m🚀 [WinCMP] ' + t("正在啟動專案終端會話...") + '\x1b[0m');
 
-    // 3. 延遲執行 fit 避免 DOM 尺寸未就緒導致計算為 0
     setTimeout(async () => {
       try {
         fitAddon.fit();
-        const cols = term.cols || 80;
-        const rows = term.rows || 24;
-
-        // 4. 呼叫後端啟動 PTY 進程
+        const cols = term.cols || 80; const rows = term.rows || 24;
         const sID = await StartTerminalSession(projectName, cols, rows);
-        sessionIDRef.current = sID;
-        setIsReady(true);
-
-        // 5. 綁定終端輸入事件
-        term.onData((data) => {
-          SendTerminalInput(sID, data).catch((err) => {
-            console.error("發送終端輸入失敗:", err);
-          });
-        });
-
-        // 6. 監聽後端輸出事件
-        unsubOutput = EventsOn('terminal_output', (res: { sessionId: string; data: string }) => {
-          if (res.sessionId === sID) {
-            term.write(res.data);
-          }
-        });
-
-        // 7. 監聽後端進程關閉事件
-        unsubExit = EventsOn('terminal_exit', (res: { sessionId: string }) => {
-          if (res.sessionId === sID) {
-            term.writeln('\r\n\x1b[38;5;203m🚫 [WinCMP] ' + t("終端會話已中斷或關閉") + '\x1b[0m\r\n');
-          }
-        });
-
-        // 8. 監聽 DOM 容器大小變化，隨時通知後端 PTY Resize
+        sessionIDRef.current = sID; setIsReady(true);
+        term.onData((data) => { SendTerminalInput(sID, data).catch((err) => { console.error("發送終端輸入失敗:", err); }); });
+        unsubOutput = EventsOn('terminal_output', (res: { sessionId: string; data: string }) => { if (res.sessionId === sID) term.write(res.data); });
+        unsubExit = EventsOn('terminal_exit', (res: { sessionId: string }) => { if (res.sessionId === sID) term.writeln('\r\n\x1b[38;5;203m🚫 [WinCMP] ' + t("終端會話已中斷或關閉") + '\x1b[0m\r\n'); });
         containerResizeObserver.current = new ResizeObserver(() => {
           if (!fitAddonRef.current || !termInstance.current || !sessionIDRef.current) return;
           try {
             fitAddonRef.current.fit();
-            const currentCols = termInstance.current.cols;
-            const currentRows = termInstance.current.rows;
-            ResizeTerminal(sessionIDRef.current, currentCols, currentRows).catch((e) => {
-              console.error("調整終端視窗尺寸失敗:", e);
-            });
-          } catch (e) {
-            // 忽略因 DOM 不在文件流中導致的 fit 錯誤
-          }
+            ResizeTerminal(sessionIDRef.current, termInstance.current.cols, termInstance.current.rows).catch((e) => { console.error("調整終端視窗尺寸失敗:", e); });
+          } catch (e) {}
         });
-        if (terminalRef.current) {
-          containerResizeObserver.current.observe(terminalRef.current);
-        }
-
+        if (terminalRef.current) containerResizeObserver.current.observe(terminalRef.current);
       } catch (err: any) {
         console.error("無法建立終端會話:", err);
         setErrorMsg(err.toString() || "無法建立 PTY 進程");
@@ -141,72 +151,44 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
       }
     }, 150);
 
-    // 清理資源
     return () => {
-      // 關閉監聽器
       if (unsubOutput) unsubOutput();
       if (unsubExit) unsubExit();
-
-      // 銷毀 Observer
-      if (containerResizeObserver.current) {
-        containerResizeObserver.current.disconnect();
-      }
-
-      // 呼叫後端終止會話
-      if (sessionIDRef.current) {
-        StopTerminalSession(sessionIDRef.current);
-      }
-
-      // 銷毀 xterm
-      if (termInstance.current) {
-        termInstance.current.dispose();
-      }
+      if (containerResizeObserver.current) containerResizeObserver.current.disconnect();
+      if (sessionIDRef.current) StopTerminalSession(sessionIDRef.current);
+      if (termInstance.current) termInstance.current.dispose();
     };
   }, [isOpen, projectName]);
 
   if (!isOpen) return null;
 
+  const currentThemeConfig = getTerminalTheme(theme);
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden select-none">
-      {/* 半透明背景 */}
-      <div 
-        className="absolute inset-0 bg-black/45 backdrop-blur-[1px] transition-opacity duration-300"
-        onClick={onClose}
-      />
-
+      <div className="absolute inset-0 transition-opacity duration-300" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(1px)' }} onClick={onClose} />
       <div className="absolute inset-y-0 right-0 pl-10 max-w-full flex">
-        {/* Drawer 容器 */}
-        <div className="w-screen max-w-xl bg-darkCard border-l border-darkBorder shadow-2xl flex flex-col h-full overflow-hidden animate-slide-in">
-          
+        <div className="w-screen max-w-xl flex flex-col h-full overflow-hidden animate-slide-in" style={{ background: 'var(--card)', borderLeft: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
           {/* Header */}
-          <div className="px-6 py-5 border-b border-darkBorder flex justify-between items-center bg-[#0d0d10] shrink-0">
+          <div className="px-6 py-5 flex justify-between items-center shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
             <div className="flex items-center gap-2">
-              <TermIcon size={14} className="text-blue-500" />
+              <TermIcon size={14} style={{ color: 'var(--status-info)' }} />
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-200">
-                  {t("專案開發終端 (Terminal)")}
-                </h3>
-                <p className="text-[10px] text-gray-500 font-mono mt-0.5">{projectName}</p>
+                <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("專案開發終端 (Terminal)")}</h3>
+                <p className="text-[10px] mt-0.5" style={{ color: 'var(--meta)', fontFamily: 'var(--font-mono)' }}>{projectName}</p>
               </div>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-white transition">
-              <X size={16} />
-            </button>
+            <button onClick={onClose} className="transition" style={{ color: 'var(--muted)' }}><X size={16} /></button>
           </div>
 
           {/* Terminal Area */}
-          <div className="flex-1 bg-[#08080a] p-4 relative overflow-hidden flex flex-col justify-end">
-            <div 
-              ref={terminalRef} 
-              id="terminal-container"
-              className="w-full h-full text-left"
-            />
-
+          <div className="flex-1 p-4 relative overflow-hidden flex flex-col justify-end" style={{ background: currentThemeConfig.background }}>
+            <div ref={terminalRef} id="terminal-container" className="w-full h-full text-left" />
             {errorMsg && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#08080a]/90 text-red-400 px-8 py-4 gap-3 text-center">
-                <ShieldAlert size={36} className="text-red-500" />
-                <div className="text-xs font-semibold">{t("無法啟動終端")}</div>
-                <div className="text-[11px] font-mono text-gray-500 bg-black/40 px-3 py-2 rounded-lg border border-darkBorder max-w-full truncate">
+              <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-4 gap-3 text-center" style={{ background: theme === 'xai' ? 'rgba(8,8,10,0.9)' : 'rgba(240,240,240,0.9)' }}>
+                <ShieldAlert size={36} style={{ color: 'var(--status-error)' }} />
+                <div className="text-xs font-semibold" style={{ color: 'var(--status-error)' }}>{t("無法啟動終端")}</div>
+                <div className="text-[11px] px-3 py-2 rounded-lg max-w-full truncate" style={{ color: 'var(--meta)', background: 'rgba(0,0,0,0.4)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)' }}>
                   {errorMsg}
                 </div>
               </div>
@@ -214,21 +196,9 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-3 border-t border-darkBorder flex justify-between items-center bg-[#0d0d10] shrink-0 text-[10px] text-gray-500">
-            <div>
-              {t("💡 支援完整互動指令、Ctrl+C 中斷與 TAB 自動補齊。")}
-            </div>
-            <button
-              onClick={() => {
-                // 重新載入 Session
-                onClose();
-                setTimeout(() => {
-                  // 這邊可以透過外部狀態控制觸發重新開啟
-                  onClose();
-                }, 100);
-              }}
-              className="px-2.5 py-1 hover:bg-darkBorder border border-darkBorder rounded text-gray-400 hover:text-white transition flex items-center gap-1 font-semibold"
-            >
+          <div className="px-6 py-3 flex justify-between items-center shrink-0 text-[10px]" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-deep)', color: 'var(--meta)' }}>
+            <div>{t("💡 支援完整互動指令、Ctrl+C 中斷與 TAB 自動補齊。")}</div>
+            <button onClick={() => { onClose(); setTimeout(() => onClose(), 100); }} className="px-2.5 py-1 border rounded transition flex items-center gap-1 font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--fg-2)' }}>
               <RefreshCw size={10} /> {t("重啟")}
             </button>
           </div>

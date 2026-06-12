@@ -1,0 +1,111 @@
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+export type ThemeId = 'xai' | 'claude' | 'sketch';
+
+interface ThemeMeta {
+  id: ThemeId;
+  name: string;
+  nameZh: string;
+  description: string;
+}
+
+export const THEMES: ThemeMeta[] = [
+  { id: 'xai', name: 'xAI', nameZh: 'xAI', description: 'Dark monospace brutalism' },
+  { id: 'claude', name: 'Claude', nameZh: 'Claude', description: 'Warm cream light' },
+  { id: 'sketch', name: 'Sketch', nameZh: 'Sketch 線稿', description: 'Wireframe on graph paper' },
+];
+
+export type FontSizeId = 'small' | 'medium' | 'large';
+
+interface FontSizeMeta {
+  id: FontSizeId;
+  name: string;
+  nameZh: string;
+}
+
+export const FONT_SIZES: FontSizeMeta[] = [
+  { id: 'small', name: 'Small', nameZh: '小' },
+  { id: 'medium', name: 'Medium', nameZh: '中' },
+  { id: 'large', name: 'Large', nameZh: '大' },
+];
+
+interface ThemeContextValue {
+  theme: ThemeId;
+  setTheme: (id: ThemeId) => void;
+  themes: ThemeMeta[];
+  fontSize: FontSizeId;
+  setFontSize: (id: FontSizeId) => void;
+  fontSizes: FontSizeMeta[];
+}
+
+const ThemeContext = createContext<ThemeContextValue>({
+  theme: 'xai',
+  setTheme: () => {},
+  themes: THEMES,
+  fontSize: 'small',
+  setFontSize: () => {},
+  fontSizes: FONT_SIZES,
+});
+
+const STORAGE_KEY = 'wincmp-theme';
+const FONT_SIZE_STORAGE_KEY = 'wincmp-font-size';
+
+function getInitialTheme(): ThemeId {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored && ['xai', 'claude', 'sketch'].includes(stored)) {
+      return stored as ThemeId;
+    }
+  } catch {}
+  return 'xai';
+}
+
+function getInitialFontSize(): FontSizeId {
+  try {
+    const stored = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
+    if (stored && ['small', 'medium', 'large'].includes(stored)) {
+      return stored as FontSizeId;
+    }
+  } catch {}
+  return 'small'; /* 目前的大小視為小 */
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<ThemeId>(getInitialTheme);
+  const [fontSize, setFontSizeState] = useState<FontSizeId>(getInitialFontSize);
+
+  const setTheme = useCallback((id: ThemeId) => {
+    setThemeState(id);
+    try {
+      localStorage.setItem(STORAGE_KEY, id);
+    } catch {}
+    document.documentElement.setAttribute('data-theme', id);
+  }, []);
+
+  const setFontSize = useCallback((id: FontSizeId) => {
+    setFontSizeState(id);
+    try {
+      localStorage.setItem(FONT_SIZE_STORAGE_KEY, id);
+    } catch {}
+    document.documentElement.setAttribute('data-font-size', id);
+  }, []);
+
+  // 套用主題與字型大小
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-font-size', fontSize);
+  }, [fontSize]);
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme, themes: THEMES, fontSize, setFontSize, fontSizes: FONT_SIZES }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme() {
+  return useContext(ThemeContext);
+}
