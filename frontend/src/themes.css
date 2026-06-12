@@ -35,6 +35,11 @@
   --motion-slow: 300ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Font Size Settings */
+  --font-size-small: 16px;
+  --font-size-medium: 18px;
+  --font-size-large: 20px;
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -313,7 +318,7 @@ html[data-theme="sketch"] {
   transform: rotate(-1deg);
   padding: 12px 16px;
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 :root[data-theme="sketch"] .sticky-note--pink {

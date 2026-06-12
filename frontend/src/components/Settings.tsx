@@ -8,7 +8,7 @@ import { useTheme, THEMES, ThemeId } from './ThemeContext';
 
 export default function Settings() {
   useLanguage(); // 訂閱語系變更
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, fontSize, setFontSize } = useTheme();
 
   const [config, setConfig] = useState<any>(null);
   const [originalConfig, setOriginalConfig] = useState<any>(null);
@@ -86,7 +86,7 @@ export default function Settings() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (silent = false) => {
     if (!config) return;
     setIsSaving(true);
     try {
@@ -103,15 +103,27 @@ export default function Settings() {
       setConfig(newCfg);
       setOriginalConfig(JSON.parse(JSON.stringify(newCfg)));
       (window as any).isSettingsDirty = false;
-      // 即時生效設定前端語系
+      // 即時生效設定前端語系與字型大小
       setLanguage(newCfg.global.language || 'zh-TW');
-      (window as any).customAlert(t("設定儲存成功！"));
+      setFontSize(newCfg.global.font_size || 'small');
+      if (!silent) {
+        await (window as any).customAlert(t("設定儲存成功！"));
+      }
     } catch (err) {
       (window as any).customAlert(`${t("儲存設定失敗")}: ${err}`);
+      throw err;
     } finally {
       setIsSaving(false);
     }
   };
+
+  // 每次 render 都更新 window.saveSettings 參照，確保在外部呼叫時能以最新設定值儲存
+  useEffect(() => {
+    (window as any).saveSettings = handleSave;
+    return () => {
+      (window as any).saveSettings = undefined;
+    };
+  });
 
   const handleOpenLocalPath = async (type: 'hosts' | 'phpini' | 'wincmpjson') => {
     try {
@@ -157,7 +169,7 @@ export default function Settings() {
             <span>{t("依賴庫管理")}</span>
           </button>
           <button
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={isSaving}
             className="px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 hover:bg-blue-700 disabled:opacity-50"
             style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-on)' }}
@@ -284,6 +296,21 @@ export default function Settings() {
               >
                 <option value="zh-TW">繁體中文 (zh-TW)</option>
                 <option value="en-US">English (en-US)</option>
+              </select>
+            </div>
+
+            {/* 字型大小 */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase select-none" style={{ color: 'var(--meta)' }}>{t("字型大小")}</label>
+              <select
+                value={config.global.font_size || 'small'}
+                onChange={(e) => handleGlobalFieldChange('font_size', e.target.value)}
+                className="w-full rounded-lg px-3 py-1.5 outline-none transition cursor-pointer font-semibold focus:border-blue-500"
+                style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg)' }}
+              >
+                <option value="small">{t("小")}</option>
+                <option value="medium">{t("中")}</option>
+                <option value="large">{t("大")}</option>
               </select>
             </div>
 
@@ -468,7 +495,7 @@ export default function Settings() {
             <div className="grid grid-cols-3 gap-3 select-none">
               <button
                 onClick={() => handleOpenLocalPath('hosts')}
-                className="py-3 px-2 rounded-xl flex flex-col items-center gap-2 transition hover:border-orange-500/40 hover:bg-orange-500/[0.02]"
+                className="py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition hover:border-orange-500/40 hover:bg-orange-500/[0.02]"
                 style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
               >
                 <Shield size={16} style={{ color: 'var(--status-warn)' }} />
@@ -477,7 +504,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={() => handleOpenLocalPath('phpini')}
-                className="py-3 px-2 rounded-xl flex flex-col items-center gap-2 transition hover:border-emerald-500/40 hover:bg-emerald-500/[0.02]"
+                className="py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition hover:border-emerald-500/40 hover:bg-emerald-500/[0.02]"
                 style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
               >
                 <SettingsIcon size={16} style={{ color: 'var(--status-ok)' }} />
@@ -486,7 +513,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={() => handleOpenLocalPath('wincmpjson')}
-                className="py-3 px-2 rounded-xl flex flex-col items-center gap-2 transition hover:border-blue-500/40 hover:bg-blue-500/[0.02]"
+                className="py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition hover:border-blue-500/40 hover:bg-blue-500/[0.02]"
                 style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
               >
                 <Info size={16} style={{ color: 'var(--accent)' }} />

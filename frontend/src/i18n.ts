@@ -58,7 +58,9 @@ export const enTranslations: Record<string, string> = {
   "打開 Logs 控制台": "Expand Logs Console",
   "系統提示": "System Notice",
   "系統確認": "System Confirmation",
-  "您有尚未儲存的設定變更，確定要離開此頁面嗎？": "You have unsaved settings. Are you sure you want to leave?",
+  "您有尚未儲存的設定變更，在離開前是否要先保存？": "You have unsaved settings. Would you like to save them before leaving?",
+  "否，不保存立即離開": "No, leave without saving",
+  "是，保存後離開": "Yes, save and leave",
   "確定": "OK",
   "取消": "Cancel",
 
@@ -94,7 +96,7 @@ export const enTranslations: Record<string, string> = {
   "系統設定檔案快速捷徑": "System Configurations Shortcuts",
   "可以在這裡直接使用系統預設編輯器開啟核心設定檔，進行進階手動編輯：": "Open core configuration files directly with system default editor for advanced editing:",
   "Hosts 檔案": "Hosts File",
-  "php.ini 設定": "php.ini Configuration",
+  "php.ini 設定": "php.ini Config",
   "WinCMP Json": "WinCMP JSON",
   "載入設定中...": "Loading configurations...",
   "設定儲存成功！": "Settings saved successfully!",
@@ -453,7 +455,14 @@ export const enTranslations: Record<string, string> = {
   // Theme Settings
   "外觀主題 (Theme)": "Appearance Theme",
   "選擇您偏好的視覺風格，切換後立即套用。": "Choose your preferred visual style. Changes apply immediately.",
-  "找不到匹配的專案": "No matching projects found"
+  "找不到匹配的專案": "No matching projects found",
+
+  // Font Settings
+  "字型大小": "Font Size",
+  "字型": "Font",
+  "小": "Small",
+  "中": "Medium",
+  "大": "Large",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

@@ -102,8 +102,8 @@ export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
 }
 
-export function SaveQuickSettings(arg1, arg2) {
-  return window['go']['main']['App']['SaveQuickSettings'](arg1, arg2);
+export function SaveQuickSettings(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveQuickSettings'](arg1, arg2, arg3);
 }
 
 export function ScanServices() {

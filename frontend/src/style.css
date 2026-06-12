@@ -10,6 +10,36 @@
 }
 
 /* ─── Base ───────────────────────────────────────────────────── */
+html {
+  font-size: var(--font-size-small);
+  transition: font-size var(--motion-base) var(--ease-standard);
+}
+
+html[data-font-size="small"] {
+  font-size: var(--font-size-small);
+}
+
+html[data-font-size="medium"] {
+  font-size: var(--font-size-medium);
+}
+
+html[data-font-size="large"] {
+  font-size: var(--font-size-large);
+}
+
+/* 覆寫 Tailwind 寫死 px 的類別，改用 rem 相對單位以支援字型大小縮放 */
+.text-\[9px\] {
+  font-size: 0.5625rem !important;
+}
+
+.text-\[10px\] {
+  font-size: 0.625rem !important;
+}
+
+.text-\[11px\] {
+  font-size: 0.6875rem !important;
+}
+
 select {
   appearance: none;
   -webkit-appearance: none;

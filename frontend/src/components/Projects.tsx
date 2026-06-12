@@ -269,6 +269,9 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     letterSpacing: '0.05em', textTransform: 'uppercase',
     color: 'var(--muted)', background: 'var(--surface)',
     borderBottom: '1px solid var(--border)',
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
   };
 
   const tdStyle: React.CSSProperties = {
@@ -309,8 +312,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                 <th style={thStyle}>{t("專案名稱")}</th>
                 <th style={thStyle}>{t("類型 / 框架")}</th>
                 <th style={thStyle}>{t("本機網域")}</th>
-                <th style={thStyle}>{t("可用性")}</th>
-                <th style={thStyle}>{t("可用性")}</th>
+                <th style={thStyle}>{t("狀態")}</th>
+                <th style={thStyle}>{t("啟用")}</th>
                 <th style={{ ...thStyle, textAlign: 'center' }}>{t("操作")}</th>
               </tr>
             </thead>

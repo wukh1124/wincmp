@@ -132,10 +132,11 @@ func (a *App) SaveConfig(newCfg *config.WincmpConfig) error {
 	return nil
 }
 
-// SaveQuickSettings 快速儲存主題與語言設定，避免與其他設定頁草稿衝突
-func (a *App) SaveQuickSettings(theme string, language string) error {
+// SaveQuickSettings 快速儲存主題、語言與字體大小設定，避免與其他設定頁草稿衝突
+func (a *App) SaveQuickSettings(theme string, language string, fontSize string) error {
 	a.appCfg.Global.Theme = theme
 	a.appCfg.Global.Language = language
+	a.appCfg.Global.FontSize = fontSize
 	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
 
 	if err := a.appCfg.Save(cfgPath); err != nil {

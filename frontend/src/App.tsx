@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages, Type } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -16,16 +16,16 @@ import { useTheme, THEMES } from './components/ThemeContext';
 // 追蹤在本次 App 生命週期中是否已觸發過 Projects 自動收合 sidebar
 let projectsCollapsedTriggered = false;
 
-// 防抖儲存主題與語言設定的定時器
+// 防抖儲存主題、語言與字體大小設定的定時器
 let quickSaveTimer: any = null;
 
-const saveQuickSettingsDebounced = (theme: string, lang: string) => {
+const saveQuickSettingsDebounced = (theme: string, lang: string, fontSize: string) => {
   if (quickSaveTimer) {
     clearTimeout(quickSaveTimer);
   }
   quickSaveTimer = setTimeout(async () => {
     try {
-      await SaveQuickSettings(theme, lang);
+      await SaveQuickSettings(theme, lang, fontSize);
       // 發送事件通知 Settings 頁面同步最新後端設定
       window.dispatchEvent(new CustomEvent('wincmp_config_synced'));
     } catch (err) {
@@ -36,7 +36,7 @@ const saveQuickSettingsDebounced = (theme: string, lang: string) => {
 
 export default function App() {
   useLanguage();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, fontSize, setFontSize, fontSizes } = useTheme();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'resources' | 'settings' | 'logs' | 'update'>('dashboard');
   const [showLogs, setShowLogs] = useState(false);
@@ -44,6 +44,22 @@ export default function App() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [customAlert, setCustomAlert] = useState<{ isOpen: boolean; message: string; resolve?: () => void }>({ isOpen: false, message: '' });
   const [customConfirm, setCustomConfirm] = useState<{ isOpen: boolean; message: string; resolve?: (value: boolean) => void }>({ isOpen: false, message: '' });
+  const [unsavedConfirm, setUnsavedConfirm] = useState<{
+    isOpen: boolean;
+    resolve?: (value: 'save' | 'discard' | 'cancel') => void;
+  }>({ isOpen: false });
+
+  const askUnsavedSettings = () => {
+    return new Promise<'save' | 'discard' | 'cancel'>((resolve) => {
+      setUnsavedConfirm({
+        isOpen: true,
+        resolve: (val) => {
+          setUnsavedConfirm({ isOpen: false, resolve: undefined });
+          resolve(val);
+        }
+      });
+    });
+  };
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [appVersion, setAppVersion] = useState('v2.0.0');
@@ -79,8 +95,17 @@ export default function App() {
         } else {
           setTheme('xai');
         }
+
+        // 字型大小回退：若無此值或格式有誤，則預設為 'small'
+        const validFontSizes = ['small', 'medium', 'large'];
+        const savedFontSize = cfg.global.font_size;
+        if (savedFontSize && validFontSizes.includes(savedFontSize)) {
+          setFontSize(savedFontSize);
+        } else {
+          setFontSize('small');
+        }
       }
-    }).catch((err: any) => console.error("獲取語系與主題失敗:", err));
+    }).catch((err: any) => console.error("獲取語系、主題與字型大小失敗:", err));
   }, []);
 
   // 2. 監聽 Ctrl+K 快速鍵聚焦搜尋框
@@ -109,8 +134,20 @@ export default function App() {
   const handleTabChange = async (tabId: typeof activeTab) => {
     if (activeTab === 'settings' && tabId !== 'settings') {
       if ((window as any).isSettingsDirty) {
-        const confirmLeave = await (window as any).customConfirm(t("您有尚未儲存的設定變更，確定要離開此頁面嗎？"));
-        if (!confirmLeave) return;
+        const choice = await askUnsavedSettings();
+        if (choice === 'cancel') {
+          return;
+        }
+        if (choice === 'save') {
+          try {
+            if ((window as any).saveSettings) {
+              await (window as any).saveSettings(true);
+            }
+          } catch (err) {
+            console.error("離開前自動儲存設定失敗:", err);
+            return;
+          }
+        }
       }
     }
     (window as any).isSettingsDirty = false;
@@ -215,7 +252,16 @@ export default function App() {
     const next = THEMES[(idx + 1) % THEMES.length];
     setTheme(next.id);
     if ((window as any).saveQuickSettingsDebounced) {
-      (window as any).saveQuickSettingsDebounced(next.id, getLanguage());
+      (window as any).saveQuickSettingsDebounced(next.id, getLanguage(), fontSize);
+    }
+  };
+
+  const cycleFontSize = () => {
+    const idx = fontSizes.findIndex(fs => fs.id === fontSize);
+    const next = fontSizes[(idx + 1) % fontSizes.length];
+    setFontSize(next.id);
+    if ((window as any).saveQuickSettingsDebounced) {
+      (window as any).saveQuickSettingsDebounced(theme, getLanguage(), next.id);
     }
   };
 
@@ -225,7 +271,7 @@ export default function App() {
     const next = LANGS[(idx + 1) % LANGS.length];
     setLanguage(next);
     if ((window as any).saveQuickSettingsDebounced) {
-      (window as any).saveQuickSettingsDebounced(theme, next);
+      (window as any).saveQuickSettingsDebounced(theme, next, fontSize);
     }
   };
 
@@ -323,37 +369,57 @@ export default function App() {
             padding: isCollapsed ? '8px' : '16px',
           }}
         >
-          {/* Language Quick Switch */}
-          <button
-            onClick={cycleLanguage}
-            className="w-full flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 mb-3"
-            style={{
-              color: 'var(--fg-2)',
-              background: 'var(--surface-warm)',
-              border: '1px solid var(--border-soft)',
-              justifyContent: isCollapsed ? 'center' : 'flex-start',
-            }}
-            title={`Language: ${getLanguage()}`}
-          >
-            <Languages size={14} style={{ color: 'var(--accent)' }} />
-            {!isCollapsed && <span style={{ fontFamily: 'var(--font-mono)' }}>{getLanguage() === 'zh-TW' ? 'ENGLISH' : '繁體中文'}</span>}
-          </button>
+          {/* 快速設定按鈕組：展開時橫向排列以節省垂直空間，收合時垂直排列 */}
+          <div className={isCollapsed ? "flex flex-col gap-2 mb-3" : "flex flex-row gap-1.5 mb-3"}>
+            {/* Language Quick Switch */}
+            <button
+              onClick={cycleLanguage}
+              className={`flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              style={{
+                color: 'var(--fg-2)',
+                background: 'var(--surface-warm)',
+                border: '1px solid var(--border-soft)',
+              }}
+              title={`Language: ${getLanguage() === 'zh-TW' ? '繁體中文' : 'English'}`}
+            >
+              <Languages size={13} style={{ color: 'var(--accent)' }} />
+              {!isCollapsed && <span style={{ fontFamily: 'var(--font-mono)' }}>{getLanguage() === 'zh-TW' ? 'EN' : '繁'}</span>}
+            </button>
 
-          {/* Theme Quick Switch */}
-          <button
-            onClick={cycleTheme}
-            className="w-full flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 mb-3"
-            style={{
-              color: 'var(--fg-2)',
-              background: 'var(--surface-warm)',
-              border: '1px solid var(--border-soft)',
-              justifyContent: isCollapsed ? 'center' : 'flex-start',
-            }}
-            title={`Theme: ${theme}`}
-          >
-            <Palette size={14} style={{ color: 'var(--accent)' }} />
-            {!isCollapsed && <span style={{ fontFamily: 'var(--font-mono)' }}>{theme.toUpperCase()}</span>}
-          </button>
+            {/* Theme Quick Switch */}
+            <button
+              onClick={cycleTheme}
+              className={`flex items-center gap-1.5 py-2 px-2 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              style={{
+                color: 'var(--fg-2)',
+                background: 'var(--surface-warm)',
+                border: '1px solid var(--border-soft)',
+              }}
+              title={`Theme: ${theme}`}
+            >
+              <Palette size={13} style={{ color: 'var(--accent)' }} />
+              {!isCollapsed && <span className="truncate" style={{ fontFamily: 'var(--font-mono)' }}>{theme.toUpperCase()}</span>}
+            </button>
+
+            {/* Font Size Quick Switch */}
+            <button
+              onClick={cycleFontSize}
+              className={`flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              style={{
+                color: 'var(--fg-2)',
+                background: 'var(--surface-warm)',
+                border: '1px solid var(--border-soft)',
+              }}
+              title={`${t('字型大小')}: ${t(fontSize === 'small' ? '小' : fontSize === 'medium' ? '中' : '大')}`}
+            >
+              <Type size={13} style={{ color: 'var(--accent)' }} />
+              {!isCollapsed && (
+                <span style={{ fontFamily: 'var(--font-mono)' }}>
+                  {fontSize === 'small' ? 'S' : fontSize === 'medium' ? 'M' : 'L'}
+                </span>
+              )}
+            </button>
+          </div>
 
           {!isCollapsed ? (
             <>
@@ -610,6 +676,44 @@ export default function App() {
                 style={{ background: 'var(--status-info)', color: '#fff' }}
               >
                 {t("確定")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Unsaved Settings Confirm Modal ────────────────────── */}
+      {unsavedConfirm.isOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-fade-in" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(2px)' }}>
+          <div className="w-full max-w-md rounded-xl overflow-hidden p-5 flex flex-col space-y-4 animate-slide-in" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)' }}>
+            <div className="flex items-center gap-2.5 font-bold text-sm" style={{ color: 'var(--status-warn || #e6a23c)' }}>
+              <span className="text-base">⚠️</span>
+              <span>{t("系統提示")}</span>
+            </div>
+            <p className="text-xs leading-relaxed break-all whitespace-pre-line" style={{ color: 'var(--fg-2)' }}>
+              {t("您有尚未儲存的設定變更，在離開前是否要先保存？")}
+            </p>
+            <div className="flex justify-end gap-2.5 pt-1">
+              <button
+                onClick={() => unsavedConfirm.resolve?.('cancel')}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
+              >
+                {t("取消")}
+              </button>
+              <button
+                onClick={() => unsavedConfirm.resolve?.('discard')}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+                style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}
+              >
+                {t("否，不保存立即離開")}
+              </button>
+              <button
+                onClick={() => unsavedConfirm.resolve?.('save')}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-semibold active:scale-[0.98] transition duration-150"
+                style={{ background: 'var(--accent)', color: 'var(--accent-on)' }}
+              >
+                {t("是，保存後離開")}
               </button>
             </div>
           </div>

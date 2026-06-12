@@ -32,6 +32,7 @@ type GlobalConfig struct {
 	RunOnBoot        bool             `json:"run_on_boot"`
 	Theme            string           `json:"theme"` // 主題設定: "light", "dark", "system" (預設)
 	Language         string           `json:"language"` // 語言設定: "zh-TW" (預設), "en-US"
+	FontSize         string           `json:"font_size"` // 字型大小設定: "small" (預設), "medium", "large"
 	LastServiceState LastServiceState `json:"last_service_state,omitempty"`
 
 	// 日誌設定
@@ -206,6 +207,11 @@ func Load(path string) (*WincmpConfig, error) {
 	// 預設語言為自動偵測系統語言
 	if cfg.Global.Language == "" {
 		cfg.Global.Language = GetSystemLanguage()
+	}
+
+	// 預設字型大小為 small
+	if cfg.Global.FontSize == "" {
+		cfg.Global.FontSize = "small"
 	}
 
 	// 預設終端為 powershell.exe
