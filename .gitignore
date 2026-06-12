@@ -79,5 +79,9 @@ vendor/
 
 build/bin/
 build/windows/installer/
+
+# 項目落地頁
 /website/screenshot/
 /website/release.json
+/website/.od-skills/
+/website/index.html.artifact.json

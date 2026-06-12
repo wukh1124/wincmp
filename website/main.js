@@ -2,6 +2,33 @@ document.addEventListener('DOMContentLoaded', () => {
     let cachedReleaseData = null;
 
     // ==========================================================================
+    // 0. 主題切換邏輯 (Theme Switching)
+    // ==========================================================================
+    const themeBtn = document.getElementById('theme-switch-btn');
+
+    function applyTheme(theme) {
+        if (theme === 'sketch') {
+            document.documentElement.setAttribute('data-theme', 'sketch');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+        localStorage.setItem('wincmp_theme', theme);
+    }
+
+    // 載入時恢復已儲存的主題偏好，預設為 'sketch' (亮色手繪風)
+    const savedTheme = localStorage.getItem('wincmp_theme') || 'sketch';
+    applyTheme(savedTheme);
+
+    // 監聽主題切換按鈕
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const nextTheme = currentTheme === 'sketch' ? 'dark' : 'sketch';
+            applyTheme(nextTheme);
+        });
+    }
+
+    // ==========================================================================
     // 1. 多國語言字典與核心切換邏輯 (i18n)
     // ==========================================================================
     const translations = {
@@ -13,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
             nav_architecture: "Architecture",
             nav_changelog: "Changelog",
             lang_btn_text: "繁體中文",
+            theme_btn_dark: "Dark",
+            theme_btn_sketch: "Sketch",
             hero_badge_prefix: "Latest Version:",
             hero_title: "Extreme Lightweight & Portable<br><span class=\"gradient-text\">Local Dev Control Panel</span> for Windows",
             hero_subtitle: "Integrated with <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> and interactive terminal. Core development services run entirely without admin privileges. Fast, lightweight, and hassle-free!",
@@ -80,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             arch_card_2_title: "Smart Ports & Seamless Reload",
             arch_card_2_desc: "WinCMP automatically manages ports to prevent conflicts when running multiple PHP/Node versions. Any configuration changes are applied instantly in the background via Caddy's hot-reload, ensuring zero downtime.",
             changelog_title: "Latest Updates",
-            changelog_subtitle: "See what new features and fixes have been added recently!",
+            changelog_subtitle: "See what new features and fixes have been added recently",
             changelog_loading: "Fetching latest changelog from GitHub...",
             changelog_view_more: "View all releases on GitHub",
             footer_desc: "WinCMP gratefully integrates and acknowledges open-source projects including Caddy, MariaDB, PHP, Mailpit, Node.js, Composer, HeidiSQL, Wails, and React."
@@ -93,6 +122,8 @@ document.addEventListener('DOMContentLoaded', () => {
             nav_architecture: "架構原理",
             nav_changelog: "更新日誌",
             lang_btn_text: "English",
+            theme_btn_dark: "Dark",
+            theme_btn_sketch: "Sketch",
             hero_badge_prefix: "最新版本:",
             hero_title: "專為 Windows 打造的<br><span class=\"gradient-text\">極致輕量免安裝</span>開發面板",
             hero_subtitle: "整合 <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> 與專案互動終端。核心開發服務啟動免管理員權限，極速、輕量、無負擔！",
@@ -160,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
             arch_card_2_title: "智慧連接埠與無縫重載",
             arch_card_2_desc: "WinCMP 會自動管理並分配服務連接埠，避免多個 PHP 或 Node 版本同時執行時發生衝突。調整設定時，系統會在背景即時套用變更，過程完全不需重啟伺服器，保證網頁連線不中斷！",
             changelog_title: "最新版本更新日誌",
-            changelog_subtitle: "看看最近幫 WinCMP 增加了什麼厲害的新魔法吧！",
+            changelog_subtitle: "查看最近 WinCMP 的更新和修正項目",
             changelog_loading: "正在從 GitHub 獲取最新發布日誌...",
             changelog_view_more: "前往 GitHub 查看所有歷史發布與日誌",
             footer_desc: "WinCMP 整合並致敬優秀的開源生態組件，包括 Caddy, MariaDB, PHP, Mailpit, Node.js, Composer, HeidiSQL, Wails 與 React。"
@@ -181,12 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 儲存偏好
         localStorage.setItem('wincmp_lang', lang);
-
-        // 更新語言切換按鈕文字
-        const langBtnText = document.getElementById('lang-btn-text');
-        if (langBtnText) {
-            langBtnText.innerText = translations[lang]['lang_btn_text'];
-        }
 
         // 重新初始化 Lucide 圖示 (避免動態重寫後圖示消失)
         if (window.lucide) {
@@ -333,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
     const navbar = document.getElementById('navbar');
     const navToggle = document.getElementById('nav-toggle');
-    const navLinks = document.querySelectorAll('.nav-link, #lang-switch-btn, #github-nav-btn');
+    const navLinks = document.querySelectorAll('.nav-link, #lang-switch-btn, #theme-switch-btn, #github-nav-btn');
 
     if (navToggle && navbar) {
         navToggle.addEventListener('click', () => {
