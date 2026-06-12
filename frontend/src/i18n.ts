@@ -377,6 +377,23 @@ export const enTranslations: Record<string, string> = {
   "Caddy/PHP 靜態託管": "Caddy/PHP Static Hosting",
   "無 Runtime": "No Runtime",
 
+  // 專案操作引導教學
+  "操作按鈕快速指南": "Actions Guide",
+  "好的，我知道了": "Got it!",
+  "啟動專案的 Node/Python/Go 運行環境": "Start the project's Node/Python/Go execution environment",
+  "進入專案的 CLI 交互終端偵錯": "Enter the project's CLI interactive terminal for debugging",
+  "開啟專案在硬碟上的物理根目錄": "Open the project's physical root directory on disk",
+  "調整網域、SSL 憑證、連接埠與啟動指令": "Configure domains, SSL certificates, ports, and startup commands",
+  "從面板移除（不會刪除硬碟檔案喔）": "Remove from panel (does not delete actual files on disk)",
+
+  // 依賴管理引導教學
+  "依賴管理指南": "Dependency Management Guide",
+  "在此您可以一鍵下載並安裝 Web 開發必備的依賴元件，包含：": "Here you can download and install essential Web development dependencies with one click, including:",
+  "Caddy Web 伺服器 (反向代理)": "Caddy Web Server (Reverse Proxy)",
+  "MariaDB (本地資料庫)": "MariaDB (Local Database)",
+  "PHP-CGI (PHP 多版本運行環境)": "PHP-CGI (PHP Multi-version Runtime)",
+  "Composer、Node.js 等實用工具": "Composer, Node.js and other tools",
+
   // DBExplorer.tsx
   "載入失敗": "Load Failed",
   "開啟 HeidiSQL 失敗": "Failed to open HeidiSQL",

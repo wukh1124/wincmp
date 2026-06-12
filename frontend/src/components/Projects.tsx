@@ -39,6 +39,21 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [detected, setDetected] = useState(false);
   const [terminalProject, setTerminalProject] = useState<string | null>(null);
   const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
+
+  useEffect(() => {
+    if (config?.projects && config.projects.length > 0) {
+      const isShown = localStorage.getItem('wincmp_onboarding_shown') === 'true';
+      if (!isShown) {
+        setShowGuide(true);
+      }
+    }
+  }, [config]);
+
+  const dismissGuide = () => {
+    localStorage.setItem('wincmp_onboarding_shown', 'true');
+    setShowGuide(false);
+  };
 
   useEffect(() => {
     if (highlightedProjectName && config?.projects) {
@@ -314,7 +329,74 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                 <th style={thStyle}>{t("本機網域")}</th>
                 <th style={thStyle}>{t("狀態")}</th>
                 <th style={thStyle}>{t("啟用")}</th>
-                <th style={{ ...thStyle, textAlign: 'center' }}>{t("操作")}</th>
+                <th style={{ ...thStyle, textAlign: 'center', position: 'relative' }}>
+                  {t("操作")}
+                  {showGuide && (
+                    <div className="absolute right-0 top-10 z-50 animate-fade-in w-80 text-left p-4 rounded-xl border font-normal" style={{
+                      background: 'var(--bg-deep)',
+                      borderColor: 'var(--border)',
+                      boxShadow: 'var(--shadow-lg)',
+                      color: 'var(--fg)',
+                      textTransform: 'none',
+                      letterSpacing: 'normal',
+                    }}>
+                      {/* 氣泡小箭頭 */}
+                      <div className="absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" style={{
+                        background: 'var(--bg-deep)',
+                        borderColor: 'var(--border)'
+                      }} />
+                      
+                      <div className="space-y-3">
+                        <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
+                          <span>💡 {t("操作按鈕快速指南")}</span>
+                        </div>
+                        <div className="space-y-2.5 text-[11px]" style={{ color: 'var(--fg-2)' }}>
+                          <div className="flex items-start gap-2">
+                            <span className="p-1 rounded text-white flex items-center shrink-0" style={{ background: 'var(--status-ok)' }}><Play size={10} /></span>
+                            <div className="leading-tight">
+                              <strong>{t("啟動專案 Runtime")}</strong>
+                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("啟動專案的 Node/Python/Go 運行環境")}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }}><Terminal size={10} /></span>
+                            <div className="leading-tight">
+                              <strong>{t("開啟專案終端")}</strong>
+                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("進入專案的 CLI 交互終端偵錯")}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)' }}><FolderOpen size={10} /></span>
+                            <div className="leading-tight">
+                              <strong>{t("開啟專案資料夾")}</strong>
+                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("開啟專案在硬碟上的物理根目錄")}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }}><Edit size={10} /></span>
+                            <div className="leading-tight">
+                              <strong>{t("編輯專案設定")}</strong>
+                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("調整網域、SSL 憑證、連接埠與啟動指令")}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-error)' }}><Trash2 size={10} /></span>
+                            <div className="leading-tight">
+                              <strong>{t("刪除專案")}</strong>
+                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("從面板移除（不會刪除硬碟檔案喔）")}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-end pt-1">
+                          <button onClick={(e) => { e.stopPropagation(); dismissGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90" style={{ background: 'var(--status-info)' }}>
+                            {t("好的，我知道了")}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody>
