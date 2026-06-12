@@ -5,12 +5,93 @@ import { FitAddon } from '@xterm/addon-fit';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { StartTerminalSession, SendTerminalInput, ResizeTerminal, StopTerminalSession } from '../../wailsjs/go/main/App';
 import { t, useLanguage } from '../i18n';
+import { useTheme } from './ThemeContext';
 import '@xterm/xterm/css/xterm.css';
+
+// 取得 xterm.js 主題配色的輔助函式
+const getTerminalTheme = (themeId: string) => {
+  switch (themeId) {
+    case 'claude':
+      return {
+        background: '#faf9f7', // Claude 暖乳白底色
+        foreground: '#1a1916', // 暖深灰文字
+        cursor: '#c96442',     // 陶土橘游標
+        cursorAccent: '#faf9f7',
+        selectionBackground: '#e5e0d8',
+        black: '#1a1916',
+        red: '#c0392b',
+        green: '#2e8b57',
+        yellow: '#c08b30',
+        blue: '#3a7cc8',
+        magenta: '#a855f7',
+        cyan: '#06b6d4',
+        white: '#8a857d',
+        brightBlack: '#cdc6ba',
+        brightRed: '#e74c3c',
+        brightGreen: '#3cb371',
+        brightYellow: '#d4ac0d',
+        brightBlue: '#5dade2',
+        brightMagenta: '#d7bde2',
+        brightCyan: '#a9cce3',
+        brightWhite: '#ffffff'
+      };
+    case 'sketch':
+      return {
+        background: '#f0ebe0', // Sketch 手稿底色 (略帶黃感紙張)
+        foreground: '#2d2b28', // 鉛筆石墨深灰文字
+        cursor: '#2b6cb0',     // 藍色原子筆游標
+        cursorAccent: '#f0ebe0',
+        selectionBackground: '#c8c0b0',
+        black: '#2d2b28',
+        red: '#c62828',
+        green: '#2e7d32',
+        yellow: '#e65100',
+        blue: '#1565c0',
+        magenta: '#a855f7',
+        cyan: '#06b6d4',
+        white: '#8a8578',
+        brightBlack: '#b0a998',
+        brightRed: '#ef5350',
+        brightGreen: '#4caf50',
+        brightYellow: '#ff9800',
+        brightBlue: '#42a5f5',
+        brightMagenta: '#d7bde2',
+        brightCyan: '#a9cce3',
+        brightWhite: '#ffffff'
+      };
+    case 'xai':
+    default:
+      return {
+        background: '#08080a', // xAI 深色底色
+        foreground: '#d4d4d8',
+        cursor: '#3b82f6',
+        cursorAccent: '#08080a',
+        selectionBackground: '#1e3a8a',
+        black: '#000000',
+        red: '#ef4444',
+        green: '#22c55e',
+        yellow: '#eab308',
+        blue: '#3b82f6',
+        magenta: '#a855f7',
+        cyan: '#06b6d4',
+        white: '#d4d4d8',
+        brightBlack: '#71717a',
+        brightRed: '#f87171',
+        brightGreen: '#4ade80',
+        brightYellow: '#facc15',
+        brightBlue: '#60a5fa',
+        brightMagenta: '#c084fc',
+        brightCyan: '#22d3ee',
+        brightWhite: '#ffffff'
+      };
+  }
+};
 
 interface ProjectTerminalProps { projectName: string; isOpen: boolean; onClose: () => void; }
 
 export default function ProjectTerminal({ projectName, isOpen, onClose }: ProjectTerminalProps) {
   useLanguage();
+  const { theme } = useTheme();
   const terminalRef = useRef<HTMLDivElement>(null);
   const termInstance = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -18,6 +99,13 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
   const containerResizeObserver = useRef<ResizeObserver | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+
+  // 當全域主題切換時，動態更新終端機的配色選項
+  useEffect(() => {
+    if (termInstance.current) {
+      termInstance.current.options.theme = getTerminalTheme(theme);
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (!isOpen || !terminalRef.current) return;
@@ -29,15 +117,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
       cursorBlink: true,
       fontFamily: '"Fira Code", Consolas, Menlo, Monaco, "Courier New", monospace',
       fontSize: 12, lineHeight: 1.2,
-      theme: {
-        background: '#08080a', foreground: '#d4d4d8', cursor: '#3b82f6',
-        cursorAccent: '#08080a', selectionBackground: '#1e3a8a',
-        black: '#000000', red: '#ef4444', green: '#22c55e', yellow: '#eab308',
-        blue: '#3b82f6', magenta: '#a855f7', cyan: '#06b6d4', white: '#d4d4d8',
-        brightBlack: '#71717a', brightRed: '#f87171', brightGreen: '#4ade80',
-        brightYellow: '#facc15', brightBlue: '#60a5fa', brightMagenta: '#c084fc',
-        brightCyan: '#22d3ee', brightWhite: '#ffffff'
-      }
+      theme: getTerminalTheme(theme)
     });
 
     const fitAddon = new FitAddon();
@@ -82,6 +162,8 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
 
   if (!isOpen) return null;
 
+  const currentThemeConfig = getTerminalTheme(theme);
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden select-none">
       <div className="absolute inset-0 transition-opacity duration-300" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(1px)' }} onClick={onClose} />
@@ -100,10 +182,10 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
           </div>
 
           {/* Terminal Area */}
-          <div className="flex-1 p-4 relative overflow-hidden flex flex-col justify-end" style={{ background: '#08080a' }}>
+          <div className="flex-1 p-4 relative overflow-hidden flex flex-col justify-end" style={{ background: currentThemeConfig.background }}>
             <div ref={terminalRef} id="terminal-container" className="w-full h-full text-left" />
             {errorMsg && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-4 gap-3 text-center" style={{ background: 'rgba(8,8,10,0.9)' }}>
+              <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-4 gap-3 text-center" style={{ background: theme === 'xai' ? 'rgba(8,8,10,0.9)' : 'rgba(240,240,240,0.9)' }}>
                 <ShieldAlert size={36} style={{ color: 'var(--status-error)' }} />
                 <div className="text-xs font-semibold" style={{ color: 'var(--status-error)' }}>{t("無法啟動終端")}</div>
                 <div className="text-[11px] px-3 py-2 rounded-lg max-w-full truncate" style={{ color: 'var(--meta)', background: 'rgba(0,0,0,0.4)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)' }}>
