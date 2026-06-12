@@ -289,7 +289,7 @@ export default function ResourceMonitor() {
       <div className="space-y-4 pt-2">
         <div className="flex items-center gap-2 pb-2" style={{ borderBottom: '1px solid var(--border-soft)' }}>
           <Server size={15} style={{ color: 'var(--status-ok)' }} />
-          <h3 className="font-bold text-sm" style={{ color: 'var(--fg-2)' }}>{t("啟動中的依賴服務 (Services Stack)")}</h3>
+          <h3 className="font-bold text-sm" style={{ color: 'var(--fg-2)' }}>{t("啟動中的依賴服務")}</h3>
         </div>
 
         {svcKeys.length > 0 ? (
