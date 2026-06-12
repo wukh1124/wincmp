@@ -132,6 +132,24 @@ func (a *App) SaveConfig(newCfg *config.WincmpConfig) error {
 	return nil
 }
 
+// SaveQuickSettings 快速儲存主題與語言設定，避免與其他設定頁草稿衝突
+func (a *App) SaveQuickSettings(theme string, language string) error {
+	a.appCfg.Global.Theme = theme
+	a.appCfg.Global.Language = language
+	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
+
+	if err := a.appCfg.Save(cfgPath); err != nil {
+		return fmt.Errorf(i18n.T("無法儲存設定檔: %w"), err)
+	}
+
+	// 更新後端語系並同步刷新系統托盤選單
+	i18n.SetLanguage(language)
+	a.updateTrayMenu()
+
+	return nil
+}
+
+
 // ScanServices 重新掃描 bin/ 目錄並更新二進位服務版本資訊
 func (a *App) ScanServices() (*scanner.ScanResult, error) {
 	res, err := scanner.ScanBinDir(a.baseDir)

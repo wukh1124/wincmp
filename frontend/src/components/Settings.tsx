@@ -3,7 +3,7 @@ import { Settings as SettingsIcon, Save, FolderOpen, Shield, Database, Mail, Lan
 import { GetConfig, SaveConfig, SelectFolder, OpenFolder } from '../../wailsjs/go/main/App';
 import DependencyManager from './DependencyManager';
 import { logStore } from './logStore';
-import { t, useLanguage, setLanguage } from '../i18n';
+import { t, useLanguage, setLanguage, getLanguage } from '../i18n';
 import { useTheme, THEMES, ThemeId } from './ThemeContext';
 
 export default function Settings() {
@@ -44,6 +44,28 @@ export default function Settings() {
   useEffect(() => {
     return () => {
       (window as any).isSettingsDirty = false;
+    };
+  }, []);
+
+  // 監聽 Sidebar 或全域快速設定的儲存同步事件，自動重新讀取 Config 以同步頁面狀態
+  useEffect(() => {
+    const handleConfigSynced = async () => {
+      try {
+        const cfg = await GetConfig();
+        setConfig(cfg);
+        // 如果此時 Settings 頁面是乾淨的，就把 originalConfig 也刷新
+        // 這樣就不會讓 (window as any).isSettingsDirty 變成 true
+        if (!(window as any).isSettingsDirty) {
+          setOriginalConfig(JSON.parse(JSON.stringify(cfg)));
+        }
+      } catch (err) {
+        console.error("同步設定失敗:", err);
+      }
+    };
+
+    window.addEventListener('wincmp_config_synced', handleConfigSynced);
+    return () => {
+      window.removeEventListener('wincmp_config_synced', handleConfigSynced);
     };
   }, []);
 
@@ -492,7 +514,12 @@ export default function Settings() {
                 return (
                   <button
                     key={th.id}
-                    onClick={() => setTheme(th.id)}
+                    onClick={() => {
+                      setTheme(th.id);
+                      if ((window as any).saveQuickSettingsDebounced) {
+                        (window as any).saveQuickSettingsDebounced(th.id, getLanguage());
+                      }
+                    }}
                     className="py-4 px-3 rounded-xl flex flex-col items-center gap-2 transition relative"
                     style={{
                       background: tc.bg,

@@ -8,13 +8,31 @@ import ResourceMonitor from './components/ResourceMonitor';
 import TerminalLogs from './components/TerminalLogs';
 import VersionUpdate from './components/VersionUpdate';
 import { EventsOn } from '../wailsjs/runtime/runtime';
-import { GetAppVersion, IsAdmin, GetConfig } from '../wailsjs/go/main/App';
+import { GetAppVersion, IsAdmin, GetConfig, SaveQuickSettings } from '../wailsjs/go/main/App';
 import logo from './assets/images/icon.svg';
 import { t, setLanguage, useLanguage, getLanguage } from './i18n';
 import { useTheme, THEMES } from './components/ThemeContext';
 
 // 追蹤在本次 App 生命週期中是否已觸發過 Projects 自動收合 sidebar
 let projectsCollapsedTriggered = false;
+
+// 防抖儲存主題與語言設定的定時器
+let quickSaveTimer: any = null;
+
+const saveQuickSettingsDebounced = (theme: string, lang: string) => {
+  if (quickSaveTimer) {
+    clearTimeout(quickSaveTimer);
+  }
+  quickSaveTimer = setTimeout(async () => {
+    try {
+      await SaveQuickSettings(theme, lang);
+      // 發送事件通知 Settings 頁面同步最新後端設定
+      window.dispatchEvent(new CustomEvent('wincmp_config_synced'));
+    } catch (err) {
+      console.error("快速儲存設定失敗:", err);
+    }
+  }, 1500);
+};
 
 export default function App() {
   useLanguage();
@@ -37,15 +55,32 @@ export default function App() {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. 初始化讀取版本與管理員權限及語系
+  // 1. 初始化讀取版本與管理員權限及語系、主題，並掛載全域防抖儲存函式
   useEffect(() => {
+    (window as any).saveQuickSettingsDebounced = saveQuickSettingsDebounced;
+
     GetAppVersion().then(setAppVersion).catch((err: any) => console.error("獲取版本失敗:", err));
     IsAdmin().then(setIsAdmin).catch((err: any) => console.error("獲取管理員權限失敗:", err));
     GetConfig().then((cfg: any) => {
-      if (cfg && cfg.global && cfg.global.language) {
-        setLanguage(cfg.global.language);
+      if (cfg && cfg.global) {
+        // 語言回退：若無此值，則預設為系統語言
+        const lang = cfg.global.language;
+        if (lang) {
+          setLanguage(lang);
+        } else {
+          setLanguage(getLanguage());
+        }
+
+        // 主題回退：若無此值或格式有誤，則預設回退至 'xai'
+        const validThemes = ['xai', 'claude', 'sketch'];
+        const savedTheme = cfg.global.theme;
+        if (savedTheme && validThemes.includes(savedTheme)) {
+          setTheme(savedTheme);
+        } else {
+          setTheme('xai');
+        }
       }
-    }).catch((err: any) => console.error("獲取語系失敗:", err));
+    }).catch((err: any) => console.error("獲取語系與主題失敗:", err));
   }, []);
 
   // 2. 監聽 Ctrl+K 快速鍵聚焦搜尋框
@@ -179,6 +214,9 @@ export default function App() {
     const idx = THEMES.findIndex(th => th.id === theme);
     const next = THEMES[(idx + 1) % THEMES.length];
     setTheme(next.id);
+    if ((window as any).saveQuickSettingsDebounced) {
+      (window as any).saveQuickSettingsDebounced(next.id, getLanguage());
+    }
   };
 
   const LANGS = ['zh-TW', 'en-US'] as const;
@@ -186,6 +224,9 @@ export default function App() {
     const idx = LANGS.indexOf(getLanguage() as typeof LANGS[number]);
     const next = LANGS[(idx + 1) % LANGS.length];
     setLanguage(next);
+    if ((window as any).saveQuickSettingsDebounced) {
+      (window as any).saveQuickSettingsDebounced(theme, next);
+    }
   };
 
   return (
