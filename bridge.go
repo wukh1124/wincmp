@@ -625,6 +625,9 @@ func (a *App) triggerHostsUpdate() {
 
 	var allDomains []string
 	for _, proj := range a.appCfg.Projects {
+		if !proj.Enabled {
+			continue
+		}
 		allDomains = append(allDomains, proj.Domains...)
 	}
 
