@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
  * WinCMP Theme System — Three Independent Designs
  *
- * xAI:    Dark-first monospace brutalism. #1f2228 canvas, white
+ * Carbon: Dark-first monospace brutalism. #1f2228 canvas, white
  *         as the sole voice, GeistMono display, zero shadows.
  * Claude:  Warm cream light with terracotta accent. Clean,
  *          modern, approachable — Anthropic's signature warmth.
@@ -44,9 +44,9 @@
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * THEME: xAI — Monochrome brutalism
+ * THEME: Carbon — Monochrome brutalism
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-:root[data-theme="xai"] {
+:root[data-theme="carbon"] {
   /* Surface */
   --bg: #1f2228;
   --bg-deep: #181a1f;
@@ -350,7 +350,7 @@ html[data-theme="sketch"] main {
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * Default theme (xAI) — applied when no data-theme is set
+ * Default theme (Carbon) — applied when no data-theme is set
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 :root:not([data-theme]) {
   /* Surface */

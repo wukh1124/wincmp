@@ -95,13 +95,15 @@ export default function App() {
           setLanguage(getLanguage());
         }
 
-        // 主題回退：若無此值或格式有誤，則預設回退至 'xai'
-        const validThemes = ['xai', 'claude', 'sketch'];
+        // 主題回退：若無此值或格式有誤，則預設回退至 'carbon'
+        const validThemes = ['carbon', 'claude', 'sketch'];
         const savedTheme = cfg.global.theme;
         if (savedTheme && validThemes.includes(savedTheme)) {
           setTheme(savedTheme);
+        } else if (savedTheme === 'xai') {
+          setTheme('carbon');
         } else {
-          setTheme('xai');
+          setTheme('carbon');
         }
 
         // 字型大小回退：若無此值或格式有誤，則預設為 'small'
