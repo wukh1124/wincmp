@@ -92,7 +92,7 @@ export default function DBExplorer() {
           <div>
             <h3 className="text-sm font-bold" style={{ color: 'var(--fg)' }}>{t("MariaDB 尚未啟動")}</h3>
             <p className="text-xs mt-1.5 max-w-sm leading-relaxed" style={{ color: 'var(--muted)' }}>
-              {t("請先前往 **Dashboard** 頁面啟動 MariaDB 資料庫服務，再使用 Database Explorer 進行瀏覽。")}
+              {t("請先前往 儀表板 頁面啟動 MariaDB 資料庫服務，再使用 Database Explorer 進行瀏覽。")}
             </p>
           </div>
         </div>

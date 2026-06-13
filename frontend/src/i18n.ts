@@ -402,7 +402,7 @@ export const enTranslations: Record<string, string> = {
   "重新整理": "Refresh",
   "Open in HeidiSQL": "Open in HeidiSQL",
   "MariaDB 尚未啟動": "MariaDB is not running",
-  "請先前往 **Dashboard** 頁面啟動 MariaDB 資料庫服務，再使用 Database Explorer 進行瀏覽。": "Please visit the Dashboard page to start the MariaDB database service first before using the Database Explorer.",
+  "請先前往 儀表板 頁面啟動 MariaDB 資料庫服務，再使用 Database Explorer 進行瀏覽。": "Please visit the Dashboard page to start the MariaDB database service first before using the Database Explorer.",
   "的資料表：": "'s tables:",
   "請選擇左側的資料庫以檢視資料表": "Please select a database from the left to view its tables",
 
