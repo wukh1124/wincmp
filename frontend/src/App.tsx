@@ -373,6 +373,7 @@ export default function App() {
               return (
                 <button
                   key={item.id}
+                  id={`nav-btn-${item.id}`}
                   onClick={() => handleTabChange(item.id)}
                   title={isCollapsed ? item.label : undefined}
                   className="w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 relative"

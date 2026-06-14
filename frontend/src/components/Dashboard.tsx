@@ -183,7 +183,7 @@ export default function Dashboard() {
         </div>
         <div className="flex gap-2.5">
           <div className="relative">
-            <button onClick={handleOpenDepManager} className="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
+            <button id="btn-open-dep-manager" onClick={handleOpenDepManager} className="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
               <Package size={13} style={{ color: 'var(--status-info)' }} />
               <span>{t("依賴庫管理")}</span>
             </button>

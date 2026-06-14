@@ -85,3 +85,5 @@ build/windows/installer/
 /website/release.json
 /website/.od-skills/
 /website/index.html.artifact.json
+
+/screenshot/backup

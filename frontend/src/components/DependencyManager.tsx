@@ -235,7 +235,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               <RefreshCw size={14} className={isFetchingRemote ? 'animate-spin' : ''} />
               <span>{isFetchingRemote ? t('獲取中...') : t('獲取最新')}</span>
             </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg transition" style={{ color: 'var(--muted)' }}><X size={18} /></button>
+            <button id="btn-close-dep-manager" onClick={onClose} className="p-1.5 rounded-lg transition" style={{ color: 'var(--muted)' }}><X size={18} /></button>
           </div>
         </div>
 

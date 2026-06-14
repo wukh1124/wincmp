@@ -178,7 +178,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
                 <p className="text-[10px] mt-0.5" style={{ color: 'var(--meta)', fontFamily: 'var(--font-mono)' }}>{projectName}</p>
               </div>
             </div>
-            <button onClick={onClose} className="transition" style={{ color: 'var(--muted)' }}><X size={16} /></button>
+            <button id="btn-close-terminal" onClick={onClose} className="transition" style={{ color: 'var(--muted)' }}><X size={16} /></button>
           </div>
 
           {/* Terminal Area */}
