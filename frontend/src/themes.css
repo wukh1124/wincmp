@@ -231,11 +231,11 @@
   --status-error: #c62828;
   --status-info: #1565c0;
 
-  /* Semantic fills — tinted paper */
-  --status-ok-bg: rgba(46, 125, 50, 0.08);
-  --status-warn-bg: rgba(230, 81, 0, 0.08);
-  --status-error-bg: rgba(198, 40, 40, 0.08);
-  --status-info-bg: rgba(21, 101, 192, 0.08);
+  /* Semantic fills — tinted paper (solid colors in sketch to prevent grid bleeding) */
+  --status-ok-bg: #c8e6c9;
+  --status-warn-bg: #fff4a3;
+  --status-error-bg: #ffcdd2;
+  --status-info-bg: #bbdefb;
 
   /* Typography — marker for display, clean sans for body */
   --font-display: "Comic Neue", "Caveat", cursive, sans-serif;
