@@ -131,7 +131,9 @@
 }
 
 /* --- 基礎樣式重設 --- */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -449,7 +451,7 @@ body.menu-open {
     position: absolute;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, var(--primary-glow) 0%, rgba(0,0,0,0) 70%);
+    background: radial-gradient(circle, var(--primary-glow) 0%, rgba(0, 0, 0, 0) 70%);
     top: -200px;
     left: -100px;
     z-index: -1;
@@ -460,7 +462,7 @@ body.menu-open {
     position: absolute;
     width: 600px;
     height: 600px;
-    background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, rgba(0,0,0,0) 70%);
+    background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
     bottom: -100px;
     right: -100px;
     z-index: -1;
@@ -497,10 +499,12 @@ body.menu-open {
         transform: scale(0.9);
         box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7);
     }
+
     70% {
         transform: scale(1.1);
         box-shadow: 0 0 0 8px rgba(6, 182, 212, 0);
     }
+
     100% {
         transform: scale(0.9);
         box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
@@ -570,9 +574,20 @@ body.menu-open {
     border-radius: 50%;
 }
 
-.window-dot.red { background-color: var(--accent-rose); opacity: 0.8; }
-.window-dot.yellow { background-color: var(--accent-amber); opacity: 0.8; }
-.window-dot.green { background-color: var(--accent-emerald); opacity: 0.8; }
+.window-dot.red {
+    background-color: var(--accent-rose);
+    opacity: 0.8;
+}
+
+.window-dot.yellow {
+    background-color: var(--accent-amber);
+    opacity: 0.8;
+}
+
+.window-dot.green {
+    background-color: var(--accent-emerald);
+    opacity: 0.8;
+}
 
 .window-title {
     position: absolute;
@@ -644,7 +659,8 @@ body.menu-open {
     margin-bottom: 24px;
 }
 
-.feature-icon svg, .feature-icon-warning svg {
+.feature-icon svg,
+.feature-icon-warning svg {
     width: 24px;
     height: 24px;
 }
@@ -727,7 +743,7 @@ body.menu-open {
 .gallery-img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: fill;
     transition: opacity 0.3s ease-in-out;
 }
 
@@ -755,7 +771,8 @@ body.menu-open {
     min-width: 700px;
 }
 
-.comparison-table th, .comparison-table td {
+.comparison-table th,
+.comparison-table td {
     padding: 20px 24px;
     border-bottom: 1px solid var(--border-color);
     font-size: 15px;
@@ -886,16 +903,24 @@ body.menu-open {
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Markdown 樣式渲染 */
 .markdown-body {
-    display: none; /* 載入完成後由 JS 顯示 */
+    display: none;
+    /* 載入完成後由 JS 顯示 */
 }
 
-.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
     font-family: var(--font-display);
     color: var(--markdown-h-color);
     margin-top: 24px;
@@ -918,7 +943,8 @@ body.menu-open {
     color: var(--text-secondary);
 }
 
-.markdown-body ul, .markdown-body ol {
+.markdown-body ul,
+.markdown-body ol {
     margin-bottom: 16px;
     padding-left: 24px;
     color: var(--text-secondary);
@@ -1026,7 +1052,9 @@ body.menu-open {
    ========================================================================== */
 /* 避免在桌上型電腦/平板解析度中因寬度不足導致選單重疊，限制最小寬度強制水平滾動 */
 @media (min-width: 769px) {
-    body, .navbar {
+
+    body,
+    .navbar {
         min-width: 1000px;
     }
 }
@@ -1035,6 +1063,7 @@ body.menu-open {
     .features-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+
     .hero-title {
         font-size: 44px;
     }
@@ -1044,61 +1073,75 @@ body.menu-open {
     section {
         padding: 40px 0;
     }
+
     .hero-section {
         padding-top: 100px;
         padding-bottom: 48px;
     }
+
     .hero-title {
         font-size: 36px;
     }
+
     .hero-subtitle {
         font-size: 16px;
     }
+
     .hero-actions {
         flex-direction: column;
         gap: 12px;
         align-items: center;
     }
+
     .btn {
         width: 100%;
         max-width: 320px;
     }
+
     .features-grid {
         grid-template-columns: 1fr;
         gap: 20px;
     }
+
     .feature-card {
         padding: 24px;
     }
+
     .architecture-grid {
         grid-template-columns: 1fr;
         gap: 24px;
     }
+
     .arch-card {
         padding: 24px;
     }
+
     .changelog-box {
         padding: 24px;
         min-height: 120px;
     }
+
     .footer {
         padding: 32px 0;
     }
+
     .footer-container {
         flex-direction: column;
         text-align: center;
         align-items: center;
         gap: 16px;
     }
+
     .footer-left {
         max-width: 100%;
         text-align: center;
         flex: none;
     }
+
     .footer-right {
         text-align: center;
     }
-    
+
     /* 行動端導覽列 */
     .nav-toggle {
         display: inline-flex;
@@ -1164,19 +1207,23 @@ body.menu-open {
     .comparison-table {
         min-width: 100%;
     }
-    .comparison-table th, 
+
+    .comparison-table th,
     .comparison-table td {
         padding: 14px 12px;
         font-size: 13px;
     }
+
     .comparison-table th.highlight-column {
         font-size: 15px;
     }
+
     .comparison-table th:first-child,
     .comparison-table td:first-child {
         width: 35%;
         font-weight: 600;
     }
+
     .comparison-table th:last-child,
     .comparison-table td:last-child {
         width: 65%;
@@ -1188,6 +1235,7 @@ body.menu-open {
         opacity: 0;
         transform: translateY(-10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1272,11 +1320,11 @@ body.menu-open {
 
 /* SKETCH 模式：hero 光暈改為更柔和的色塊 */
 [data-theme="sketch"] .hero-glow-1 {
-    background: radial-gradient(circle, hsl(250, 50%, 85%, 0.3) 0%, rgba(0,0,0,0) 70%);
+    background: radial-gradient(circle, hsl(250, 50%, 85%, 0.3) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 [data-theme="sketch"] .hero-glow-2 {
-    background: radial-gradient(circle, hsl(195, 50%, 85%, 0.2) 0%, rgba(0,0,0,0) 70%);
+    background: radial-gradient(circle, hsl(195, 50%, 85%, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 /* SKETCH 模式：gallery tab 調整 */

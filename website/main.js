@@ -6,6 +6,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
     const themeBtn = document.getElementById('theme-switch-btn');
 
+    function updateScreenshotThemes(theme) {
+        const isSketch = (theme === 'sketch');
+        const tabs = document.querySelectorAll('.gallery-tab');
+        tabs.forEach(tab => {
+            const darkPath = tab.getAttribute('data-img-dark');
+            const sketchPath = tab.getAttribute('data-img-sketch');
+            tab.setAttribute('data-img', isSketch ? sketchPath : darkPath);
+        });
+
+        const displayImg = document.getElementById('gallery-display-img');
+        const activeTab = document.querySelector('.gallery-tab.active');
+        if (displayImg && activeTab) {
+            const currentImgSrc = activeTab.getAttribute('data-img');
+            if (displayImg.getAttribute('src') !== currentImgSrc) {
+                displayImg.style.opacity = '0.3';
+                setTimeout(() => {
+                    displayImg.src = currentImgSrc;
+                    displayImg.style.opacity = '1';
+                }, 100);
+            }
+        }
+
+        const heroImg = document.getElementById('hero-main-img');
+        if (heroImg) {
+            const darkPath = heroImg.getAttribute('data-img-dark');
+            const sketchPath = heroImg.getAttribute('data-img-sketch');
+            const currentHeroSrc = isSketch ? sketchPath : darkPath;
+            if (heroImg.getAttribute('src') !== currentHeroSrc) {
+                heroImg.src = currentHeroSrc;
+            }
+        }
+    }
+
     function applyTheme(theme) {
         if (theme === 'sketch') {
             document.documentElement.setAttribute('data-theme', 'sketch');
@@ -13,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.documentElement.removeAttribute('data-theme');
         }
         localStorage.setItem('wincmp_theme', theme);
+        updateScreenshotThemes(theme);
     }
 
     // 載入時恢復已儲存的主題偏好，預設為 'sketch' (亮色手繪風)
@@ -68,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gallery_tab_dashboard: "Dashboard",
             gallery_tab_projects: "Projects",
             gallery_tab_terminal: "Built-in Terminal",
+            gallery_tab_db: "Database Explorer",
             gallery_tab_add_project: "Add Project",
             gallery_tab_resource: "Resource Monitor",
             gallery_tab_settings: "Preferences",
@@ -150,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gallery_tab_dashboard: "主控台",
             gallery_tab_projects: "專案管理",
             gallery_tab_terminal: "內建終端",
+            gallery_tab_db: "資料庫管理器",
             gallery_tab_add_project: "新增專案",
             gallery_tab_resource: "資源佔用監控",
             gallery_tab_settings: "偏好設定",
