@@ -249,7 +249,7 @@ export default function TerminalLogs() {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 p-5 overflow-y-auto font-mono text-[11px] leading-relaxed select-text"
+        className="flex-1 p-5 overflow-y-auto font-mono text-[11px] leading-relaxed select-text terminal-log-content"
         style={{ backgroundColor: 'var(--bg-deep)', color: 'var(--fg-2)' }}
       >
         {currentTabLogs.length > 0 ? (

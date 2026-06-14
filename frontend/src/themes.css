@@ -300,6 +300,28 @@ html[data-theme="sketch"] main {
   background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px !important;
 }
 
+/* Sketch theme: dependency manager modal content grid background */
+html[data-theme="sketch"] .dependency-manager-content {
+  background-color: var(--bg) !important;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
+    repeating-linear-gradient(90deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
+    repeating-linear-gradient(0deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px),
+    repeating-linear-gradient(90deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px) !important;
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px !important;
+}
+
+/* Sketch theme: terminal log ruled line via element borders to perfectly match font size */
+html[data-theme="sketch"] .terminal-log-content {
+  background-color: var(--bg-deep) !important;
+  background-image: none !important;
+}
+
+html[data-theme="sketch"] .terminal-log-content .whitespace-pre-wrap>div {
+  border-bottom: 1px solid var(--graph-line) !important;
+  border-radius: 0 !important;
+}
+
 /* Sketch theme: card hatching for empty/chart placeholders */
 :root[data-theme="sketch"] .sketch-hatch,
 :root[data-theme="sketch"] .ph-img {
