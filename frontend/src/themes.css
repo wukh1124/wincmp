@@ -234,7 +234,7 @@
   /* Semantic fills — tinted paper (solid colors in sketch to prevent grid bleeding) */
   --status-ok-bg: #c8e6c9;
   --status-warn-bg: #fff4a3;
-  --status-error-bg: #ffcdd2;
+  --status-error-bg: #ffeaec;
   --status-info-bg: #bbdefb;
 
   /* Typography — marker for display, clean sans for body */
