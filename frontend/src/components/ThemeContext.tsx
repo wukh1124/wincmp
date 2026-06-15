@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-export type ThemeId = 'xai' | 'claude' | 'sketch';
+export type ThemeId = 'carbon' | 'claude' | 'sketch';
 
 interface ThemeMeta {
   id: ThemeId;
@@ -10,7 +10,7 @@ interface ThemeMeta {
 }
 
 export const THEMES: ThemeMeta[] = [
-  { id: 'xai', name: 'xAI', nameZh: 'xAI', description: 'Dark monospace brutalism' },
+  { id: 'carbon', name: 'Carbon', nameZh: 'Carbon', description: 'Dark monospace brutalism' },
   { id: 'claude', name: 'Claude', nameZh: 'Claude', description: 'Warm cream light' },
   { id: 'sketch', name: 'Sketch', nameZh: 'Sketch 線稿', description: 'Wireframe on graph paper' },
 ];
@@ -39,7 +39,7 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'xai',
+  theme: 'carbon',
   setTheme: () => {},
   themes: THEMES,
   fontSize: 'small',
@@ -53,11 +53,14 @@ const FONT_SIZE_STORAGE_KEY = 'wincmp-font-size';
 function getInitialTheme(): ThemeId {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && ['xai', 'claude', 'sketch'].includes(stored)) {
+    if (stored && ['carbon', 'claude', 'sketch'].includes(stored)) {
       return stored as ThemeId;
     }
+    if (stored === 'xai') {
+      return 'carbon';
+    }
   } catch {}
-  return 'xai';
+  return 'carbon';
 }
 
 function getInitialFontSize(): FontSizeId {

@@ -39,6 +39,21 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [detected, setDetected] = useState(false);
   const [terminalProject, setTerminalProject] = useState<string | null>(null);
   const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
+
+  useEffect(() => {
+    if (config?.projects && config.projects.length > 0) {
+      const isShown = localStorage.getItem('wincmp_onboarding_shown') === 'true';
+      if (!isShown) {
+        setShowGuide(true);
+      }
+    }
+  }, [config]);
+
+  const dismissGuide = () => {
+    localStorage.setItem('wincmp_onboarding_shown', 'true');
+    setShowGuide(false);
+  };
 
   useEffect(() => {
     if (highlightedProjectName && config?.projects) {
@@ -291,20 +306,20 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden select-none" style={{ background: 'var(--bg)' }}>
+    <div className="flex flex-col h-full overflow-hidden select-none" style={{ background: 'var(--main-content-bg, var(--bg))' }}>
       {/* Header */}
       <div className="flex justify-between items-center px-4 py-2.5 shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
         <div className="flex items-center gap-2">
           <h1 className="text-xs font-bold" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("專案管理面板")}</h1>
-          <span className="text-[10px] hidden sm:inline" style={{ color: 'var(--meta)' }}>| {t("管理與運行網頁專案，支援靜態、PHP 及 Node/Python/Go 自訂專案")}</span>
+          <span className="text-[10px] hidden sm:inline" style={{ color: 'var(--meta)' }}> {t("管理與運行網頁專案，支援靜態、PHP 及 Node/Python/Go 自訂專案")}</span>
         </div>
-        <button onClick={() => handleOpenEditModal(null, null)} className="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition duration-200" style={{ background: 'var(--status-info)', color: '#fff' }}>
+        <button id="btn-add-project" onClick={() => handleOpenEditModal(null, null)} className="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition duration-200" style={{ background: 'var(--status-info)', color: '#fff' }}>
           <Plus size={12} /> {t("新增專案")}
         </button>
       </div>
 
       {/* Project List */}
-      <div className="flex-1 overflow-auto" style={{ background: 'var(--bg)' }}>
+      <div className="flex-1 overflow-auto" style={{ background: 'var(--main-content-bg, var(--bg))' }}>
         {config?.projects && config.projects.length > 0 ? (
           <table className="w-full text-left text-xs table-auto">
             <thead>
@@ -314,7 +329,74 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                 <th style={thStyle}>{t("本機網域")}</th>
                 <th style={thStyle}>{t("狀態")}</th>
                 <th style={thStyle}>{t("啟用")}</th>
-                <th style={{ ...thStyle, textAlign: 'center' }}>{t("操作")}</th>
+                <th style={{ ...thStyle, textAlign: 'center', position: 'relative' }}>
+                  {t("操作")}
+                  {showGuide && (
+                    <div className="absolute right-0 top-10 z-50 animate-fade-in w-80 text-left p-4 rounded-xl border font-normal" style={{
+                      background: 'var(--bg-deep)',
+                      borderColor: 'var(--border)',
+                      boxShadow: 'var(--shadow-lg)',
+                      color: 'var(--fg)',
+                      textTransform: 'none',
+                      letterSpacing: 'normal',
+                    }}>
+                      {/* 氣泡小箭頭 */}
+                      <div className="absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" style={{
+                        background: 'var(--bg-deep)',
+                        borderColor: 'var(--border)'
+                      }} />
+                      
+                      <div className="space-y-3">
+                        <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
+                          <span>💡 {t("操作按鈕快速指南")}</span>
+                        </div>
+                        <div className="space-y-2.5 text-[11px]" style={{ color: 'var(--fg-2)' }}>
+                          <div className="flex items-start gap-2">
+                            <span className="p-1 rounded text-white flex items-center shrink-0" style={{ background: 'var(--status-ok)' }}><Play size={10} /></span>
+                            <div className="leading-tight">
+                              <strong>{t("啟動專案 Runtime")}</strong>
+                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("啟動專案的 Node/Python/Go 運行環境")}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }}><Terminal size={10} /></span>
+                            <div className="leading-tight">
+                              <strong>{t("開啟專案終端")}</strong>
+                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("進入專案的 CLI 交互終端偵錯")}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)' }}><FolderOpen size={10} /></span>
+                            <div className="leading-tight">
+                              <strong>{t("開啟專案資料夾")}</strong>
+                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("開啟專案在硬碟上的物理根目錄")}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }}><Edit size={10} /></span>
+                            <div className="leading-tight">
+                              <strong>{t("編輯專案設定")}</strong>
+                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("調整網域、SSL 憑證、連接埠與啟動指令")}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-error)' }}><Trash2 size={10} /></span>
+                            <div className="leading-tight">
+                              <strong>{t("刪除專案")}</strong>
+                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("從面板移除（不會刪除硬碟檔案喔）")}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-end pt-1">
+                          <button onClick={(e) => { e.stopPropagation(); dismissGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90" style={{ background: 'var(--status-info)' }}>
+                            {t("好的，我知道了")}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -332,7 +414,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                     className={isHighlighted ? 'animate-highlight' : ''}
                     style={{
                       opacity: proj.enabled ? 1 : 0.5,
-                      background: isHighlighted ? 'var(--status-info-bg)' : 'transparent',
+                      background: isHighlighted ? 'var(--status-info-bg)' : 'var(--table-row-bg, transparent)',
                       transition: 'all 0.3s',
                     }}
                   >
@@ -408,7 +490,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                             </button>
                           )
                         )}
-                        <button onClick={() => setTerminalProject(proj.name)} className="p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("開啟專案終端")}>
+                        <button onClick={() => setTerminalProject(proj.name)} className="p-1.5 rounded-lg transition btn-open-terminal" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("開啟專案終端")}>
                           <Terminal size={11} />
                         </button>
                         <button onClick={() => handleOpenFolder(proj.root_path)} className="p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)' }} title={t("開啟專案資料夾")}>
@@ -618,7 +700,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
               {/* Footer */}
               <div className="px-6 py-4 flex justify-end gap-3 shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
-                <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-lg text-xs font-semibold transition" style={{ border: '1px solid var(--border)', color: 'var(--fg-2)' }}>{t("取消")}</button>
+                <button id="btn-cancel-add" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-lg text-xs font-semibold transition" style={{ border: '1px solid var(--border)', color: 'var(--fg-2)' }}>{t("取消")}</button>
                 {(editIndex !== null || detected) && (
                   <button onClick={handleSaveProject} className="px-4 py-2 rounded-lg text-xs font-semibold transition" style={{ background: 'var(--status-info)', color: '#fff' }}>{t("儲存設定")}</button>
                 )}

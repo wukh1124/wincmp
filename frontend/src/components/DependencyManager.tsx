@@ -188,7 +188,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                 <AlertTriangle size={12} /> {t("安裝失敗")}
               </span>
             </div>
-            <p className="text-[11px] mt-1 break-all p-1.5 rounded" style={{ color: 'var(--fg-2)', background: 'var(--surface)', fontFamily: 'var(--font-mono)' }}>{error}</p>
+            <p className="text-[11px] mt-1 break-all p-1.5 rounded select-text" style={{ color: 'var(--fg-2)', background: 'var(--surface)', fontFamily: 'var(--font-mono)', whiteSpace: 'pre-wrap', userSelect: 'text', WebkitUserSelect: 'text' }}>{error}</p>
             <button onClick={() => handleDownload(key)} className="mt-1 text-center py-1 rounded text-xs transition" style={{ background: 'var(--status-error-bg)', color: 'var(--status-error)' }}>
               {t("重試安裝")}
             </button>
@@ -218,7 +218,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0" style={{ background: 'var(--overlay-bg)', backdropFilter: 'blur(4px)' }} onClick={onClose} />
-      <div className="relative w-full max-w-2xl max-h-[90vh] rounded-2xl flex flex-col overflow-hidden animate-fade-in select-none" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', color: 'var(--fg)' }}>
+      <div className="relative w-full max-w-2xl max-h-[90vh] rounded-2xl flex flex-col overflow-hidden animate-fade-in select-none dependency-manager-modal" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)', color: 'var(--fg)' }}>
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
           <div className="flex items-center gap-2.5">
@@ -226,7 +226,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               <HardDrive size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>📦 {t("WinCMP 依賴庫管理")}</h2>
+              <h2 className="text-lg font-bold tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>{t("WinCMP 依賴庫管理")}</h2>
               <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{t("下載或升級本機 Web 開發依賴")}</p>
             </div>
           </div>
@@ -235,12 +235,12 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               <RefreshCw size={14} className={isFetchingRemote ? 'animate-spin' : ''} />
               <span>{isFetchingRemote ? t('獲取中...') : t('獲取最新')}</span>
             </button>
-            <button onClick={onClose} className="p-1.5 rounded-lg transition" style={{ color: 'var(--muted)' }}><X size={18} /></button>
+            <button id="btn-close-dep-manager" onClick={onClose} className="p-1.5 rounded-lg transition" style={{ color: 'var(--muted)' }}><X size={18} /></button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 dependency-manager-content">
           {isLoadingConfig ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3" style={{ color: 'var(--muted)' }}>
               <Loader2 size={32} className="animate-spin" style={{ color: 'var(--status-info)' }} />

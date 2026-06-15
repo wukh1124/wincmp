@@ -21,9 +21,27 @@ export default function Dashboard() {
   const [loadingServices, setLoadingServices] = useState<Record<string, boolean>>({});
   const [isScanning, setIsScanning] = useState(false);
   const [showDepManager, setShowDepManager] = useState(false);
-  const [missingCore, setMissingCore] = useState<{ caddy: boolean; php: boolean }>({ caddy: false, php: false });
+  const [missingCore, setMissingCore] = useState<{ caddy: boolean }>({ caddy: false });
   const [dismissBanner, setDismissBanner] = useState(false);
   const [portConflicts, setPortConflicts] = useState<Record<string, boolean>>({});
+  const [showDepGuide, setShowDepGuide] = useState(false);
+
+  useEffect(() => {
+    const isShown = localStorage.getItem('wincmp_dep_onboarding_shown') === 'true';
+    if (!isShown) {
+      setShowDepGuide(true);
+    }
+  }, []);
+
+  const dismissDepGuide = () => {
+    localStorage.setItem('wincmp_dep_onboarding_shown', 'true');
+    setShowDepGuide(false);
+  };
+
+  const handleOpenDepManager = () => {
+    dismissDepGuide();
+    setShowDepManager(true);
+  };
 
   useEffect(() => {
     async function initData() {
@@ -35,7 +53,7 @@ export default function Dashboard() {
         await updateStatus();
         await updateConflicts();
         const missing = await CheckMissingCoreDependencies();
-        setMissingCore({ caddy: !!missing?.caddy, php: !!missing?.php });
+        setMissingCore({ caddy: !!missing?.caddy });
       } catch (err) { console.error("初始化資料失敗:", err); }
     }
     initData();
@@ -61,7 +79,7 @@ export default function Dashboard() {
       setScanResult(res);
       await updateStatus();
       const missing = await CheckMissingCoreDependencies();
-      setMissingCore({ caddy: !!missing?.caddy, php: !!missing?.php });
+      setMissingCore({ caddy: !!missing?.caddy });
     } catch (err) { console.error("掃描二進位服務失敗:", err); }
     finally { setIsScanning(false); }
   };
@@ -133,17 +151,16 @@ export default function Dashboard() {
     <div className="p-6 overflow-y-auto h-full space-y-6">
 
       {/* ─── Missing Dependencies Banner ────────────────────── */}
-      {(missingCore.caddy || missingCore.php) && !dismissBanner && (
+      {missingCore.caddy && !dismissBanner && (
         <div className="relative rounded-xl p-4 pr-10 md:pr-14 flex flex-col md:flex-row justify-between items-start md:items-center gap-4" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', boxShadow: 'var(--shadow-md)' }}>
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="p-2.5 rounded-lg shrink-0" style={{ background: 'var(--status-error-bg)', color: 'var(--status-error)' }}>
               <AlertTriangle size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="font-bold block text-sm" style={{ color: 'var(--status-error)' }}>⚠️ {t("偵測到核心依賴元件缺失")}</span>
+              <span className="font-bold block text-sm" style={{ color: 'var(--status-error)' }}>⚠️ {t("偵測到核心依賴 Caddy 缺失")}</span>
               <span className="text-xs mt-0.5 block" style={{ color: 'var(--fg-2)' }}>
-                {t("本機未安裝：")}
-                {[missingCore.caddy && t("Caddy Web 伺服器"), missingCore.php && t("PHP 執行環境")].filter(Boolean).join(t("、"))}{t("。請先完成依賴安裝以確保專案與服務正常運作。")}
+                {t("本機未安裝 Caddy Web 伺服器。請先完成依賴安裝以確保服務正常運作。")}
               </span>
             </div>
           </div>
@@ -165,10 +182,49 @@ export default function Dashboard() {
           <p className="text-xs" style={{ color: 'var(--muted)' }}>{t("管理 Caddy, MariaDB, PHP-CGI 與背景開發服務")}</p>
         </div>
         <div className="flex gap-2.5">
-          <button onClick={() => setShowDepManager(true)} className="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
-            <Package size={13} style={{ color: 'var(--status-info)' }} />
-            <span>{t("依賴庫管理")}</span>
-          </button>
+          <div className="relative">
+            <button id="btn-open-dep-manager" onClick={handleOpenDepManager} className="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
+              <Package size={13} style={{ color: 'var(--status-info)' }} />
+              <span>{t("依賴庫管理")}</span>
+            </button>
+            {showDepGuide && (
+              <div className="absolute right-0 top-10 z-50 animate-fade-in w-72 text-left p-4 rounded-xl border font-normal" style={{
+                background: 'var(--bg-deep)',
+                borderColor: 'var(--border)',
+                boxShadow: 'var(--shadow-lg)',
+                color: 'var(--fg)',
+                textTransform: 'none',
+                letterSpacing: 'normal',
+              }}>
+                {/* 氣泡小箭頭 */}
+                <div className="absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" style={{
+                  background: 'var(--bg-deep)',
+                  borderColor: 'var(--border)'
+                }} />
+
+                <div className="space-y-3">
+                  <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
+                    <span>💡 {t("依賴管理指南")}</span>
+                  </div>
+                  <div className="space-y-2 text-[11px]" style={{ color: 'var(--fg-2)', lineHeight: '1.4' }}>
+                    <p>{t("在此您可以一鍵下載並安裝 Web 開發必備的依賴元件，包含：")}</p>
+                    <ul className="space-y-1 list-disc list-inside pl-1 text-[10px]" style={{ color: 'var(--fg)' }}>
+                      <li>{t("Caddy Web 伺服器 (反向代理)")}</li>
+                      <li>{t("MariaDB (本地資料庫)")}</li>
+                      <li>{t("PHP-CGI (PHP 多版本運行環境)")}</li>
+                      <li>{t("Composer、Node.js 等實用工具")}</li>
+                    </ul>
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button onClick={(e) => { e.stopPropagation(); dismissDepGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90" style={{ background: 'var(--status-info)' }}>
+                      {t("好的，我知道了")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <button onClick={handleScan} disabled={isScanning} className="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)', opacity: isScanning ? 0.5 : 1 }}>
             <RefreshCw size={13} className={isScanning ? 'animate-spin' : ''} />
             {isScanning ? t("掃描中...") : t("重新掃描服務")}
@@ -430,26 +486,13 @@ export default function Dashboard() {
             <div className="mt-2.5">
               {(() => {
                 const hasCaddy = !!scanResult?.CaddyList?.length;
-                const hasMariaDB = !!scanResult?.MariaDBList?.length;
-                const hasPHP = !!scanResult?.PHPList?.length;
-                const hasMailpit = !!scanResult?.MailpitList?.length;
-                let readyCount = 0;
-                if (hasCaddy) readyCount++;
-                if (hasMariaDB) readyCount++;
-                if (hasPHP) readyCount++;
-                if (hasMailpit) readyCount++;
-                const missing = [];
-                if (!hasCaddy) missing.push('Caddy');
-                if (!hasPHP) missing.push('PHP');
-                if (!hasMariaDB) missing.push('MariaDB');
-                if (!hasMailpit) missing.push('Mailpit');
                 return (
                   <>
-                    <span className="text-xl font-black tracking-tight" style={{ color: readyCount === 4 ? 'var(--fg)' : 'var(--status-warn)', fontFamily: 'var(--font-mono)' }}>
-                      {t("%s / 4 已就緒", readyCount)}
+                    <span className="text-xl font-black tracking-tight" style={{ color: hasCaddy ? 'var(--fg)' : 'var(--status-warn)', fontFamily: 'var(--font-mono)' }}>
+                      {hasCaddy ? t("Caddy 已就緒") : t("Caddy 未就緒")}
                     </span>
                     <p className="text-[10px] mt-2 font-medium" style={{ color: 'var(--meta)' }}>
-                      {readyCount === 4 ? t("所有核心依賴配置正常") : `${t("缺: ")}${missing.join(', ')}`}
+                      {hasCaddy ? t("核心依賴配置正常") : t("核心依賴 Caddy 缺失")}
                     </p>
                   </>
                 );

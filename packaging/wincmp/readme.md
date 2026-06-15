@@ -15,7 +15,7 @@ Inspired by XAMPP and Laragon, WinCMP provides a lightweight, **portable (instal
 
 ## ✨ Key Features
 
-- 🪶 **Extremely Lightweight**: Compiled with a Go core using the native Web rendering engine (WebView2). Zero Electron dependencies, fast startup, and minimal resource usage.
+- 🪶 **Lightweight**: Compiled with a Go core using the native Web rendering engine (WebView2). Zero Electron dependencies, fast startup, and minimal resource usage.
 - 🛡️ **No Admin Privileges Needed**: Runs without system administrator privileges, does not modify system environment variables, and does not write to the registry. *(Note: Automatic host file updates require UAC elevation if enabled).*
 - 🎨 **Modern UI/UX**: Built-in dark and light modes with an intuitive graphical interface for real-time service status monitoring.
 - 🔄 **PHP Multi-Version Support**: Manage multiple PHP versions simultaneously, with automatic load balancing for improved performance.

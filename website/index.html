@@ -7,7 +7,7 @@
     <title data-i18n="doc_title">WinCMP - Portable Local Development Control Panel for Windows (Caddy + MariaDB + PHP
         + Mailpit)</title>
     <meta name="description"
-        content="WinCMP is a lightweight, portable local development control panel for Windows. Integrates Caddy, MariaDB, PHP and Mailpit. Starts without admin rights, using extremely low memory.">
+        content="WinCMP is a lightweight, portable local development control panel for Windows. Integrates Caddy, MariaDB, PHP and Mailpit. Starts without admin rights, using low memory.">
     <meta name="keywords"
         content="WinCMP, Windows, Caddy, MariaDB, PHP, Mailpit, Local Dev Environment, XAMPP alternative, Laragon alternative, Wails, Go, React">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -47,8 +47,9 @@
 
                     <!-- 主題切換按鈕 -->
                     <button class="nav-btn-icon nav-btn-theme" id="theme-switch-btn" aria-label="切換主題" title="切換主題">
-                        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="4" />
                             <path d="M12 2v2" />
                             <path d="M12 20v2" />
@@ -59,14 +60,16 @@
                             <path d="m6.34 17.66-1.41 1.41" />
                             <path d="m19.07 4.93-1.41 1.41" />
                         </svg>
-                        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
                         </svg>
                     </button>
 
                     <!-- GitHub 連結 -->
-                    <a href="https://github.com/wukh1124/wincmp" target="_blank" class="nav-btn-icon" id="github-nav-btn" aria-label="GitHub" title="GitHub">
+                    <a href="https://github.com/wukh1124/wincmp" target="_blank" class="nav-btn-icon"
+                        id="github-nav-btn" aria-label="GitHub" title="GitHub">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path
@@ -92,7 +95,7 @@
                             id="latest-tag">Loading...</span>
                     </span>
                 </div>
-                <h1 class="hero-title" data-i18n="hero_title">Extreme Lightweight & Portable<br><span
+                <h1 class="hero-title" data-i18n="hero_title">Lightweight & Portable<br><span
                         class="gradient-text">Local Dev Control Panel</span> for Windows</h1>
                 <p class="hero-subtitle" data-i18n="hero_subtitle">
                     Integrated with <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> +
@@ -127,8 +130,8 @@
                         </div>
                         <div class="window-title" id="gallery-main-window-title">WinCMP Control Panel</div>
                     </div>
-                    <img src="screenshot/dashboard.png" alt="WinCMP Dashboard" class="hero-screenshot"
-                        id="hero-main-img">
+                    <img src="screenshot/dark/dashboard.png" alt="WinCMP Dashboard" class="hero-screenshot"
+                        id="hero-main-img" data-img-dark="screenshot/dark/dashboard.png" data-img-sketch="screenshot/sketch/dashboard.png">
                 </div>
             </div>
         </section>
@@ -148,10 +151,10 @@
                         <div class="feature-icon">
                             <i data-lucide="feather"></i>
                         </div>
-                        <h3 class="feature-card-title" data-i18n="feat_1_title">Extreme Lightweight</h3>
+                        <h3 class="feature-card-title" data-i18n="feat_1_title">Lightweight</h3>
                         <p class="feature-card-desc" data-i18n="feat_1_desc">Statically compiled in Go + Wails,
                             leveraging native OS WebView2 without Electron. Starts in milliseconds, idling memory usage
-                            is only about 30-50MB.</p>
+                            is about 150-250MB (due to WebView2).</p>
                     </div>
                     <!-- 卡片 2 -->
                     <div class="feature-card">
@@ -227,26 +230,29 @@
                 </div>
 
                 <div class="gallery-tabs" id="gallery-tabs">
-                    <button class="gallery-tab active" data-img="screenshot/dashboard.png">
+                    <button class="gallery-tab active" data-img-dark="screenshot/dark/dashboard.png" data-img-sketch="screenshot/sketch/dashboard.png">
                         <i data-lucide="layout-dashboard"></i> <span data-i18n="gallery_tab_dashboard">Dashboard</span>
                     </button>
-                    <button class="gallery-tab" data-img="screenshot/add_new_project.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/add_new_project.png" data-img-sketch="screenshot/sketch/add_new_project.png">
                         <i data-lucide="folder-plus"></i> <span data-i18n="gallery_tab_add_project">Add Project</span>
                     </button>
-                    <button class="gallery-tab" data-img="screenshot/projects.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/projects.png" data-img-sketch="screenshot/sketch/projects.png">
                         <i data-lucide="folder-kanban"></i> <span data-i18n="gallery_tab_projects">Projects</span>
                     </button>
-                    <button class="gallery-tab" data-img="screenshot/project_terminal.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/project_terminal.png" data-img-sketch="screenshot/sketch/project_terminal.png">
                         <i data-lucide="terminal-square"></i> <span data-i18n="gallery_tab_terminal">Built-in
                             Terminal</span>
                     </button>
-                    <button class="gallery-tab" data-img="screenshot/resource_monitor.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/db_explorer.png" data-img-sketch="screenshot/sketch/db_explorer.png">
+                        <i data-lucide="database"></i> <span data-i18n="gallery_tab_db">Database Explorer</span>
+                    </button>
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/resource_monitor.png" data-img-sketch="screenshot/sketch/resource_monitor.png">
                         <i data-lucide="activity"></i> <span data-i18n="gallery_tab_resource">Resource Monitor</span>
                     </button>
-                    <button class="gallery-tab" data-img="screenshot/settings.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/settings.png" data-img-sketch="screenshot/sketch/settings.png">
                         <i data-lucide="settings"></i> <span data-i18n="gallery_tab_settings">Preferences</span>
                     </button>
-                    <button class="gallery-tab" data-img="screenshot/wincmp_dependencies.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/wincmp_dependencies.png" data-img-sketch="screenshot/sketch/wincmp_dependencies.png">
                         <i data-lucide="download-cloud"></i> <span data-i18n="gallery_tab_dependencies">Dependency
                             Downloader</span>
                     </button>
@@ -262,7 +268,7 @@
                         <div class="window-title" id="gallery-window-title">WinCMP - Dashboard</div>
                     </div>
                     <div class="gallery-img-wrapper">
-                        <img src="screenshot/dashboard.png" alt="WinCMP screenshot" class="gallery-img"
+                        <img src="screenshot/dark/dashboard.png" alt="WinCMP screenshot" class="gallery-img"
                             id="gallery-display-img">
                     </div>
                 </div>
@@ -284,7 +290,7 @@
                             <tr>
                                 <th data-i18n="compare_head_metric">Metric</th>
                                 <th data-i18n="compare_head_v1">WinCMP v1 (Fyne)</th>
-                                <th class="highlight-column" data-i18n="compare_head_v2">WinCMP v2 (Wails) 🚀</th>
+                                <th class="highlight-column" data-i18n="compare_head_v2">WinCMP v2 (Wails)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -296,14 +302,13 @@
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_2_name">Startup Speed</td>
-                                <td data-i18n="compare_row_2_val_1">Slow (Fyne cold start lag)</td>
-                                <td class="highlight-column" data-i18n="compare_row_2_val_2">Instant (Optimized Go core)
-                                </td>
+                                <td data-i18n="compare_row_2_val_1">Instant (Same Go core)</td>
+                                <td class="highlight-column" data-i18n="compare_row_2_val_2">Instant (Same Go core)</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_3_name">Idle RAM</td>
                                 <td data-i18n="compare_row_3_val_1">Medium (~80-120MB)</td>
-                                <td class="highlight-column" data-i18n="compare_row_3_val_2">Low (~30-50MB)</td>
+                                <td class="highlight-column" data-i18n="compare_row_3_val_2">~150-250MB (Includes WebView2)</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_4_name">Privilege</td>
@@ -324,9 +329,8 @@
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_7_name">Email Sandbox</td>
-                                <td data-i18n="compare_row_7_val_1">None</td>
-                                <td class="highlight-column" data-i18n="compare_row_7_val_2">One-click Mailpit download
-                                </td>
+                                <td data-i18n="compare_row_7_val_1">Supported (Manual download required)</td>
+                                <td class="highlight-column" data-i18n="compare_row_7_val_2">Supported (One-click Mailpit download)</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_8_name">Config Apply</td>

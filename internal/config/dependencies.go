@@ -13,6 +13,7 @@ import (
 type DependencyItem struct {
 	Version string `json:"version"`
 	URL     string `json:"url"`
+	SHA256  string `json:"sha256,omitempty"`
 }
 
 // DependencyConfig 對應 dependencies.json 的結構，儲存所有依賴項

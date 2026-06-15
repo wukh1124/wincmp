@@ -30,7 +30,7 @@ wails build -debug
 # 正式發布編譯 (無視窗主控台，編譯後產出 wincmp.exe)
 wails build -clean
 
-# 壓縮並移除 symbols 的正式發布 (適用於極致體積優化)
+# 壓縮並移除 symbols 的正式發布 (適用於體積優化)
 wails build -clean -ldflags "-s -w"
 ```
 

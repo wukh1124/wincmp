@@ -59,7 +59,7 @@ const getTerminalTheme = (themeId: string) => {
         brightCyan: '#a9cce3',
         brightWhite: '#ffffff'
       };
-    case 'xai':
+    case 'carbon':
     default:
       return {
         background: '#08080a', // xAI 深色底色
@@ -178,14 +178,14 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
                 <p className="text-[10px] mt-0.5" style={{ color: 'var(--meta)', fontFamily: 'var(--font-mono)' }}>{projectName}</p>
               </div>
             </div>
-            <button onClick={onClose} className="transition" style={{ color: 'var(--muted)' }}><X size={16} /></button>
+            <button id="btn-close-terminal" onClick={onClose} className="transition" style={{ color: 'var(--muted)' }}><X size={16} /></button>
           </div>
 
           {/* Terminal Area */}
           <div className="flex-1 p-4 relative overflow-hidden flex flex-col justify-end" style={{ background: currentThemeConfig.background }}>
             <div ref={terminalRef} id="terminal-container" className="w-full h-full text-left" />
             {errorMsg && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-4 gap-3 text-center" style={{ background: theme === 'xai' ? 'rgba(8,8,10,0.9)' : 'rgba(240,240,240,0.9)' }}>
+              <div className="absolute inset-0 flex flex-col items-center justify-center px-8 py-4 gap-3 text-center" style={{ background: theme === 'carbon' ? 'rgba(8,8,10,0.9)' : 'rgba(240,240,240,0.9)' }}>
                 <ShieldAlert size={36} style={{ color: 'var(--status-error)' }} />
                 <div className="text-xs font-semibold" style={{ color: 'var(--status-error)' }}>{t("無法啟動終端")}</div>
                 <div className="text-[11px] px-3 py-2 rounded-lg max-w-full truncate" style={{ color: 'var(--meta)', background: 'rgba(0,0,0,0.4)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)' }}>

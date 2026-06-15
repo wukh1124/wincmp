@@ -168,7 +168,7 @@ export default function VersionUpdate() {
             <>
               {!releaseInfo.has_update ? (
                 // 已是最新版本狀態
-                <div className="rounded-xl p-5 flex items-center gap-3.5" style={{ background: 'color-mix(in srgb, var(--status-ok) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--status-ok) 20%, transparent)' }}>
+                <div className="rounded-xl p-5 flex items-center gap-3.5" style={{ background: 'color-mix(in srgb, var(--status-ok) 5%, var(--card))', border: '1px solid color-mix(in srgb, var(--status-ok) 20%, transparent)' }}>
                   <div className="p-2.5 rounded-lg shrink-0" style={{ background: 'color-mix(in srgb, var(--status-ok) 20%, transparent)', color: 'var(--status-ok)' }}>
                     <Check size={20} />
                   </div>
@@ -181,7 +181,7 @@ export default function VersionUpdate() {
                 </div>
               ) : (
                 // 偵測到新版本狀態
-                <div className="rounded-xl p-5 flex items-center justify-between gap-4" style={{ background: 'color-mix(in srgb, var(--status-info) 5%, transparent)', border: '1px solid color-mix(in srgb, var(--status-info) 20%, transparent)' }}>
+                <div className="rounded-xl p-5 flex items-center justify-between gap-4" style={{ background: 'color-mix(in srgb, var(--status-info) 5%, var(--card))', border: '1px solid color-mix(in srgb, var(--status-info) 20%, transparent)' }}>
                   <div className="flex items-center gap-3.5">
                     <div className="p-2.5 rounded-lg shrink-0" style={{ background: 'color-mix(in srgb, var(--status-info) 20%, transparent)', color: 'var(--status-info)' }}>
                       <ArrowUpCircle size={20} />

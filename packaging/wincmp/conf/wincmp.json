@@ -6,7 +6,7 @@
     "restore_last_state": true,
     "minimize_to_tray": false,
     "run_on_boot": false,
-    "theme": "Dark Gray",
+    "theme": "sketch",
     "language": "en-US",
     "last_service_state": {
       "caddy": false,

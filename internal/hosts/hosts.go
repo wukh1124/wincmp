@@ -25,6 +25,16 @@ func IsValidDomain(domain string) bool {
 	return validDomainPattern.MatchString(domain)
 }
 
+// CheckWritable 檢查 hosts 檔案是否可寫（通常需要管理員權限）
+func CheckWritable() error {
+	f, err := os.OpenFile(HostsFilePath, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("%s: %w", i18n.T("無法開啟 hosts 檔案進行寫入 (可能需要管理員權限)"), err)
+	}
+	f.Close()
+	return nil
+}
+
 // BackupHosts 將目前的 hosts 備份至指定的備份目錄
 func BackupHosts(baseDir string) (string, error) {
 	backupDir := filepath.Join(baseDir, "data", "backup", "hosts")

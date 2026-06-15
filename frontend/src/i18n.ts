@@ -58,6 +58,9 @@ export const enTranslations: Record<string, string> = {
   "打開 Logs 控制台": "Expand Logs Console",
   "系統提示": "System Notice",
   "系統確認": "System Confirmation",
+  "Hosts 更新失敗": "Hosts Update Failed",
+  "無法寫入 Hosts 檔案。這通常是因為權限不足。\n請嘗試以「系統管理員身分」執行 WinCMP，或者手動將網域新增至 Hosts 檔案中。": "Failed to write to the Hosts file. This is usually due to insufficient privileges.\nPlease try running WinCMP as an administrator, or manually add the domains to the Hosts file.",
+  "本次啟動不再提醒": "Don't remind me again in this session",
   "您有尚未儲存的設定變更，在離開前是否要先保存？": "You have unsaved settings. Would you like to save them before leaving?",
   "否，不保存立即離開": "No, leave without saving",
   "是，保存後離開": "Yes, save and leave",
@@ -107,9 +110,12 @@ export const enTranslations: Record<string, string> = {
   "(核心配置)": "(Core Config)",
 
   // Dashboard.tsx
-  "偵測到核心依賴元件缺失": "Core Dependencies Missing",
-  "本機未安裝：": "Not installed locally: ",
-  "。請先完成依賴安裝以確保專案與服務正常運作。": ". Please download dependencies to ensure services run properly.",
+  "偵測到核心依賴 Caddy 缺失": "Core Dependency Caddy Missing",
+  "本機未安裝 Caddy Web 伺服器。請先完成依賴安裝以確保服務正常運作。": "Caddy Web Server is not installed locally. Please install the dependency first to ensure services run properly.",
+  "Caddy 已就緒": "Caddy Ready",
+  "Caddy 未就緒": "Caddy Not Ready",
+  "核心依賴 Caddy 缺失": "Core Dependency Caddy Missing",
+  "核心依賴配置正常": "Core dependency configured normally",
   "立即下載": "Download",
   "關閉": "Close",
   "Caddy Web 伺服器": "Caddy Web Server",
@@ -371,6 +377,23 @@ export const enTranslations: Record<string, string> = {
   "Caddy/PHP 靜態託管": "Caddy/PHP Static Hosting",
   "無 Runtime": "No Runtime",
 
+  // 專案操作引導教學
+  "操作按鈕快速指南": "Actions Guide",
+  "好的，我知道了": "Got it!",
+  "啟動專案的 Node/Python/Go 運行環境": "Start the project's Node/Python/Go execution environment",
+  "進入專案的 CLI 交互終端偵錯": "Enter the project's CLI interactive terminal for debugging",
+  "開啟專案在硬碟上的物理根目錄": "Open the project's physical root directory on disk",
+  "調整網域、SSL 憑證、連接埠與啟動指令": "Configure domains, SSL certificates, ports, and startup commands",
+  "從面板移除（不會刪除硬碟檔案喔）": "Remove from panel (does not delete actual files on disk)",
+
+  // 依賴管理引導教學
+  "依賴管理指南": "Dependency Management Guide",
+  "在此您可以一鍵下載並安裝 Web 開發必備的依賴元件，包含：": "Here you can download and install essential Web development dependencies with one click, including:",
+  "Caddy Web 伺服器 (反向代理)": "Caddy Web Server (Reverse Proxy)",
+  "MariaDB (本地資料庫)": "MariaDB (Local Database)",
+  "PHP-CGI (PHP 多版本運行環境)": "PHP-CGI (PHP Multi-version Runtime)",
+  "Composer、Node.js 等實用工具": "Composer, Node.js and other tools",
+
   // DBExplorer.tsx
   "載入失敗": "Load Failed",
   "開啟 HeidiSQL 失敗": "Failed to open HeidiSQL",
@@ -379,7 +402,7 @@ export const enTranslations: Record<string, string> = {
   "重新整理": "Refresh",
   "Open in HeidiSQL": "Open in HeidiSQL",
   "MariaDB 尚未啟動": "MariaDB is not running",
-  "請先前往 **Dashboard** 頁面啟動 MariaDB 資料庫服務，再使用 Database Explorer 進行瀏覽。": "Please visit the Dashboard page to start the MariaDB database service first before using the Database Explorer.",
+  "請先前往 儀表板 頁面啟動 MariaDB 資料庫服務，再使用 Database Explorer 進行瀏覽。": "Please visit the Dashboard page to start the MariaDB database service first before using the Database Explorer.",
   "的資料表：": "'s tables:",
   "請選擇左側的資料庫以檢視資料表": "Please select a database from the left to view its tables",
 

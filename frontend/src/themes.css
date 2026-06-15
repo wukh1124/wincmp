@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
  * WinCMP Theme System — Three Independent Designs
  *
- * xAI:    Dark-first monospace brutalism. #1f2228 canvas, white
+ * Carbon: Dark-first monospace brutalism. #1f2228 canvas, white
  *         as the sole voice, GeistMono display, zero shadows.
  * Claude:  Warm cream light with terracotta accent. Clean,
  *          modern, approachable — Anthropic's signature warmth.
@@ -40,12 +40,13 @@
   --font-size-small: 16px;
   --font-size-medium: 18px;
   --font-size-large: 20px;
+  --main-content-bg: var(--bg);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * THEME: xAI — Monochrome brutalism
+ * THEME: Carbon — Monochrome brutalism
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-:root[data-theme="xai"] {
+:root[data-theme="carbon"] {
   /* Surface */
   --bg: #1f2228;
   --bg-deep: #181a1f;
@@ -53,6 +54,7 @@
   --surface-warm: rgba(255, 255, 255, 0.05);
   --card: rgba(255, 255, 255, 0.04);
   --card-hover: rgba(255, 255, 255, 0.07);
+  --table-row-bg: transparent;
 
   /* Foreground — opacity ramp */
   --fg: #ffffff;
@@ -124,6 +126,7 @@
   --surface-warm: #f5f2ed;
   --card: #ffffff;
   --card-hover: #faf8f4;
+  --table-row-bg: transparent;
 
   /* Foreground — warm charcoal, not pure black */
   --fg: #1a1916;
@@ -195,6 +198,7 @@
   --surface-warm: #f5f0e4;
   --card: #fffef8;
   --card-hover: #fff9e8;
+  --table-row-bg: var(--card);
 
   /* Foreground — marker ink, not pure black */
   --fg: #2d2b28;
@@ -227,11 +231,11 @@
   --status-error: #c62828;
   --status-info: #1565c0;
 
-  /* Semantic fills — tinted paper */
-  --status-ok-bg: rgba(46, 125, 50, 0.08);
-  --status-warn-bg: rgba(230, 81, 0, 0.08);
-  --status-error-bg: rgba(198, 40, 40, 0.08);
-  --status-info-bg: rgba(21, 101, 192, 0.08);
+  /* Semantic fills — tinted paper (solid colors in sketch to prevent grid bleeding) */
+  --status-ok-bg: #c8e6c9;
+  --status-warn-bg: #fff4a3;
+  --status-error-bg: #ffeaec;
+  --status-info-bg: #bbdefb;
 
   /* Typography — marker for display, clean sans for body */
   --font-display: "Comic Neue", "Caveat", cursive, sans-serif;
@@ -271,30 +275,51 @@
   /* Hatching pattern for placeholders */
   --hatch-color: rgba(140, 130, 110, 0.15);
   --hatch-size: 8px;
+  --main-content-bg: transparent;
 }
 
 /* ─── Sketch theme: graph paper background ─────────────────────
- * Uses CSS `background` shorthand with !important to override
- * the inline `backgroundColor` on the app's root <div>.
- * The shorthand sets color + image atomically. */
+ * Applied only to the right main content area. Left sidebar remains solid. */
 html[data-theme="sketch"] #root>div {
-  background:
-    var(--bg) repeating-linear-gradient(0deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
-    repeating-linear-gradient(90deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
-    repeating-linear-gradient(0deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px),
-    repeating-linear-gradient(90deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px) !important;
-  background-size: auto, 100px 100px, 100px 100px, 20px 20px, 20px 20px !important;
+  background-color: var(--bg) !important;
+  background-image: none !important;
 }
 
-/* Also on html/body as fallback */
 html[data-theme="sketch"] {
   background-color: var(--bg);
+  background-image: none;
+}
+
+html[data-theme="sketch"] main {
+  background-color: var(--bg) !important;
   background-image:
     repeating-linear-gradient(0deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
     repeating-linear-gradient(90deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
     repeating-linear-gradient(0deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px),
-    repeating-linear-gradient(90deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px);
-  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+    repeating-linear-gradient(90deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px) !important;
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px !important;
+}
+
+/* Sketch theme: dependency manager modal content grid background */
+html[data-theme="sketch"] .dependency-manager-content {
+  background-color: var(--bg) !important;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
+    repeating-linear-gradient(90deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
+    repeating-linear-gradient(0deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px),
+    repeating-linear-gradient(90deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px) !important;
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px !important;
+}
+
+/* Sketch theme: terminal log ruled line via element borders to perfectly match font size */
+html[data-theme="sketch"] .terminal-log-content {
+  background-color: var(--bg-deep) !important;
+  background-image: none !important;
+}
+
+html[data-theme="sketch"] .terminal-log-content .whitespace-pre-wrap>div {
+  border-bottom: 1px solid var(--graph-line) !important;
+  border-radius: 0 !important;
 }
 
 /* Sketch theme: card hatching for empty/chart placeholders */
@@ -350,7 +375,7 @@ html[data-theme="sketch"] {
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * Default theme (xAI) — applied when no data-theme is set
+ * Default theme (Carbon) — applied when no data-theme is set
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 :root:not([data-theme]) {
   /* Surface */
@@ -360,6 +385,7 @@ html[data-theme="sketch"] {
   --surface-warm: rgba(255, 255, 255, 0.05);
   --card: rgba(255, 255, 255, 0.04);
   --card-hover: rgba(255, 255, 255, 0.07);
+  --table-row-bg: transparent;
 
   /* Foreground */
   --fg: #ffffff;

@@ -1,12 +1,13 @@
 {
-  "name": "wincmp-redesign",
+  "name": "wincmp-ui",
   "private": true,
   "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "screenshot": "node scripts/capture.cjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

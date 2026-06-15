@@ -6,6 +6,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
     const themeBtn = document.getElementById('theme-switch-btn');
 
+    function updateScreenshotThemes(theme) {
+        const isSketch = (theme === 'sketch');
+        const tabs = document.querySelectorAll('.gallery-tab');
+        tabs.forEach(tab => {
+            const darkPath = tab.getAttribute('data-img-dark');
+            const sketchPath = tab.getAttribute('data-img-sketch');
+            tab.setAttribute('data-img', isSketch ? sketchPath : darkPath);
+        });
+
+        const displayImg = document.getElementById('gallery-display-img');
+        const activeTab = document.querySelector('.gallery-tab.active');
+        if (displayImg && activeTab) {
+            const currentImgSrc = activeTab.getAttribute('data-img');
+            if (displayImg.getAttribute('src') !== currentImgSrc) {
+                displayImg.style.opacity = '0.3';
+                setTimeout(() => {
+                    displayImg.src = currentImgSrc;
+                    displayImg.style.opacity = '1';
+                }, 100);
+            }
+        }
+
+        const heroImg = document.getElementById('hero-main-img');
+        if (heroImg) {
+            const darkPath = heroImg.getAttribute('data-img-dark');
+            const sketchPath = heroImg.getAttribute('data-img-sketch');
+            const currentHeroSrc = isSketch ? sketchPath : darkPath;
+            if (heroImg.getAttribute('src') !== currentHeroSrc) {
+                heroImg.src = currentHeroSrc;
+            }
+        }
+    }
+
     function applyTheme(theme) {
         if (theme === 'sketch') {
             document.documentElement.setAttribute('data-theme', 'sketch');
@@ -13,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.documentElement.removeAttribute('data-theme');
         }
         localStorage.setItem('wincmp_theme', theme);
+        updateScreenshotThemes(theme);
     }
 
     // 載入時恢復已儲存的主題偏好，預設為 'sketch' (亮色手繪風)
@@ -43,14 +77,14 @@ document.addEventListener('DOMContentLoaded', () => {
             theme_btn_dark: "Dark",
             theme_btn_sketch: "Sketch",
             hero_badge_prefix: "Latest Version:",
-            hero_title: "Extreme Lightweight & Portable<br><span class=\"gradient-text\">Local Dev Control Panel</span> for Windows",
+            hero_title: "Lightweight & Portable<br><span class=\"gradient-text\">Local Dev Control Panel</span> for Windows",
             hero_subtitle: "Integrated with <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> and interactive terminal. Core development services run entirely without admin privileges. Fast, lightweight, and hassle-free!",
             hero_download_btn: "Download Now (WinCMP.exe)",
             hero_github_btn: "View GitHub Repo",
             features_title: "Why Choose WinCMP?",
             features_subtitle: "Experience the ultimate local Web development environment on Windows with zero setup and maximum performance!",
-            feat_1_title: "Extreme Lightweight",
-            feat_1_desc: "Statically compiled in Go + Wails, leveraging native OS WebView2 without Electron. Starts in milliseconds, idling memory usage is only about 30-50MB.",
+            feat_1_title: "Lightweight",
+            feat_1_desc: "Statically compiled in Go + Wails, leveraging native OS WebView2 without Electron. Starts in milliseconds, idling memory usage is about 150-250MB (due to WebView2).",
             feat_2_title: "Admin-Privilege-Free Core",
             feat_2_desc: "Caddy, PHP-CGI, MariaDB, and Mailpit run entirely under restricted user permissions. No system registry writes or path pollution, fully portable.",
             feat_3_title: "Interactive Terminal Drawer",
@@ -68,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gallery_tab_dashboard: "Dashboard",
             gallery_tab_projects: "Projects",
             gallery_tab_terminal: "Built-in Terminal",
+            gallery_tab_db: "Database Explorer",
             gallery_tab_add_project: "Add Project",
             gallery_tab_resource: "Resource Monitor",
             gallery_tab_settings: "Preferences",
@@ -76,16 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
             compare_subtitle: "Hardcore metrics comparison between WinCMP v1 and v2 on Windows:",
             compare_head_metric: "Metric",
             compare_head_v1: "WinCMP v1 (Fyne)",
-            compare_head_v2: "WinCMP v2 (Wails) 🚀",
+            compare_head_v2: "WinCMP v2 (Wails)",
             compare_row_1_name: "Architecture",
             compare_row_1_val_1: "Go 1.20 + Fyne 2.3 (Native GUI)",
             compare_row_1_val_2: "Go 1.26 + Wails v2 + React 18",
             compare_row_2_name: "Startup Speed",
-            compare_row_2_val_1: "Slow (Fyne cold start lag)",
-            compare_row_2_val_2: "Instant (Optimized Go core)",
+            compare_row_2_val_1: "Instant (Same Go core)",
+            compare_row_2_val_2: "Instant (Same Go core)",
             compare_row_3_name: "Idle RAM",
             compare_row_3_val_1: "Medium (~80-120MB)",
-            compare_row_3_val_2: "Low (~30-50MB)",
+            compare_row_3_val_2: "~150-250MB (Includes WebView2)",
             compare_row_4_name: "Privilege",
             compare_row_4_val_1: "Requires Admin",
             compare_row_4_val_2: "User Space (No Admin)",
@@ -96,14 +131,14 @@ document.addEventListener('DOMContentLoaded', () => {
             compare_row_6_val_1: "None",
             compare_row_6_val_2: "Built-in ConPTY + xterm.js drawer",
             compare_row_7_name: "Email Sandbox",
-            compare_row_7_val_1: "None",
-            compare_row_7_val_2: "One-click Mailpit download",
+            compare_row_7_val_1: "Supported (Manual download required)",
+            compare_row_7_val_2: "Supported (One-click Mailpit download)",
             compare_row_8_name: "Config Apply",
             compare_row_8_val_1: "Manual restart required",
             compare_row_8_val_2: "Auto Hot Reload (Zero Downtime)",
             compare_table_note: "* Note: RAM usage refers to the Control Panel UI itself in idle state.",
             arch_title: "WinCMP Architecture",
-            arch_subtitle: "Here is a glimpse of how the backend is designed for high performance and isolation:",
+            arch_subtitle: "For high performance and isolation:",
             arch_card_1_title: "Dynamic Env Isolation",
             arch_card_1_desc: "Instead of modifying Windows system global variables, WinCMP creates a temporary execution path only for the active project. This allows multiple projects to run different PHP/Node versions simultaneously without any system pollution.",
             arch_card_2_title: "Smart Ports & Seamless Reload",
@@ -115,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             footer_desc: "WinCMP gratefully integrates and acknowledges open-source projects including Caddy, MariaDB, PHP, Mailpit, Node.js, Composer, HeidiSQL, Wails, and React."
         },
         zh: {
-            doc_title: "WinCMP - 專為 Windows 打造的極致輕量、免安裝本地開發控制面板 (整合 Caddy + MariaDB + PHP + Mailpit)",
+            doc_title: "WinCMP - 專為 Windows 打造的輕量、免安裝本地開發控制面板 (整合 Caddy + MariaDB + PHP + Mailpit)",
             nav_features: "特色功能",
             nav_gallery: "介面展示",
             nav_comparison: "性能對比",
@@ -125,14 +160,14 @@ document.addEventListener('DOMContentLoaded', () => {
             theme_btn_dark: "Dark",
             theme_btn_sketch: "Sketch",
             hero_badge_prefix: "最新版本:",
-            hero_title: "專為 Windows 打造的<br><span class=\"gradient-text\">極致輕量免安裝</span>開發面板",
-            hero_subtitle: "整合 <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> 與專案互動終端。核心開發服務啟動免管理員權限，極速、輕量、無負擔！",
+            hero_title: "專為 Windows 打造的<br><span class=\"gradient-text\">輕量快速免安裝</span>開發面板",
+            hero_subtitle: "整合 <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> 與專案互動終端。核心開發服務啟動免管理員權限，輕量、快速、無負擔！",
             hero_download_btn: "立即下載 (WinCMP.exe)",
             hero_github_btn: "瀏覽 GitHub 倉庫",
             features_title: "為什麼選擇 WinCMP？",
-            features_subtitle: "為開發者提供極致的 Windows 本地 Web 開發體驗，零配置、高效能，讓開發更輕鬆流暢！",
-            feat_1_title: "極致輕量 (Statically Compiled)",
-            feat_1_desc: "基於 Go + Wails 靜態編譯，直接調用 Windows 原生 WebView2 引擎，無需 Electron 運作。啟動僅需毫秒級，日常閒置記憶體佔用僅約 30-50MB。",
+            features_subtitle: "為開發者提供的 Windows 本地 Web 開發體驗，零配置、高效能，讓開發更輕鬆流暢！",
+            feat_1_title: "輕量 (Statically Compiled)",
+            feat_1_desc: "基於 Go + Wails 靜態編譯，直接調用 Windows 原生 WebView2 引擎，無需 Electron 運作。啟動僅需毫秒級，日常閒置記憶體佔用約 150-250MB (含 WebView2 引擎)。",
             feat_2_title: "核心服務免 Admin 權限",
             feat_2_desc: "Caddy、PHP-CGI、MariaDB、Mailpit 啟動完全執行在受限的用戶權限下，免寫系統登錄檔、免污染全域環境變數，完全綠色可攜。",
             feat_3_title: "整合式互動終端 Drawer",
@@ -150,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gallery_tab_dashboard: "主控台",
             gallery_tab_projects: "專案管理",
             gallery_tab_terminal: "內建終端",
+            gallery_tab_db: "資料庫管理器",
             gallery_tab_add_project: "新增專案",
             gallery_tab_resource: "資源佔用監控",
             gallery_tab_settings: "偏好設定",
@@ -158,16 +194,16 @@ document.addEventListener('DOMContentLoaded', () => {
             compare_subtitle: "WinCMP v1 與 v2 在 Windows 上的各項硬派技術指標對比：",
             compare_head_metric: "項目",
             compare_head_v1: "WinCMP v1 (Fyne)",
-            compare_head_v2: "WinCMP v2 (Wails) 🚀",
+            compare_head_v2: "WinCMP v2 (Wails)",
             compare_row_1_name: "底層架構",
             compare_row_1_val_1: "Go 1.20 + Fyne 2.3 (原生 GUI)",
             compare_row_1_val_2: "Go 1.26 + Wails v2 + React 18",
             compare_row_2_name: "啟動速度",
-            compare_row_2_val_1: "較慢 (Fyne 冷啟動延遲)",
-            compare_row_2_val_2: "極速 (優化 Go 核心)",
+            compare_row_2_val_1: "極速 (相同 Go 核心)",
+            compare_row_2_val_2: "極速 (相同 Go 核心)",
             compare_row_3_name: "記憶體佔用",
             compare_row_3_val_1: "中等 (~80-120MB)",
-            compare_row_3_val_2: "極低 (~30-50MB)",
+            compare_row_3_val_2: "約 150-250MB (含 WebView2)",
             compare_row_4_name: "啟動權限",
             compare_row_4_val_1: "需要管理員權限",
             compare_row_4_val_2: "用戶空間 (免管理員權限)",
@@ -178,14 +214,14 @@ document.addEventListener('DOMContentLoaded', () => {
             compare_row_6_val_1: "無",
             compare_row_6_val_2: "內建 ConPTY + xterm.js 抽屜終端",
             compare_row_7_name: "郵件測試",
-            compare_row_7_val_1: "無",
-            compare_row_7_val_2: "可一鍵下載 Mailpit",
+            compare_row_7_val_1: "支援 (需手動下載)",
+            compare_row_7_val_2: "支援 (內建一鍵下載 Mailpit)",
             compare_row_8_name: "配置生效",
             compare_row_8_val_1: "需要手動重啟",
             compare_row_8_val_2: "自動熱重載 (零停機)",
             compare_table_note: "* 註：記憶體佔用指控制面板主程式本身的閒置狀態。",
             arch_title: "WinCMP 底層運作原理",
-            arch_subtitle: "後端寫了許多巧思，確保極致的效能與乾淨的環境隔離：",
+            arch_subtitle: "確保的效能與乾淨的環境隔離：",
             arch_card_1_title: "動態環境變數隔離",
             arch_card_1_desc: "不修改 Windows 系統全域設定，WinCMP 只在啟動專案時為其建立暫時的執行路徑。這能讓不同的專案同時執行不同版本的 PHP 或 Node，彼此互不干擾，系統也依然保持綠色乾淨！",
             arch_card_2_title: "智慧連接埠與無縫重載",

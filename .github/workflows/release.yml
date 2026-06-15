@@ -41,6 +41,11 @@ jobs:
           cd frontend
           npm ci
 
+      - name: Validate Dependencies Link and SHA-256
+        shell: pwsh
+        run: |
+          go run scripts/check_deps.go --check
+
       - name: Run Release Script
         shell: pwsh
         run: |

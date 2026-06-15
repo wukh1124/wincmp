@@ -625,6 +625,9 @@ func (a *App) triggerHostsUpdate() {
 
 	var allDomains []string
 	for _, proj := range a.appCfg.Projects {
+		if !proj.Enabled {
+			continue
+		}
 		allDomains = append(allDomains, proj.Domains...)
 	}
 
@@ -662,7 +665,15 @@ func (a *App) triggerHostsUpdate() {
 		return
 	}
 
-	// 備份 Hosts
+	// 1. 預檢 hosts 可寫入性，避免在無權限時產生無效的備份檔
+	if err := hosts.CheckWritable(); err != nil {
+		errMsg := i18n.T("更新系統 Hosts 失敗 (可能需要管理員權限)")
+		a.handleErrorLog("system", errMsg, err)
+		runtime.EventsEmit(a.ctx, "hosts_update_failed", fmt.Sprintf("%v", err))
+		return
+	}
+
+	// 2. 備份 Hosts
 	backupPath, err := hosts.BackupHosts(a.baseDir)
 	if err != nil {
 		a.handleErrorLog("system", i18n.T("備份 Hosts 失敗 (將停止更新)"), err)
@@ -670,21 +681,20 @@ func (a *App) triggerHostsUpdate() {
 	}
 	a.handleLog("system", i18n.Tfmt("✅ 已備份現有 Hosts 到: %s", backupPath))
 
-	// 更新 Hosts
+	// 3. 更新 Hosts
 	err = hosts.UpdateHosts(validMissing)
 	if err != nil {
 		errMsg := i18n.T("更新系統 Hosts 失敗 (可能需要管理員權限)")
 		a.handleErrorLog("system", errMsg, err)
 		
-		// 彈出 Wails 對話框提示用戶
-		go func() {
-			_, _ = runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
-				Type:          runtime.WarningDialog,
-				Title:         i18n.T("Hosts 更新失敗"),
-				Message:       i18n.T("無法寫入 Hosts 檔案。這通常是因為權限不足。\n請嘗試以「系統管理員身分」執行 WinCMP，或者手動將網域新增至 Hosts 檔案中。") + "\n\n" + fmt.Sprintf("Error: %v", err),
-				Buttons:       []string{i18n.T("確定")},
-			})
-		}()
+		// 既然更新失敗，且剛才已經建立了備份檔，就將其移除，避免殘留無效備份
+		if errRemove := os.Remove(backupPath); errRemove != nil {
+			a.handleErrorLog("system", i18n.T("移除無效備份檔失敗"), errRemove)
+		} else {
+			a.handleLog("system", i18n.T("已自動清除無效的 Hosts 備份檔"))
+		}
+
+		runtime.EventsEmit(a.ctx, "hosts_update_failed", fmt.Sprintf("%v", err))
 		return
 	}
 
