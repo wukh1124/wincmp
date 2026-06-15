@@ -84,7 +84,7 @@ const themes = [
 (async () => {
     // 啟動瀏覽器
     const browser = await chromium.launch({ headless: true });
-    // 設定 1264x729 (哥哥指定的理想擷圖解析度)，deviceScaleFactor: 2 輸出雙倍清晰截圖
+    // 設定 1264x729 (指定的理想擷圖解析度)，deviceScaleFactor: 2 輸出雙倍清晰截圖
     const context = await browser.newContext({
         viewport: { width: 1264, height: 729 },
         deviceScaleFactor: 2
