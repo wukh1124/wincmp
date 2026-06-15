@@ -163,6 +163,30 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 		return
 	}
 
+	// 2.5 進行 SHA-256 完整性校驗
+	if item.SHA256 != "" {
+		a.handleLog("system", i18n.Tfmt("🛡️ 正在校驗 %s 的完整性...", name))
+		shaVal, shaErr := downloader.CalculateSHA256(destZip)
+		if shaErr != nil {
+			a.handleErrorLog("system", i18n.Tfmt("❌ 計算 %s 的 SHA-256 失敗", name), shaErr)
+			a.emitProgress(key, "error", 0, 0, 0, shaErr.Error())
+			os.Remove(destZip)
+			return
+		}
+		if !strings.EqualFold(shaVal, item.SHA256) {
+			mismatchErr := fmt.Errorf(
+				i18n.Tfmt("SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。\n\n💡 建議指引：\n1. 請先嘗試在依賴管理面板點擊「獲取最新」，然後重試下載。\n2. 若問題持續，請手動下載：%s\n3. 並解壓放置於以下 bin 目錄位置：%s", item.URL, destDir),
+			)
+			a.handleErrorLog("system", i18n.Tfmt("❌ %s 的完整性校驗失敗", name), mismatchErr)
+			a.emitProgress(key, "error", 0, 0, 0, mismatchErr.Error())
+			os.Remove(destZip)
+			return
+		}
+		a.handleLog("system", i18n.Tfmt("🛡️ %s 的 SHA-256 校驗成功！", name))
+	} else {
+		a.handleLog("system", i18n.Tfmt("ℹ️ %s 未設定 SHA-256 校驗值，跳過完整性檢查", name))
+	}
+
 	// 3. 解壓縮處理
 	if strings.HasSuffix(destZip, ".zip") {
 		a.handleLog("system", i18n.Tfmt("📦 正在解壓縮 %s...", name))

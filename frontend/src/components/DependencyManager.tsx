@@ -188,7 +188,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                 <AlertTriangle size={12} /> {t("安裝失敗")}
               </span>
             </div>
-            <p className="text-[11px] mt-1 break-all p-1.5 rounded" style={{ color: 'var(--fg-2)', background: 'var(--surface)', fontFamily: 'var(--font-mono)' }}>{error}</p>
+            <p className="text-[11px] mt-1 break-all p-1.5 rounded select-text" style={{ color: 'var(--fg-2)', background: 'var(--surface)', fontFamily: 'var(--font-mono)', whiteSpace: 'pre-wrap', userSelect: 'text', WebkitUserSelect: 'text' }}>{error}</p>
             <button onClick={() => handleDownload(key)} className="mt-1 text-center py-1 rounded text-xs transition" style={{ background: 'var(--status-error-bg)', color: 'var(--status-error)' }}>
               {t("重試安裝")}
             </button>

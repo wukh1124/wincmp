@@ -2,6 +2,7 @@ package downloader
 
 import (
 	"archive/zip"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
@@ -119,4 +120,20 @@ func Unzip(srcZip, destDir string) error {
 	}
 
 	return nil
+}
+
+// CalculateSHA256 計算指定本機檔案的 SHA-256 雜湊值並傳回十六進位字串
+func CalculateSHA256(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }

@@ -3,6 +3,7 @@
 ## [2.0.3] 2026-06-15
 
 ### Added
+- **SHA-256 Dependency Integrity Verification**: Implemented automatic SHA-256 integrity verification after downloading and before extracting dependencies. Corrupted files are automatically deleted, with clear user instructions provided for manual resolution or remote configuration fetching.
 - **Onboarding Guide**: Added interactive step-by-step onboarding popovers for project actions and the dependency manager to help users quickly get familiar with the UI.
 - **Custom Hosts Error Alerts**: Replaced native browser dialogs with a custom React Alert component for Hosts file write failures, adding a "Do not remind again" option to prevent repetitive alerts.
 

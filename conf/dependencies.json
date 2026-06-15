@@ -1,46 +1,57 @@
 {
+  "cacert": {
+    "version": "2026.06.08",
+    "url": "https://curl.se/ca/cacert.pem",
+    "sha256": "86a1f3366afac7c6f8ae9f3c779ac221129328c43f0ab2b8817eb2f362a5025c"
+  },
   "caddy": {
     "version": "2.11.3",
-    "url": "https://github.com/caddyserver/caddy/releases/download/v2.11.3/caddy_2.11.3_windows_amd64.zip"
+    "url": "https://github.com/caddyserver/caddy/releases/download/v2.11.3/caddy_2.11.3_windows_amd64.zip",
+    "sha256": "94ba71226d30a07d8eca3f971e88222fafb13f8bc46f391ed01afd6780f9c030"
   },
   "composer": {
     "version": "2.7.7",
-    "url": "https://github.com/composer/composer/releases/download/2.7.7/composer.phar"
+    "url": "https://github.com/composer/composer/releases/download/2.7.7/composer.phar",
+    "sha256": "aab940cd53d285a54c50465820a2080fcb7182a4ba1e5f795abfb10414a4b4be"
   },
   "heidisql": {
     "version": "12.17",
-    "url": "https://github.com/HeidiSQL/HeidiSQL/releases/download/12.17/HeidiSQL_12.17_64_Portable.zip"
+    "url": "https://github.com/HeidiSQL/HeidiSQL/releases/download/12.17/HeidiSQL_12.17_64_Portable.zip",
+    "sha256": "d40f8c32cbbd43c17e76d95443ef275cd8571652150083b66f382ff1acf141c5"
   },
   "mailpit": {
     "version": "1.30.1",
-    "url": "https://github.com/axllent/mailpit/releases/download/v1.30.1/mailpit-windows-amd64.zip"
+    "url": "https://github.com/axllent/mailpit/releases/download/v1.30.1/mailpit-windows-amd64.zip",
+    "sha256": "efe727d63b28361b47f6a81bf4054a03a77940178b9f67107928e6c1a483c34b"
   },
   "mariadb": {
     "version": "11.4.10",
-    "url": "https://archive.mariadb.org/mariadb-11.4.10/winx64-packages/mariadb-11.4.10-winx64.zip"
+    "url": "https://archive.mariadb.org/mariadb-11.4.10/winx64-packages/mariadb-11.4.10-winx64.zip",
+    "sha256": "fb7c76f0804321ee373daa49145f2056d2d88f321b614130adeb05a1644ea003"
   },
   "node": {
     "version": "24.16.0",
-    "url": "https://nodejs.org/dist/v24.16.0/node-v24.16.0-win-x64.zip"
+    "url": "https://nodejs.org/dist/v24.16.0/node-v24.16.0-win-x64.zip",
+    "sha256": "edaca9bd58ec8e92037dac4e877d52f6b8f430b81c18b57e264b4e2fb111cd56"
   },
   "php73": {
     "version": "7.3.33",
-    "url": "https://windows.php.net/downloads/releases/archives/php-7.3.33-nts-Win32-VC15-x64.zip"
+    "url": "https://windows.php.net/downloads/releases/archives/php-7.3.33-nts-Win32-VC15-x64.zip",
+    "sha256": "5eaf3cad80e678623f222a42c99bcefcc60eea359d407fb51e805afdb3b13e5e"
   },
   "php82": {
     "version": "8.2.30",
-    "url": "https://windows.php.net/downloads/releases/archives/php-8.2.30-nts-Win32-vs16-x64.zip"
+    "url": "https://windows.php.net/downloads/releases/archives/php-8.2.30-nts-Win32-vs16-x64.zip",
+    "sha256": "8a6e409adb5f7fb196c07315c69195c4eb87eec8acae2e74a0e04ec50745a055"
   },
   "php83": {
     "version": "8.3.28",
-    "url": "https://windows.php.net/downloads/releases/archives/php-8.3.28-nts-Win32-vs16-x64.zip"
+    "url": "https://windows.php.net/downloads/releases/archives/php-8.3.28-nts-Win32-vs16-x64.zip",
+    "sha256": "25530b3d001ba48bcba83c6deb22be03e5799ef66813befc079436b8e24ba666"
   },
   "php84": {
     "version": "8.4.21",
-    "url": "https://downloads.php.net/~windows/releases/archives/php-8.4.21-nts-Win32-vs17-x64.zip"
-  },
-  "cacert": {
-    "version": "2026.06.08",
-    "url": "https://curl.se/ca/cacert.pem"
+    "url": "https://downloads.php.net/~windows/releases/archives/php-8.4.21-nts-Win32-vs17-x64.zip",
+    "sha256": "2cb57d0d3a17b1248c6a53b600719d4b051e1c374373404d5031409c0725031d"
   }
 }
