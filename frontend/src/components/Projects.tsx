@@ -43,6 +43,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [showGuide, setShowGuide] = useState(false);
   const [useCustomCmd, setUseCustomCmd] = useState(false);
   const [savedRuntimeType, setSavedRuntimeType] = useState('node');
+  const effectivelyUseCustomCmd = useCustomCmd || editingProject?.type === 'custom';
 
   useEffect(() => {
     if (config?.projects && config.projects.length > 0) {
@@ -84,7 +85,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     { value: 'python_flask', label: t('Python Flask') },
     { value: 'go_api', label: t('Go Web API') },
     { value: 'pocketbase', label: t('PocketBase') },
-    { value: 'custom', label: t('Custom Command') }
+    { value: 'custom', label: t('Custom') }
   ];
 
   const runtimeTypes = [
@@ -135,7 +136,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   }, []);
 
   useEffect(() => {
-    if (isModalOpen && editingProject && !useCustomCmd) {
+    if (isModalOpen && editingProject && !effectivelyUseCustomCmd) {
       const type = editingProject.type || 'static';
       const rt = editingProject.runtime_type || 'none';
       let isSubscribed = true;
@@ -156,7 +157,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
         isSubscribed = false;
       };
     }
-  }, [editingProject?.type, editingProject?.runtime_type, useCustomCmd, isModalOpen]);
+  }, [editingProject?.type, editingProject?.runtime_type, effectivelyUseCustomCmd, isModalOpen]);
 
   const handleUseCustomCmdChange = (checked: boolean) => {
     setUseCustomCmd(checked);
@@ -293,6 +294,9 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     }
     const newCfg = { ...config };
     const cleanProj = { ...editingProject }; cleanProj.name = trimName;
+    if (cleanProj.type === 'custom') {
+      cleanProj.runtime_type = 'custom';
+    }
     if (cleanProj.type !== 'laravel' && cleanProj.type !== 'php') cleanProj.php_version = '';
     cleanProj.domains = cleanProj.domains.filter(d => d.trim() !== "");
     if (cleanProj.domains.length === 0) cleanProj.domains = [`local-${cleanProj.name.toLowerCase().replace(/_/g, '-')}.test`];
@@ -647,8 +651,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         <div className="space-y-1.5">
                           <label style={labelStyle}>{t("執行器 (Runtime)")}</label>
                           <select 
-                            value={useCustomCmd ? 'custom' : editingProject.runtime_type} 
-                            disabled={useCustomCmd}
+                            value={effectivelyUseCustomCmd ? 'custom' : editingProject.runtime_type} 
+                            disabled={effectivelyUseCustomCmd}
                             onChange={(e) => { 
                               const newRt = e.target.value; 
                               setEditingProject({ ...editingProject, runtime_type: newRt, use_wincmp_bin: hasBundledRuntime(newRt) }); 
@@ -656,8 +660,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                             className="w-full cursor-pointer font-semibold" 
                             style={{
                               ...inputStyle,
-                              opacity: useCustomCmd ? 0.6 : 1,
-                              cursor: useCustomCmd ? 'not-allowed' : 'pointer'
+                              opacity: effectivelyUseCustomCmd ? 0.6 : 1,
+                              cursor: effectivelyUseCustomCmd ? 'not-allowed' : 'pointer'
                             }}
                           >
                             {runtimeTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -716,36 +720,35 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                               type="text" 
                               value={editingProject.command || ''} 
                               onChange={(e) => {
-                                if (useCustomCmd) {
+                                if (effectivelyUseCustomCmd) {
                                   setEditingProject({ ...editingProject, command: e.target.value });
                                 }
                               }} 
-                              readOnly={!useCustomCmd}
+                              readOnly={!effectivelyUseCustomCmd}
                               placeholder={t("例如: npm run dev -- --port %PORT%")} 
                               className="w-full font-mono text-xs" 
                               style={{
                                 ...inputStyle,
-                                backgroundColor: !useCustomCmd ? 'var(--input-bg-readonly, var(--border-soft))' : 'var(--input-bg)',
-                                color: !useCustomCmd ? 'var(--meta)' : 'var(--fg)',
-                                opacity: !useCustomCmd ? 0.75 : 1,
-                                cursor: !useCustomCmd ? 'not-allowed' : 'text'
+                                backgroundColor: !effectivelyUseCustomCmd ? 'var(--input-bg-readonly, var(--border-soft))' : 'var(--input-bg)',
+                                color: !effectivelyUseCustomCmd ? 'var(--meta)' : 'var(--fg)',
+                                opacity: !effectivelyUseCustomCmd ? 0.75 : 1,
+                                cursor: !effectivelyUseCustomCmd ? 'not-allowed' : 'text'
                               }} 
                             />
                           </div>
-                          {editingProject.type !== 'custom' && (
-                            <div className="flex items-center gap-2 pt-1">
-                              <input 
-                                type="checkbox" 
-                                id="useCustomCmd" 
-                                checked={useCustomCmd} 
-                                onChange={(e) => handleUseCustomCmdChange(e.target.checked)} 
-                                className="w-3.5 h-3.5 cursor-pointer accent-blue-500" 
-                              />
-                              <label htmlFor="useCustomCmd" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)' }}>
-                                {t("使用自訂執行指令")}
-                              </label>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 pt-1">
+                            <input 
+                              type="checkbox" 
+                              id="useCustomCmd" 
+                              checked={effectivelyUseCustomCmd} 
+                              disabled={editingProject.type === 'custom'}
+                              onChange={(e) => handleUseCustomCmdChange(e.target.checked)} 
+                              className="w-3.5 h-3.5 cursor-pointer accent-blue-500" 
+                            />
+                            <label htmlFor="useCustomCmd" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)', opacity: editingProject.type === 'custom' ? 0.6 : 1 }}>
+                              {t("使用自訂執行指令")}
+                            </label>
+                          </div>
                         </div>
                       )}
                     </div>
