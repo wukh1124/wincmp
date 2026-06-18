@@ -68,10 +68,8 @@ export const enTranslations: Record<string, string> = {
   "取消": "Cancel",
 
   // Settings.tsx
-  "系統全域設定": "System Settings",
   "配置開發路徑、資料庫參數以及 WinCMP 全域行為": "Configure development paths, database and global settings",
   "依賴庫管理": "Dependencies",
-  "儲存全域設定": "Save",
   "儲存設定": "Save Settings",
   "儲存中...": "Saving...",
   "設定儲存成功！部分設定 (如語言) 可能需要重新啟動以完全套用。": "Settings saved successfully! Some changes (e.g. language) may require a restart to apply completely.",
@@ -122,7 +120,6 @@ export const enTranslations: Record<string, string> = {
   "PHP 執行環境": "PHP Runtime",
   "Mailpit 郵件測試伺服器": "Mailpit Mail Test Server",
   "、": ", ",
-  "儀表板 (Dashboard)": "Dashboard",
   "管理 Caddy, MariaDB, PHP-CGI 與背景開發服務": "Manage Caddy, MariaDB, PHP-CGI and background runtimes",
   "重新掃描服務": "Rescan Services",
   "掃描中...": "Scanning...",
@@ -173,7 +170,6 @@ export const enTranslations: Record<string, string> = {
   "保存設定失敗": "Failed to save settings",
 
   // Projects.tsx
-  "專案管理面板": "Projects Management Panel",
   "管理與運行網頁專案，支援靜態、PHP 及 Node/Python/Go 自訂專案": "Manage and run web projects; supports Static, PHP and Node/Python/Go custom runtimes",
   "掃描 WWW 目錄": "Scan WWW Dir",
   "手動新增專案": "Add Project Manual",
@@ -397,7 +393,7 @@ export const enTranslations: Record<string, string> = {
   // DBExplorer.tsx
   "載入失敗": "Load Failed",
   "開啟 HeidiSQL 失敗": "Failed to open HeidiSQL",
-  "資料庫瀏覽器": "Database Explorer",
+  "資料庫瀏覽器": "Database",
   "內建極簡 Schema / 資料表結構速覽，或一鍵透過外部工具管理": "Built-in basic schema / table structure viewer, or one-click external tool access",
   "重新整理": "Refresh",
   "Open in HeidiSQL": "Open in HeidiSQL",
@@ -410,7 +406,7 @@ export const enTranslations: Record<string, string> = {
   "正在載入系統與服務資源數據...": "Loading system and service resources data...",
   "載入資源監控失敗": "Failed to load resource monitor",
   "重新嘗試": "Retry",
-  "即時監控系統總體、主程式、Web 視窗介面及各背景服務的 CPU 與 RAM 使用狀況": "Real-time tracking of CPU and RAM usage for the system, core engine, UI render engine and background services",
+  "即時監控系統總體、主程式、Web 視窗介面及各背景服務的 CPU 與 RAM 使用狀況": "Tracking of CPU and RAM usage for the system, core, UI render engine and background services",
   "手動整理": "Refresh",
   "整理中...": "Refreshing...",
   "WinCMP CPU 總佔用": "WinCMP Total CPU Usage",

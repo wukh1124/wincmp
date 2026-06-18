@@ -310,7 +310,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       {/* Header */}
       <div className="flex justify-between items-center px-4 py-2.5 shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
         <div className="flex items-baseline gap-2">
-          <h1 className="text-xs font-bold" style={{ color: 'var(--fg)' }}>{t("專案管理面板")}</h1>
+          <h1 className="text-xs font-bold" style={{ color: 'var(--fg)' }}>{t("專案管理")}</h1>
           <span className="text-[10px] hidden sm:inline" style={{ color: 'var(--meta)' }}> {t("管理與運行網頁專案，支援靜態、PHP 及 Node/Python/Go 自訂專案")}</span>
         </div>
         <button id="btn-add-project" onClick={() => handleOpenEditModal(null, null)} className="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition duration-200" style={{ background: 'var(--status-info)', color: '#fff' }}>

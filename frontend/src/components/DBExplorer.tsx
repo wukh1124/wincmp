@@ -58,9 +58,9 @@ export default function DBExplorer() {
     <div className="p-6 h-full flex flex-col space-y-6">
       {/* 標頭 */}
       <div className="flex justify-between items-center select-none">
-        <div>
+        <div className="flex items-baseline gap-3">
           <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("資料庫瀏覽器")}</h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{t("內建極簡 Schema / 資料表結構速覽，或一鍵透過外部工具管理")}</p>
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>{t("內建極簡 Schema / 資料表結構速覽，或一鍵透過外部工具管理")}</p>
         </div>
         <div className="flex gap-2.5">
           <button

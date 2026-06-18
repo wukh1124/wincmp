@@ -155,9 +155,9 @@ export default function Settings() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* 標頭 */}
       <div className="p-6 pb-4 flex justify-between items-center select-none shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("系統全域設定")}</h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{t("配置開發路徑、資料庫參數以及 WinCMP 全域行為")}</p>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("系統設定")}</h1>
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>{t("配置開發路徑、資料庫參數以及 WinCMP 全域行為")}</p>
         </div>
         <div className="flex gap-2.5">
           <button
@@ -175,7 +175,7 @@ export default function Settings() {
             style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-on)' }}
           >
             <Save size={14} />
-            <span>{isSaving ? t("儲存中...") : t("儲存全域設定")}</span>
+            <span>{isSaving ? t("儲存中...") : t("儲存設定")}</span>
           </button>
         </div>
       </div>

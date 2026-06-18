@@ -153,9 +153,9 @@ export default function VersionUpdate() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* 標頭 */}
       <div className="p-6 pb-4 flex justify-between items-center select-none shrink-0" style={{ borderBottom: '1px solid var(--border-soft)' }}>
-        <div>
+        <div className="flex items-baseline gap-3">
           <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("版本更新")}</h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{t("檢查 WinCMP 最新發布版本，並進行一鍵自動替換升級")}</p>
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>{t("檢查 WinCMP 最新發布版本，並進行一鍵自動替換升級")}</p>
         </div>
       </div>
 
