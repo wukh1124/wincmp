@@ -147,8 +147,8 @@ func buildRuntimeCommand(project config.ProjectConfig, exePath string) string {
 	}
 	host := "0.0.0.0"
 
-	// 如果有自定義指令且非空，優先使用（Custom 類型或使用者手動覆寫）
-	if project.Command != "" && (project.Type == "custom" || project.CommandDirty) {
+	// 如果有自定義指令且非空，優先使用（Custom 類型、Custom 執行器或使用者手動覆寫）
+	if project.Command != "" && (project.Type == "custom" || project.RuntimeType == "custom" || project.CommandDirty) {
 		return replacePlaceholders(project.Command, port, host, project.RootPath, filepath.Dir(exePath))
 	}
 
@@ -340,7 +340,7 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 
 	// UseWinCMPBin: 將 bin/ 內的對應執行檔路徑加到 PATH 前面
 	bundledRuntimeTypes := map[string]bool{
-		"node": true, "bun": true, "auto": true,
+		"node": true, "bun": true, "auto": true, "custom": true,
 	}
 	if project.UseWinCMPBin && bundledRuntimeTypes[project.RuntimeType] {
 		if exePath != "" {

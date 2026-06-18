@@ -4,7 +4,8 @@ import ProjectTerminal from './ProjectTerminal';
 import {
   GetConfig, SaveConfig, GetScanResult, GetServicesStatus,
   StartProjectRuntime, StopProjectRuntime, ReloadCaddy,
-  OpenFolder, SelectFolder, DetectProjectPath, OpenProjectCaddyfile
+  OpenFolder, SelectFolder, DetectProjectPath, OpenProjectCaddyfile,
+  GetDefaultCommandTemplate
 } from '../../wailsjs/go/main/App';
 import { t, useLanguage } from '../i18n';
 
@@ -40,6 +41,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [terminalProject, setTerminalProject] = useState<string | null>(null);
   const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [useCustomCmd, setUseCustomCmd] = useState(false);
+  const [savedRuntimeType, setSavedRuntimeType] = useState('node');
 
   useEffect(() => {
     if (config?.projects && config.projects.length > 0) {
@@ -86,7 +89,6 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
   const runtimeTypes = [
     { value: 'none', label: t('無 Runtime') },
-    { value: 'auto', label: t('Auto (Node/Bun)') },
     { value: 'node', label: t('Node.js') },
     { value: 'bun', label: t('Bun') },
     { value: 'python', label: t('Python') },
@@ -132,6 +134,55 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (isModalOpen && editingProject && !useCustomCmd) {
+      const type = editingProject.type || 'static';
+      const rt = editingProject.runtime_type || 'none';
+      let isSubscribed = true;
+      GetDefaultCommandTemplate(type, rt)
+        .then(cmd => {
+          if (isSubscribed) {
+            setEditingProject(prev => {
+              if (!prev) return null;
+              if (prev.command === cmd) return prev;
+              return { ...prev, command: cmd };
+            });
+          }
+        })
+        .catch(err => {
+          console.error("獲取預設指令模板失敗:", err);
+        });
+      return () => {
+        isSubscribed = false;
+      };
+    }
+  }, [editingProject?.type, editingProject?.runtime_type, useCustomCmd, isModalOpen]);
+
+  const handleUseCustomCmdChange = (checked: boolean) => {
+    setUseCustomCmd(checked);
+    if (checked) {
+      if (editingProject?.runtime_type && editingProject.runtime_type !== 'custom') {
+        setSavedRuntimeType(editingProject.runtime_type);
+      }
+      setEditingProject(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          runtime_type: 'custom',
+        };
+      });
+    } else {
+      const restoredRt = savedRuntimeType === 'custom' ? 'node' : savedRuntimeType;
+      setEditingProject(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          runtime_type: restoredRt,
+        };
+      });
+    }
+  };
+
   const updateStatus = async () => {
     try { setServicesStatus(await GetServicesStatus()); } catch (err) { console.error("更新狀態失敗:", err); }
   };
@@ -174,9 +225,14 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const handleOpenEditModal = (proj: Project | null, idx: number | null) => {
     if (proj) {
       const hasBin = hasBundledRuntime(proj.runtime_type);
+      const isCustom = proj.runtime_type === 'custom' && proj.type !== 'custom';
+      setUseCustomCmd(isCustom);
+      setSavedRuntimeType(isCustom ? 'node' : (proj.runtime_type || 'node'));
       setEditingProject({ ...proj, use_wincmp_bin: hasBin ? proj.use_wincmp_bin : false });
       setDetected(true);
     } else {
+      setUseCustomCmd(false);
+      setSavedRuntimeType('node');
       setEditingProject({
         name: '', domains: [''], type: 'static', runtime_type: 'none',
         php_version: scanResult?.PHPList?.[0]?.MajorMin || '', root_path: '',
@@ -590,7 +646,20 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         </div>
                         <div className="space-y-1.5">
                           <label style={labelStyle}>{t("執行器 (Runtime)")}</label>
-                          <select value={editingProject.runtime_type} onChange={(e) => { const newRt = e.target.value; setEditingProject({ ...editingProject, runtime_type: newRt, use_wincmp_bin: hasBundledRuntime(newRt) }); }} className="w-full cursor-pointer font-semibold" style={inputStyle}>
+                          <select 
+                            value={useCustomCmd ? 'custom' : editingProject.runtime_type} 
+                            disabled={useCustomCmd}
+                            onChange={(e) => { 
+                              const newRt = e.target.value; 
+                              setEditingProject({ ...editingProject, runtime_type: newRt, use_wincmp_bin: hasBundledRuntime(newRt) }); 
+                            }} 
+                            className="w-full cursor-pointer font-semibold" 
+                            style={{
+                              ...inputStyle,
+                              opacity: useCustomCmd ? 0.6 : 1,
+                              cursor: useCustomCmd ? 'not-allowed' : 'pointer'
+                            }}
+                          >
                             {runtimeTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                           </select>
                         </div>
@@ -642,9 +711,41 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                             </div>
                           )}
                           <div className="space-y-1.5">
-                            <label style={labelStyle}>{t("自訂啟動指令 (可選，空白將使用預設)")}</label>
-                            <input type="text" value={editingProject.command || ''} onChange={(e) => setEditingProject({ ...editingProject, command: e.target.value })} placeholder={t("例如: npm run dev -- --port 3000")} className="w-full" style={inputStyle} />
+                            <label style={labelStyle}>{t("執行啟動指令 (支援 %PORT% 作佔位符)")}</label>
+                            <input 
+                              type="text" 
+                              value={editingProject.command || ''} 
+                              onChange={(e) => {
+                                if (useCustomCmd) {
+                                  setEditingProject({ ...editingProject, command: e.target.value });
+                                }
+                              }} 
+                              readOnly={!useCustomCmd}
+                              placeholder={t("例如: npm run dev -- --port %PORT%")} 
+                              className="w-full font-mono text-xs" 
+                              style={{
+                                ...inputStyle,
+                                backgroundColor: !useCustomCmd ? 'var(--input-bg-readonly, var(--border-soft))' : 'var(--input-bg)',
+                                color: !useCustomCmd ? 'var(--meta)' : 'var(--fg)',
+                                opacity: !useCustomCmd ? 0.75 : 1,
+                                cursor: !useCustomCmd ? 'not-allowed' : 'text'
+                              }} 
+                            />
                           </div>
+                          {editingProject.type !== 'custom' && (
+                            <div className="flex items-center gap-2 pt-1">
+                              <input 
+                                type="checkbox" 
+                                id="useCustomCmd" 
+                                checked={useCustomCmd} 
+                                onChange={(e) => handleUseCustomCmdChange(e.target.checked)} 
+                                className="w-3.5 h-3.5 cursor-pointer accent-blue-500" 
+                              />
+                              <label htmlFor="useCustomCmd" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)' }}>
+                                {t("使用自訂執行指令")}
+                              </label>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -727,12 +828,19 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   function handleTypeChange(type: string) {
     if (!editingProject) return;
     let rt = 'none'; let port = 0;
-    if (['next', 'nuxt', 'astro', 'vite'].includes(type)) { rt = 'auto'; port = 3000; }
+    if (['next', 'nuxt', 'astro', 'vite'].includes(type)) {
+      const hasNode = !!(scanResult?.NodeList && scanResult.NodeList.length > 0) || !!scanResult?.has_global_node;
+      const hasBun = !!(scanResult?.BunList && scanResult.BunList.length > 0) || !!scanResult?.has_global_bun;
+      rt = hasNode ? 'node' : (hasBun ? 'bun' : 'node');
+      port = 3000;
+    }
     else if (type.startsWith('python')) { rt = 'python'; port = 8000; }
     else if (type === 'go_api') { rt = 'go_air'; port = 8080; }
     else if (type === 'pocketbase') { rt = 'go_run'; port = 8090; }
     else if (type === 'custom') { rt = 'custom'; port = 3000; }
+    
+    const finalRt = useCustomCmd ? 'custom' : rt;
     const hasBin = hasBundledRuntime(rt);
-    setEditingProject({ ...editingProject, type, runtime_type: rt, runtime_port: port, runtime_version: rt === 'bun' ? scanResult?.BunList?.[0]?.Version : scanResult?.NodeList?.[0]?.Version, use_wincmp_bin: shouldDefaultUseWinCMPBin(rt) });
+    setEditingProject({ ...editingProject, type, runtime_type: finalRt, runtime_port: port, runtime_version: rt === 'bun' ? scanResult?.BunList?.[0]?.Version : scanResult?.NodeList?.[0]?.Version, use_wincmp_bin: shouldDefaultUseWinCMPBin(rt) });
   }
 }

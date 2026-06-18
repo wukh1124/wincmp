@@ -38,6 +38,10 @@ export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
 
+export function GetDefaultCommandTemplate(arg1, arg2) {
+  return window['go']['main']['App']['GetDefaultCommandTemplate'](arg1, arg2);
+}
+
 export function GetDependencyConfig() {
   return window['go']['main']['App']['GetDependencyConfig']();
 }
