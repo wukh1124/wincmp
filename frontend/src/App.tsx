@@ -379,7 +379,7 @@ export default function App() {
                   className={`nav-item w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 relative ${isActive ? 'active' : ''}`}
                   style={{
                     justifyContent: isCollapsed ? 'center' : 'flex-start',
-                    padding: isCollapsed ? '10px 0' : '10px 16px',
+                    padding: isCollapsed ? '14px 0' : '14px 16px',
                     gap: isCollapsed ? 0 : 12,
                     color: isActive ? 'var(--sidebar-active-fg)' : 'var(--fg-2)',
                     background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',

@@ -196,8 +196,8 @@ export default function VersionUpdate() {
                   {updateStatus === 'idle' && (
                     <button
                       onClick={handleStartUpdate}
-                      className="px-5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 active:scale-[0.98] shrink-0"
-                      style={{ background: 'var(--accent)', color: 'var(--accent-on)', boxShadow: 'var(--shadow-md)' }}
+                      className="px-5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 active:scale-[0.98] shrink-0 version-update-btn"
+                      style={{ background: 'var(--accent)', color: 'var(--accent-on)', boxShadow: 'var(--shadow-md)', padding: '14px 26px' }}
                     >
                       <span>{t("立即更新")}</span>
                     </button>

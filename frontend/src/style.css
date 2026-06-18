@@ -72,7 +72,11 @@ body {
 /* 全域按鈕游標與對齊樣式 */
 button {
   cursor: pointer;
-  line-height: 1.25 !important;
+  line-height: 1 !important;
+}
+
+button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-btn) {
+  padding: 10px 16px !important;
 }
 
 button:disabled {
