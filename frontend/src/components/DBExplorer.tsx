@@ -66,7 +66,7 @@ export default function DBExplorer() {
           <button
             onClick={checkDBStatus}
             disabled={isLoading}
-            className="px-3.5 py-2 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition duration-200"
+            className="btn-custom-hover px-3.5 py-2 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition duration-200"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)', color: 'var(--fg-2)' }}
           >
             <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />

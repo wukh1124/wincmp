@@ -182,3 +182,45 @@ button:disabled {
 .animate-fade-in {
   transition: none !important;
 }
+
+/* ─── Custom Buttons Hover Effects ───────────────────────────── */
+
+/* 1. 輔助有邊框按鈕 (Secondary / Bordered Buttons) - 參考 sidebar 快速設定按鈕 */
+.btn-custom-hover {
+  transition: all var(--motion-fast) var(--ease-standard) !important;
+}
+
+.btn-custom-hover:hover:not(:disabled) {
+  background-color: var(--accent-muted) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--fg) !important;
+}
+
+/* 2. 危險按鈕 (Danger / Delete Buttons) */
+.btn-danger-hover {
+  transition: all var(--motion-fast) var(--ease-standard) !important;
+}
+
+.btn-danger-hover:hover:not(:disabled) {
+  background-color: var(--status-error-bg) !important;
+  border-color: var(--status-error) !important;
+  color: var(--status-error) !important;
+}
+
+/* 3. 主按鈕 (Accent / Primary Buttons) */
+button[style*="var(--accent)"]:not(:disabled):hover,
+.version-update-btn:not(:disabled):hover {
+  background-color: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+  opacity: 0.95;
+}
+
+/* 4. 亮藍色資訊主按鈕 (Status Info Buttons) */
+button[style*="var(--status-info)"]:not([style*="var(--border)"]):not(:disabled):hover {
+  opacity: 0.9 !important;
+}
+
+/* 5. 亮綠色成功主按鈕 (Status OK Buttons) */
+button[style*="var(--status-ok)"]:not([style*="var(--border)"]):not(:disabled):hover {
+  opacity: 0.9 !important;
+}

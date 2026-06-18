@@ -183,7 +183,7 @@ export default function Dashboard() {
         </div>
         <div className="flex gap-2.5">
           <div className="relative">
-            <button id="btn-open-dep-manager" onClick={handleOpenDepManager} className="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
+            <button id="btn-open-dep-manager" onClick={handleOpenDepManager} className="btn-custom-hover px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
               <Package size={13} style={{ color: 'var(--status-info)' }} />
               <span>{t("依賴庫管理")}</span>
             </button>
@@ -225,7 +225,7 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-          <button onClick={handleScan} disabled={isScanning} className="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)', opacity: isScanning ? 0.5 : 1 }}>
+          <button onClick={handleScan} disabled={isScanning} className="btn-custom-hover px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)', opacity: isScanning ? 0.5 : 1 }}>
             <RefreshCw size={13} className={isScanning ? 'animate-spin' : ''} />
             {isScanning ? t("掃描中...") : t("重新掃描服務")}
           </button>
@@ -280,10 +280,10 @@ export default function Dashboard() {
                     </button>
                   ) : (
                     <>
-                      <button onClick={() => handleServiceAction('caddy', 'stop', caddy)} disabled={loadingStop} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
+                      <button onClick={() => handleServiceAction('caddy', 'stop', caddy)} disabled={loadingStop} className="btn-danger-hover flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
                         <Square size={12} /> {loadingStop ? t("停止中...") : t("停止")}
                       </button>
-                      <button onClick={() => handleServiceAction('caddy', 'reload', caddy)} disabled={loadingReload} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
+                      <button onClick={() => handleServiceAction('caddy', 'reload', caddy)} disabled={loadingReload} className="btn-custom-hover flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
                         <RefreshCw size={12} /> {loadingReload ? t("重載中...") : t("重載")}
                       </button>
                     </>
@@ -331,7 +331,7 @@ export default function Dashboard() {
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
                   ) : (
-                    <button onClick={() => handleServiceAction(serviceKey, 'stop', mariadb)} disabled={loadingStop} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
+                    <button onClick={() => handleServiceAction(serviceKey, 'stop', mariadb)} disabled={loadingStop} className="btn-danger-hover w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
                       <Square size={12} /> {loadingStop ? t("停止中...") : t("停止服務")}
                     </button>
                   )}
@@ -378,7 +378,7 @@ export default function Dashboard() {
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
                   ) : (
-                    <button onClick={() => handleServiceAction('mailpit', 'stop', mailpit)} disabled={loadingStop} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
+                    <button onClick={() => handleServiceAction('mailpit', 'stop', mailpit)} disabled={loadingStop} className="btn-danger-hover w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
                       <Square size={12} /> {loadingStop ? t("停止中...") : t("停止服務")}
                     </button>
                   )}
@@ -452,7 +452,7 @@ export default function Dashboard() {
                           <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動 PHP")}
                         </button>
                       ) : (
-                        <button onClick={() => handleServiceAction(serviceKey, 'stop', php)} disabled={loadingStop} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
+                        <button onClick={() => handleServiceAction(serviceKey, 'stop', php)} disabled={loadingStop} className="btn-danger-hover w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
                           <Square size={12} /> {loadingStop ? t("停止中...") : t("停止 PHP")}
                         </button>
                       )}

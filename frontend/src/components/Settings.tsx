@@ -162,7 +162,7 @@ export default function Settings() {
         <div className="flex gap-2.5">
           <button
             onClick={() => setShowDepManager(true)}
-            className="px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 hover:border-gray-600"
+            className="btn-custom-hover px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200"
             style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
           >
             <Package size={14} style={{ color: 'var(--accent)' }} />
@@ -171,7 +171,7 @@ export default function Settings() {
           <button
             onClick={() => handleSave()}
             disabled={isSaving}
-            className="px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 disabled:opacity-50"
             style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-on)' }}
           >
             <Save size={14} />
@@ -202,7 +202,7 @@ export default function Settings() {
                 />
                 <button
                   onClick={() => handleSelectFolder('default_www')}
-                  className="px-3 py-1.5 rounded-lg transition font-semibold hover:border-gray-500"
+                  className="btn-custom-hover px-3 py-1.5 rounded-lg transition font-semibold"
                   style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
                 >
                   {t("選擇")}
@@ -223,7 +223,7 @@ export default function Settings() {
                 />
                 <button
                   onClick={() => handleSelectFolder('default_ssl')}
-                  className="px-3 py-1.5 rounded-lg transition font-semibold hover:border-gray-500"
+                  className="btn-custom-hover px-3 py-1.5 rounded-lg transition font-semibold"
                   style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
                 >
                   {t("選擇")}
@@ -416,7 +416,7 @@ export default function Settings() {
                     />
                     <button
                       onClick={() => handleSelectFolder('mariadb_basedir')}
-                      className="px-3 py-1 rounded-lg transition font-semibold hover:border-gray-500"
+                      className="btn-custom-hover px-3 py-1 rounded-lg transition font-semibold"
                       style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
                     >
                       {t("選擇")}
@@ -436,7 +436,7 @@ export default function Settings() {
                     />
                     <button
                       onClick={() => handleSelectFolder('mariadb_datadir')}
-                      className="px-3 py-1 rounded-lg transition font-semibold hover:border-gray-500"
+                      className="btn-custom-hover px-3 py-1 rounded-lg transition font-semibold"
                       style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
                     >
                       {t("選擇")}
@@ -495,7 +495,7 @@ export default function Settings() {
             <div className="grid grid-cols-3 gap-3 select-none">
               <button
                 onClick={() => handleOpenLocalPath('hosts')}
-                className="py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition hover:border-orange-500/40 hover:bg-orange-500/[0.02]"
+                className="btn-custom-hover py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition"
                 style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
               >
                 <Shield size={16} style={{ color: 'var(--status-warn)' }} />
@@ -504,7 +504,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={() => handleOpenLocalPath('phpini')}
-                className="py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition hover:border-emerald-500/40 hover:bg-emerald-500/[0.02]"
+                className="btn-custom-hover py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition"
                 style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
               >
                 <SettingsIcon size={16} style={{ color: 'var(--status-ok)' }} />
@@ -513,7 +513,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={() => handleOpenLocalPath('wincmpjson')}
-                className="py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition hover:border-blue-500/40 hover:bg-blue-500/[0.02]"
+                className="btn-custom-hover py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition"
                 style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
               >
                 <Info size={16} style={{ color: 'var(--accent)' }} />

@@ -608,16 +608,16 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                             </button>
                           )
                         )}
-                        <button onClick={() => setTerminalProject(proj.name)} className="p-1.5 rounded-lg transition btn-open-terminal" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("開啟專案終端")}>
+                        <button onClick={() => setTerminalProject(proj.name)} className="btn-custom-hover p-1.5 rounded-lg transition btn-open-terminal" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("開啟專案終端")}>
                           <Terminal size={11} />
                         </button>
-                        <button onClick={() => handleOpenFolder(proj.root_path)} className="p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)' }} title={t("開啟專案資料夾")}>
+                        <button onClick={() => handleOpenFolder(proj.root_path)} className="btn-custom-hover p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)' }} title={t("開啟專案資料夾")}>
                           <FolderOpen size={11} />
                         </button>
-                        <button onClick={() => handleOpenEditModal(proj, idx)} className="p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("編輯專案設定")}>
+                        <button onClick={() => handleOpenEditModal(proj, idx)} className="btn-custom-hover p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("編輯專案設定")}>
                           <Edit size={11} />
                         </button>
-                        <button onClick={() => handleDeleteProject(idx)} className="p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-error)' }} title={t("刪除專案")}>
+                        <button onClick={() => handleDeleteProject(idx)} className="btn-danger-hover p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-error)' }} title={t("刪除專案")}>
                           <Trash2 size={11} />
                         </button>
                       </div>
@@ -666,7 +666,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         onBlur={(e) => { if (editIndex === null && e.target.value.trim()) runAutoDetection(e.target.value.trim()); }}
                         onKeyDown={(e) => { if (e.key === 'Enter' && editIndex === null && (e.target as HTMLInputElement).value.trim()) runAutoDetection((e.target as HTMLInputElement).value.trim()); }}
                         placeholder={t("請選擇或填寫完整目錄路徑...")} className="flex-1" style={inputStyle} />
-                      <button onClick={handleSelectRootPath} className="px-3 py-2 font-semibold transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)', borderRadius: 'var(--radius-md)' }}>{t("選擇")}</button>
+                      <button onClick={handleSelectRootPath} className="btn-custom-hover px-3 py-2 font-semibold transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)', borderRadius: 'var(--radius-md)' }}>{t("選擇")}</button>
                     </div>
                   </div>
                   {editIndex === null && detected && (
@@ -838,7 +838,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                           <div key={dIdx} className="flex gap-2">
                             <input type="text" value={dom} onChange={(e) => handleDomainChange(dIdx, e.target.value)} placeholder={t("例如: my-site.test")} className="flex-1" style={inputStyle} />
                             {editingProject.domains.length > 1 && (
-                              <button onClick={() => handleRemoveDomain(dIdx)} className="px-3 py-2 font-semibold transition" style={{ background: 'var(--status-error-bg)', color: 'var(--status-error)', border: '1px solid var(--status-error-bg)', borderRadius: 'var(--radius-md)' }}>{t("移除")}</button>
+                              <button onClick={() => handleRemoveDomain(dIdx)} className="btn-danger-hover px-3 py-2 font-semibold transition" style={{ background: 'var(--status-error-bg)', color: 'var(--status-error)', border: '1px solid var(--status-error-bg)', borderRadius: 'var(--radius-md)' }}>{t("移除")}</button>
                             )}
                           </div>
                         ))}
@@ -883,7 +883,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
               {/* Footer */}
               <div className="px-6 py-4 flex justify-end gap-3 shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
-                <button id="btn-cancel-add" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-lg text-xs font-semibold transition" style={{ border: '1px solid var(--border)', color: 'var(--fg-2)' }}>{t("取消")}</button>
+                <button id="btn-cancel-add" onClick={() => setIsModalOpen(false)} className="btn-custom-hover px-4 py-2 rounded-lg text-xs font-semibold transition" style={{ border: '1px solid var(--border)', color: 'var(--fg-2)' }}>{t("取消")}</button>
                 {(editIndex !== null || detected) && (
                   <button onClick={handleSaveProject} className="px-4 py-2 rounded-lg text-xs font-semibold transition" style={{ background: 'var(--status-info)', color: '#fff' }}>{t("儲存設定")}</button>
                 )}

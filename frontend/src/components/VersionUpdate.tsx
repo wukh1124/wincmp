@@ -297,7 +297,7 @@ export default function VersionUpdate() {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={handleStartUpdate}
-                        className="px-4 py-2 rounded-lg font-semibold transition duration-200 text-xs active:scale-[0.98]"
+                        className="btn-custom-hover px-4 py-2 rounded-lg font-semibold transition duration-200 text-xs active:scale-[0.98]"
                         style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
                       >
                         <span>{t("重試更新")}</span>
