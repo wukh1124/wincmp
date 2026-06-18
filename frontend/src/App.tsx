@@ -462,7 +462,7 @@ export default function App() {
                     <span>💡 {t("快速設定指南")}</span>
                   </div>
                   <div className="text-[11px] leading-relaxed" style={{ color: 'var(--fg-2)' }}>
-                    {t("您可以在此快速切換介面語系、調整外觀主題，以及變更編輯器與面板的字型大小。")}
+                    {t("您可以在此快速切換介面語系、調整外觀主題，以及變更面板的字型大小。")}
                   </div>
                   <div className="flex justify-end pt-1">
                     <button onClick={(e) => { e.stopPropagation(); dismissSidebarGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90 active:scale-95" style={{ background: 'var(--status-info)' }}>

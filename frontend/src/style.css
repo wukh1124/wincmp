@@ -188,15 +188,20 @@ button:disabled {
   color: var(--fg) !important;
 }
 
+/* 針對 sketch 主題使用實心不透明淡藍色背景，防止主內容區的網格線穿透按鈕 */
+html[data-theme="sketch"] .btn-custom-hover:hover:not(:disabled) {
+  background-color: #ebebeb !important;
+}
+
 /* 2. 危險按鈕 (Danger / Delete Buttons) */
 .btn-danger-hover {
   transition: all var(--motion-fast) var(--ease-standard) !important;
 }
 
 .btn-danger-hover:hover:not(:disabled) {
-  background-color: var(--status-error-bg) !important;
+  background-color: var(--status-error) !important;
   border-color: var(--status-error) !important;
-  color: var(--status-error) !important;
+  color: #ffffff !important;
 }
 
 /* 3. 主按鈕 (Accent / Primary Buttons) */

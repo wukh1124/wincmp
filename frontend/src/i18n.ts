@@ -490,7 +490,7 @@ export const enTranslations: Record<string, string> = {
 
   // Sidebar Quick Settings Guide
   "快速設定指南": "Quick Settings Guide",
-  "您可以在此快速切換介面語系、調整外觀主題，以及變更編輯器與面板的字型大小。": "You can quickly switch the interface language, adjust appearance themes, and change editor & panel font sizes here.",
+  "您可以在此快速切換介面語系、調整外觀主題，以及變更面板的字型大小。": "You can quickly switch the interface language, adjust appearance themes, and change editor & panel font sizes here.",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符
