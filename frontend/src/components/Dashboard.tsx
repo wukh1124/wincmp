@@ -27,10 +27,22 @@ export default function Dashboard() {
   const [showDepGuide, setShowDepGuide] = useState(false);
 
   useEffect(() => {
-    const isShown = localStorage.getItem('wincmp_dep_onboarding_shown') === 'true';
-    if (!isShown) {
-      setShowDepGuide(true);
-    }
+    const checkGuides = () => {
+      const sidebarGuideShown = localStorage.getItem('wincmp_sidebar_guide_shown') === 'true';
+      const depGuideShown = localStorage.getItem('wincmp_dep_onboarding_shown') === 'true';
+      if (sidebarGuideShown && !depGuideShown) {
+        setShowDepGuide(true);
+      } else {
+        setShowDepGuide(false);
+      }
+    };
+
+    checkGuides();
+
+    window.addEventListener('wincmp_sidebar_guide_dismissed', checkGuides);
+    return () => {
+      window.removeEventListener('wincmp_sidebar_guide_dismissed', checkGuides);
+    };
   }, []);
 
   const dismissDepGuide = () => {
@@ -188,19 +200,12 @@ export default function Dashboard() {
               <span>{t("依賴庫管理")}</span>
             </button>
             {showDepGuide && (
-              <div className="absolute right-0 top-10 z-50 animate-fade-in w-72 text-left p-4 rounded-xl border font-normal" style={{
-                background: 'var(--bg-deep)',
-                borderColor: 'var(--border)',
-                boxShadow: 'var(--shadow-lg)',
-                color: 'var(--fg)',
+              <div className="guide-bubble absolute right-0 top-10 z-50 animate-fade-in w-72 text-left p-4 rounded-xl border font-normal" style={{
                 textTransform: 'none',
                 letterSpacing: 'normal',
               }}>
                 {/* 氣泡小箭頭 */}
-                <div className="absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" style={{
-                  background: 'var(--bg-deep)',
-                  borderColor: 'var(--border)'
-                }} />
+                <div className="guide-bubble-arrow absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" />
 
                 <div className="space-y-3">
                   <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
@@ -218,7 +223,7 @@ export default function Dashboard() {
 
                   <div className="flex justify-end pt-1">
                     <button onClick={(e) => { e.stopPropagation(); dismissDepGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90" style={{ background: 'var(--status-info)' }}>
-                      {t("好的，我知道了")}
+                      {t("我知道了")}
                     </button>
                   </div>
                 </div>

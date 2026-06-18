@@ -164,14 +164,6 @@ button:disabled {
   animation: fadeIn 0.2s var(--ease-standard) forwards;
 }
 
-/* ─── Theme transition ───────────────────────────────────────── */
-*,
-*::before,
-*::after {
-  transition-property: background-color, border-color, color, box-shadow;
-  transition-duration: var(--motion-slow);
-  transition-timing-function: var(--ease-standard);
-}
 
 /* Opt out of transition for animations and transforms */
 .animate-spin,
@@ -223,4 +215,60 @@ button[style*="var(--status-info)"]:not([style*="var(--border)"]):not(:disabled)
 /* 5. 亮綠色成功主按鈕 (Status OK Buttons) */
 button[style*="var(--status-ok)"]:not([style*="var(--border)"]):not(:disabled):hover {
   opacity: 0.9 !important;
+}
+
+/* ─── Guide Popover / Bubble ─────────────────────────────────── */
+.guide-bubble {
+  background-color: var(--guide-bg) !important;
+  border-color: var(--guide-border) !important;
+  box-shadow: var(--guide-shadow) !important;
+  color: var(--guide-fg) !important;
+}
+
+.guide-bubble-arrow {
+  background-color: var(--guide-bg) !important;
+  border-color: var(--guide-border) !important;
+  z-index: 10 !important;
+}
+
+/* 全域優化：將箭頭向內推進 (從原本的 -6px 調整為 -2.5px)，以增加與氣泡主體的重疊度，
+   防止在頁面初次載入、字型變更或縮放導致 layout 抖動時，箭頭與氣泡產生視覺分離或縫隙 */
+.guide-bubble-arrow[class*="-top-"] {
+  top: -8px !important;
+}
+
+.guide-bubble-arrow[class*="-bottom-"] {
+  bottom: -8px !important;
+}
+
+/* Sketch theme layout adjustments: tilt the sticky-note guides */
+html[data-theme="sketch"] .guide-bubble {
+  transform: rotate(-0.5deg);
+  border-width: 2px !important;
+  border-style: solid !important;
+}
+
+/* Sketch 主題下加粗邊框，同時必須將無須顯示的下半部/上半部邊框設為 0px，
+   否則 border-width 會將四邊都設為 2px，畫出一個完整的菱形框，導致視覺上箭頭被橫線截斷 */
+html[data-theme="sketch"] .guide-bubble-arrow {
+  border-top-width: 2px !important;
+  border-left-width: 2px !important;
+  border-bottom-width: 0px !important;
+  border-right-width: 0px !important;
+}
+
+html[data-theme="sketch"] .guide-bubble-arrow[class*="-bottom-"] {
+  border-top-width: 0px !important;
+  border-left-width: 0px !important;
+  border-bottom-width: 2px !important;
+  border-right-width: 2px !important;
+}
+
+/* Sketch 主題微調：由於 2px 邊框較粗且有旋轉，將箭頭進一步往內推進至 -2px，確保完美貼合 */
+html[data-theme="sketch"] .guide-bubble-arrow[class*="-top-"] {
+  top: -8px !important;
+}
+
+html[data-theme="sketch"] .guide-bubble-arrow[class*="-bottom-"] {
+  bottom: -8px !important;
 }

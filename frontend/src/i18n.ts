@@ -379,7 +379,7 @@ export const enTranslations: Record<string, string> = {
 
   // 專案操作引導教學
   "操作按鈕快速指南": "Actions Guide",
-  "好的，我知道了": "Got it!",
+  "我知道了": "Got it!",
   "啟動專案的 Node/Python/Go 運行環境": "Start the project's Node/Python/Go execution environment",
   "進入專案的 CLI 交互終端偵錯": "Enter the project's CLI interactive terminal for debugging",
   "開啟專案在硬碟上的物理根目錄": "Open the project's physical root directory on disk",

@@ -434,19 +434,12 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
             <Plus size={12} /> {t("新增專案")}
           </button>
           {showGuide && (
-            <div className="absolute right-0 top-full mt-2.5 z-50 animate-fade-in w-80 text-left p-4 rounded-xl border font-normal" style={{
-              background: 'var(--bg-deep)',
-              borderColor: 'var(--border)',
-              boxShadow: 'var(--shadow-lg)',
-              color: 'var(--fg)',
+            <div className="guide-bubble absolute right-0 top-full mt-2.5 z-50 animate-fade-in w-80 text-left p-4 rounded-xl border font-normal" style={{
               textTransform: 'none',
               letterSpacing: 'normal',
             }}>
               {/* 氣泡小箭頭 指向 新增專案 按鈕 */}
-              <div className="absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" style={{
-                background: 'var(--bg-deep)',
-                borderColor: 'var(--border)'
-              }} />
+              <div className="guide-bubble-arrow absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" />
 
               <div className="space-y-3">
                 <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
@@ -492,7 +485,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
                 <div className="flex justify-end pt-1">
                   <button onClick={(e) => { e.stopPropagation(); dismissGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90 active:scale-95" style={{ background: 'var(--status-info)' }}>
-                    {t("好的，我知道了")}
+                    {t("我知道了")}
                   </button>
                 </div>
               </div>

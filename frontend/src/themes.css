@@ -113,6 +113,12 @@
   --scrollbar-thumb: rgba(255, 255, 255, 0.1);
   --scrollbar-hover: rgba(255, 255, 255, 0.2);
   --overlay-bg: rgba(0, 0, 0, 0.95);
+
+  /* Guide Bubble */
+  --guide-bg: #2a2e36;
+  --guide-border: rgba(255, 255, 255, 0.2);
+  --guide-fg: #ffffff;
+  --guide-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -185,6 +191,12 @@
   --scrollbar-thumb: #d5cfc5;
   --scrollbar-hover: #bfb8ac;
   --overlay-bg: rgba(0, 0, 0, 0.45);
+
+  /* Guide Bubble */
+  --guide-bg: #ffffff;
+  --guide-border: #cdc6ba;
+  --guide-fg: #1a1916;
+  --guide-shadow: 0 10px 25px -5px rgba(26, 25, 22, 0.15), 0 8px 10px -6px rgba(26, 25, 22, 0.15);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -218,9 +230,9 @@
   --accent-muted: rgba(43, 108, 176, 0.1);
 
   /* Sticky-note accent (used via CSS vars for special surfaces) */
-  --sticky-bg: #fff4a3;
+  --sticky-bg: #fffbda;
   --sticky-fg: #4a4520;
-  --sticky-border: #e6d86a;
+  --sticky-border: #d8dba5;
   --sticky-pink: #ffcdd2;
   --sticky-blue: #bbdefb;
   --sticky-green: #c8e6c9;
@@ -276,6 +288,12 @@
   --hatch-color: rgba(140, 130, 110, 0.15);
   --hatch-size: 8px;
   --main-content-bg: transparent;
+
+  /* Guide Bubble */
+  --guide-bg: var(--sticky-bg);
+  --guide-border: var(--sticky-border);
+  --guide-fg: var(--sticky-fg);
+  --guide-shadow: 3px 3px 0 var(--border-strong);
 }
 
 /* ─── Sketch theme: graph paper background ─────────────────────
@@ -448,4 +466,10 @@ html[data-theme="sketch"] .terminal-log-content .whitespace-pre-wrap>div {
   --scrollbar-thumb: rgba(255, 255, 255, 0.1);
   --scrollbar-hover: rgba(255, 255, 255, 0.2);
   --overlay-bg: rgba(0, 0, 0, 0.95);
+
+  /* Guide Bubble */
+  --guide-bg: #2a2e36;
+  --guide-border: rgba(255, 255, 255, 0.2);
+  --guide-fg: #ffffff;
+  --guide-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }
