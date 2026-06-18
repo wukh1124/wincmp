@@ -427,6 +427,7 @@ export const enTranslations: Record<string, string> = {
   "專案:": "Project:",
   "自動滾動": "Auto Scroll",
   "暫時沒有日誌輸出": "No log output yet",
+  "無運行中的專案": "No running projects",
 
   // ProjectTerminal.tsx
   "正在啟動專案終端會話...": "Starting project terminal session...",
