@@ -3,7 +3,7 @@
  *
  * Carbon: Dark-first monospace brutalism. #1f2228 canvas, white
  *         as the sole voice, GeistMono display, zero shadows.
- * Claude:  Warm cream light with terracotta accent. Clean,
+ * Cream:   Warm cream light with terracotta accent. Clean,
  *          modern, approachable — Anthropic's signature warmth.
  * sketch: Hand-drawn wireframe on graph paper. Marker headlines,
  *          sticky-note annotations, hatched placeholders, pencil
@@ -116,9 +116,9 @@
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * THEME: Claude — Warm cream light
+ * THEME: Cream — Warm cream light
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-:root[data-theme="claude"] {
+:root[data-theme="cream"] {
   /* Surface — warm cream foundation */
   --bg: #faf9f7;
   --bg-deep: #f0ede8;
@@ -139,7 +139,7 @@
   --border-strong: #cdc6ba;
   --border-soft: #eee9e2;
 
-  /* Accent — Claude terracotta / burnt sienna */
+  /* Accent — Cream terracotta / burnt sienna */
   --accent: #c96442;
   --accent-on: #ffffff;
   --accent-hover: #b85535;

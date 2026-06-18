@@ -534,7 +534,7 @@ export default function Settings() {
                 const isActive = theme === th.id;
                 const themeColors: Record<ThemeId, { bg: string; fg: string; accent: string; border: string }> = {
                   carbon: { bg: '#1f2228', fg: '#ffffff', accent: '#ffffff', border: 'rgba(255,255,255,0.2)' },
-                  claude: { bg: '#faf9f7', fg: '#1a1916', accent: '#c96442', border: '#e5e0d8' },
+                  cream: { bg: '#faf9f7', fg: '#1a1916', accent: '#c96442', border: '#e5e0d8' },
                   sketch: { bg: '#f0ebe0', fg: '#2d2b28', accent: '#2b6cb0', border: '#c8c0b0' },
                 };
                 const tc = themeColors[th.id];

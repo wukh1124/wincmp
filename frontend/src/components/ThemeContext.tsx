@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-export type ThemeId = 'carbon' | 'claude' | 'sketch';
+export type ThemeId = 'carbon' | 'cream' | 'sketch';
 
 interface ThemeMeta {
   id: ThemeId;
@@ -11,7 +11,7 @@ interface ThemeMeta {
 
 export const THEMES: ThemeMeta[] = [
   { id: 'carbon', name: 'Carbon', nameZh: 'Carbon', description: 'Dark monospace brutalism' },
-  { id: 'claude', name: 'Claude', nameZh: 'Claude', description: 'Warm cream light' },
+  { id: 'cream', name: 'Cream', nameZh: '奶油暖白', description: 'Warm cream light' },
   { id: 'sketch', name: 'Sketch', nameZh: 'Sketch 線稿', description: 'Wireframe on graph paper' },
 ];
 
@@ -53,7 +53,7 @@ const FONT_SIZE_STORAGE_KEY = 'wincmp-font-size';
 function getInitialTheme(): ThemeId {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && ['carbon', 'claude', 'sketch'].includes(stored)) {
+    if (stored && ['carbon', 'cream', 'sketch'].includes(stored)) {
       return stored as ThemeId;
     }
     if (stored === 'xai') {

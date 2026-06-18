@@ -11,9 +11,9 @@ import '@xterm/xterm/css/xterm.css';
 // 取得 xterm.js 主題配色的輔助函式
 const getTerminalTheme = (themeId: string) => {
   switch (themeId) {
-    case 'claude':
+    case 'cream':
       return {
-        background: '#faf9f7', // Claude 暖乳白底色
+        background: '#faf9f7', // Cream 暖乳白底色
         foreground: '#1a1916', // 暖深灰文字
         cursor: '#c96442',     // 陶土橘游標
         cursorAccent: '#faf9f7',

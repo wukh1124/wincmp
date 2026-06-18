@@ -109,7 +109,7 @@ export default function App() {
         }
 
         // 主題回退：若無此值或格式有誤，則預設回退至 'carbon'
-        const validThemes = ['carbon', 'claude', 'sketch'];
+        const validThemes = ['carbon', 'cream', 'sketch'];
         const savedTheme = cfg.global.theme;
         if (savedTheme && validThemes.includes(savedTheme)) {
           setTheme(savedTheme);
