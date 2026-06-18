@@ -40,6 +40,19 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'resources' | 'settings' | 'logs' | 'update'>('dashboard');
   const [showLogs, setShowLogs] = useState(false);
+  const [showSidebarGuide, setShowSidebarGuide] = useState(false);
+
+  useEffect(() => {
+    const isShown = localStorage.getItem('wincmp_sidebar_guide_shown') === 'true';
+    if (!isShown) {
+      setShowSidebarGuide(true);
+    }
+  }, []);
+
+  const dismissSidebarGuide = () => {
+    localStorage.setItem('wincmp_sidebar_guide_shown', 'true');
+    setShowSidebarGuide(false);
+  };
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [customAlertChecked, setCustomAlertChecked] = useState(false);
@@ -142,6 +155,9 @@ export default function App() {
 
   // 4. Tab 切換阻斷 (設定頁未儲存防禦機制)
   const handleTabChange = async (tabId: typeof activeTab) => {
+    if (showSidebarGuide) {
+      dismissSidebarGuide();
+    }
     if (activeTab === 'settings' && tabId !== 'settings') {
       if ((window as any).isSettingsDirty) {
         const choice = await askUnsavedSettings();
@@ -302,6 +318,9 @@ export default function App() {
     if ((window as any).saveQuickSettingsDebounced) {
       (window as any).saveQuickSettingsDebounced(next.id, getLanguage(), fontSize);
     }
+    if (showSidebarGuide) {
+      dismissSidebarGuide();
+    }
   };
 
   const cycleFontSize = () => {
@@ -310,6 +329,9 @@ export default function App() {
     setFontSize(next.id);
     if ((window as any).saveQuickSettingsDebounced) {
       (window as any).saveQuickSettingsDebounced(theme, getLanguage(), next.id);
+    }
+    if (showSidebarGuide) {
+      dismissSidebarGuide();
     }
   };
 
@@ -320,6 +342,9 @@ export default function App() {
     setLanguage(next);
     if ((window as any).saveQuickSettingsDebounced) {
       (window as any).saveQuickSettingsDebounced(theme, next, fontSize);
+    }
+    if (showSidebarGuide) {
+      dismissSidebarGuide();
     }
   };
 
@@ -422,7 +447,38 @@ export default function App() {
           }}
         >
           {/* 快速設定按鈕組：展開時橫向排列以節省垂直空間，收合時垂直排列 */}
-          <div className={isCollapsed ? "flex flex-col gap-2 mb-3" : "flex flex-row gap-1.5 mb-3"}>
+          <div className={isCollapsed ? "flex flex-col gap-2 mb-3 relative" : "flex flex-row gap-1.5 mb-3 relative"}>
+            {showSidebarGuide && (
+              <div className="absolute left-0 bottom-full mb-2.5 z-50 animate-fade-in w-64 text-left p-4 rounded-xl border font-normal" style={{
+                background: 'var(--bg-deep)',
+                borderColor: 'var(--border)',
+                boxShadow: 'var(--shadow-lg)',
+                color: 'var(--fg)',
+                textTransform: 'none',
+                letterSpacing: 'normal',
+              }}>
+                {/* 氣泡小箭頭 */}
+                <div className="absolute -bottom-1.5 left-6 w-3 h-3 rotate-45 border-b border-r" style={{
+                  background: 'var(--bg-deep)',
+                  borderColor: 'var(--border)'
+                }} />
+
+                <div className="space-y-3">
+                  <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
+                    <span>💡 {t("快速設定指南")}</span>
+                  </div>
+                  <div className="text-[11px] leading-relaxed" style={{ color: 'var(--fg-2)' }}>
+                    {t("您可以在此快速切換介面語系、調整外觀主題，以及變更編輯器與面板的字型大小。")}
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <button onClick={(e) => { e.stopPropagation(); dismissSidebarGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90 active:scale-95" style={{ background: 'var(--status-info)' }}>
+                      {t("好的，我知道了")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Language Quick Switch */}
             <button
               onClick={cycleLanguage}

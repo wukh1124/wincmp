@@ -207,7 +207,7 @@ export default function Dashboard() {
                     <span>💡 {t("依賴管理指南")}</span>
                   </div>
                   <div className="space-y-2 text-[11px]" style={{ color: 'var(--fg-2)', lineHeight: '1.4' }}>
-                    <p>{t("在此您可以一鍵下載並安裝 Web 開發必備的依賴元件，包含：")}</p>
+                    <p>{t("在此您可以一鍵下載並安裝 Web 開發所需的依賴元件，包含：")}</p>
                     <ul className="space-y-1 list-disc list-inside pl-1 text-[10px]" style={{ color: 'var(--fg)' }}>
                       <li>{t("Caddy Web 伺服器 (反向代理)")}</li>
                       <li>{t("MariaDB (本地資料庫)")}</li>

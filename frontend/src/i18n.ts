@@ -384,7 +384,7 @@ export const enTranslations: Record<string, string> = {
 
   // 依賴管理引導教學
   "依賴管理指南": "Dependency Management Guide",
-  "在此您可以一鍵下載並安裝 Web 開發必備的依賴元件，包含：": "Here you can download and install essential Web development dependencies with one click, including:",
+  "在此您可以一鍵下載並安裝 Web 開發所需的依賴元件，包含：": "Here you can download and install Web development dependencies with one click, including:",
   "Caddy Web 伺服器 (反向代理)": "Caddy Web Server (Reverse Proxy)",
   "MariaDB (本地資料庫)": "MariaDB (Local Database)",
   "PHP-CGI (PHP 多版本運行環境)": "PHP-CGI (PHP Multi-version Runtime)",
@@ -482,6 +482,10 @@ export const enTranslations: Record<string, string> = {
   "小": "Small",
   "中": "Medium",
   "大": "Large",
+
+  // Sidebar Quick Settings Guide
+  "快速設定指南": "Quick Settings Guide",
+  "您可以在此快速切換介面語系、調整外觀主題，以及變更編輯器與面板的字型大小。": "You can quickly switch the interface language, adjust appearance themes, and change editor & panel font sizes here.",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符
