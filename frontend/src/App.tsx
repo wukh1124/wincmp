@@ -341,7 +341,7 @@ export default function App() {
             className="py-5 border-b flex items-center transition-all duration-300"
             style={{
               borderColor: 'var(--border)',
-              padding: isCollapsed ? '20px 12px' : '20px 20px',
+              padding: isCollapsed ? '20px 12px 10px 12px' : '20px 20px',
               flexDirection: isCollapsed ? 'column' : 'row',
               gap: isCollapsed ? 12 : 12,
               justifyContent: isCollapsed ? 'center' : 'space-between',
@@ -376,7 +376,7 @@ export default function App() {
                   id={`nav-btn-${item.id}`}
                   onClick={() => handleTabChange(item.id)}
                   title={isCollapsed ? item.label : undefined}
-                  className="w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 relative"
+                  className={`nav-item w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 relative ${isActive ? 'active' : ''}`}
                   style={{
                     justifyContent: isCollapsed ? 'center' : 'flex-start',
                     padding: isCollapsed ? '10px 0' : '10px 16px',
@@ -423,7 +423,7 @@ export default function App() {
             {/* Language Quick Switch */}
             <button
               onClick={cycleLanguage}
-              className={`flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              className={`quick-setting-btn flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
               style={{
                 color: 'var(--fg-2)',
                 background: 'var(--surface-warm)',
@@ -438,7 +438,7 @@ export default function App() {
             {/* Theme Quick Switch */}
             <button
               onClick={cycleTheme}
-              className={`flex items-center gap-1.5 py-2 px-2 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              className={`quick-setting-btn flex items-center gap-1.5 py-2 px-2 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
               style={{
                 color: 'var(--fg-2)',
                 background: 'var(--surface-warm)',
@@ -453,7 +453,7 @@ export default function App() {
             {/* Font Size Quick Switch */}
             <button
               onClick={cycleFontSize}
-              className={`flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              className={`quick-setting-btn flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
               style={{
                 color: 'var(--fg-2)',
                 background: 'var(--surface-warm)',
@@ -680,7 +680,7 @@ export default function App() {
               <span>{customAlert.title || t("系統提示")}</span>
             </div>
             <p className="text-xs leading-relaxed break-all whitespace-pre-line" style={{ color: 'var(--fg-2)' }}>{customAlert.message}</p>
-            
+
             {customAlert.showCheckbox && (
               <label className="flex items-center gap-2 text-xs select-none cursor-pointer" style={{ color: 'var(--fg-2)' }}>
                 <input

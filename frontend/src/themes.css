@@ -290,6 +290,12 @@ html[data-theme="sketch"] {
   background-image: none;
 }
 
+/* Sketch theme: Comic Neue display font scaling */
+html[data-theme="sketch"] [style*="font-family: var(--font-display)"],
+html[data-theme="sketch"] [style*="font-family:var(--font-display)"] {
+  font-size: 1.03em;
+}
+
 html[data-theme="sketch"] main {
   background-color: var(--bg) !important;
   background-image:

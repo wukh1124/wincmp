@@ -309,8 +309,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     <div className="flex flex-col h-full overflow-hidden select-none" style={{ background: 'var(--main-content-bg, var(--bg))' }}>
       {/* Header */}
       <div className="flex justify-between items-center px-4 py-2.5 shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
-        <div className="flex items-center gap-2">
-          <h1 className="text-xs font-bold" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("專案管理面板")}</h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-xs font-bold" style={{ color: 'var(--fg)' }}>{t("專案管理面板")}</h1>
           <span className="text-[10px] hidden sm:inline" style={{ color: 'var(--meta)' }}> {t("管理與運行網頁專案，支援靜態、PHP 及 Node/Python/Go 自訂專案")}</span>
         </div>
         <button id="btn-add-project" onClick={() => handleOpenEditModal(null, null)} className="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition duration-200" style={{ background: 'var(--status-info)', color: '#fff' }}>
@@ -345,7 +345,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         background: 'var(--bg-deep)',
                         borderColor: 'var(--border)'
                       }} />
-                      
+
                       <div className="space-y-3">
                         <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
                           <span>💡 {t("操作按鈕快速指南")}</span>
@@ -387,7 +387,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="flex justify-end pt-1">
                           <button onClick={(e) => { e.stopPropagation(); dismissGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90" style={{ background: 'var(--status-info)' }}>
                             {t("好的，我知道了")}
@@ -528,8 +528,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
               {/* Header */}
               <div className="px-6 py-5 flex justify-between items-center shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--muted)', fontFamily: 'var(--font-display)' }}>
-                    {editIndex === null ? t('✨ 新增開發專案') : t('⚙️ 編輯專案屬性')}
+                  <h3 className="text-sm font-bold uppercase tracking-wider">
+                    {editIndex === null ? t('新增開發專案') : t('編輯專案屬性')}
                   </h3>
                   {editIndex !== null && <p className="text-[11px] mt-0.5" style={{ color: 'var(--meta)', fontFamily: 'var(--font-mono)' }}>{editingProject.name}</p>}
                 </div>
@@ -540,7 +540,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
               <div className="flex-1 p-6 space-y-5 overflow-y-auto text-xs" style={{ color: 'var(--fg-2)' }}>
                 {/* General */}
                 <div className="space-y-4">
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--status-info)', fontFamily: 'var(--font-display)' }}>{t("基本設定 (General)")}</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--status-info)' }}>{t("基本設定 (General)")}</h4>
                   <div className="space-y-1.5">
                     <label style={labelStyle}>{t("專案物理根目錄")}</label>
                     <div className="flex gap-2">
@@ -578,7 +578,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                   <div className="space-y-5 animate-fade-in">
                     {/* Runtime */}
                     <div className="space-y-4 pt-4" style={{ borderTop: '1px solid var(--border-soft)' }}>
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>{t("執行環境 (Runtime)")}</h4>
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent)' }}>{t("執行環境 (Runtime)")}</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                           <label style={labelStyle}>{t("專案框架 / 類型")}</label>
@@ -649,7 +649,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
                     {/* Domains */}
                     <div className="space-y-4 pt-4" style={{ borderTop: '1px solid var(--border-soft)' }}>
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--status-ok)', fontFamily: 'var(--font-display)' }}>{t("網域別名 (Domains)")}</h4>
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--status-ok)' }}>{t("網域別名 (Domains)")}</h4>
                       <div className="space-y-2">
                         {editingProject.domains.map((dom, dIdx) => (
                           <div key={dIdx} className="flex gap-2">

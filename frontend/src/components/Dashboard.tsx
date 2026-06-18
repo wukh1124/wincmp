@@ -178,7 +178,7 @@ export default function Dashboard() {
       {/* ─── Header ─────────────────────────────────────────── */}
       <div className="flex justify-between items-center select-none">
         <div className="flex items-baseline gap-3">
-          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("儀表板")}</h1>
+          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("儀表板")}</h1>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>{t("管理 Caddy, MariaDB, PHP-CGI 與背景開發服務")}</p>
         </div>
         <div className="flex gap-2.5">
@@ -238,7 +238,7 @@ export default function Dashboard() {
       <div className="space-y-4">
         <div className="flex items-center gap-2 select-none border-b pb-2" style={{ borderColor: 'var(--border-soft)' }}>
           <LayoutGrid size={15} style={{ color: 'var(--status-info)' }} />
-          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("核心系統服務")}</h3>
+          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("核心系統服務")}</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -393,7 +393,7 @@ export default function Dashboard() {
       <div className="space-y-4 pt-2">
         <div className="flex items-center gap-2 select-none border-b pb-2" style={{ borderColor: 'var(--border-soft)' }}>
           <Server size={15} style={{ color: 'var(--status-ok)' }} />
-          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("PHP FastCGI 伺服器 (多端口負載平衡)")}</h3>
+          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("PHP FastCGI 伺服器 (多端口負載平衡)")}</h3>
         </div>
 
         {scanResult?.PHPList && scanResult.PHPList.length > 0 ? (
@@ -473,7 +473,7 @@ export default function Dashboard() {
       <div className="space-y-4 pt-2">
         <div className="flex items-center gap-2 select-none border-b pb-2" style={{ borderColor: 'var(--border-soft)' }}>
           <Layers size={15} style={{ color: 'var(--status-info)' }} />
-          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("系統狀態概覽")}</h3>
+          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("系統狀態概覽")}</h3>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 select-none">
