@@ -394,14 +394,17 @@ export default function App() {
                   {!isCollapsed && <span className="whitespace-nowrap transition-opacity duration-300">{item.label}</span>}
                   {item.id === 'update' && hasUpdate && (
                     <span
-                      className="w-2 h-2 rounded-full absolute"
+                      className="relative flex h-1.5 w-1.5"
                       style={{
-                        background: 'var(--status-error)',
+                        position: 'absolute',
                         top: isCollapsed ? 6 : '50%',
                         right: isCollapsed ? 6 : 16,
                         transform: isCollapsed ? 'none' : 'translateY(-50%)',
                       }}
-                    />
+                    >
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-error)' }}></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: 'var(--status-error)' }}></span>
+                    </span>
                   )}
                 </button>
               );
