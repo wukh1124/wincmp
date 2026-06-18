@@ -302,7 +302,7 @@ export default function ResourceMonitor() {
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-deep)', color: 'var(--meta)' }}
                   >
                     <th className="px-5 py-3">{t("服務名稱")}</th>
-                    <th className="px-5 py-3">{t("狀態")}</th>
+                    <th className="px-5 py-3 w-28 whitespace-nowrap">{t("狀態")}</th>
                     <th className="px-5 py-3">{t("CPU 佔用")}</th>
                     <th className="px-5 py-3">{t("記憶體 (RAM)")}</th>
                     <th className="px-5 py-3 font-mono">{t("進程 ID (PIDs)")}</th>
@@ -322,9 +322,9 @@ export default function ResourceMonitor() {
                         <td className="px-5 py-4 flex items-center gap-2">
                           <span className="font-bold" style={{ color: 'var(--fg)' }}>{svc.name}</span>
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 whitespace-nowrap">
                           <span
-                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full"
+                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full whitespace-nowrap"
                             style={{
                               color: 'var(--status-ok)',
                               background: 'var(--status-ok-bg)',
