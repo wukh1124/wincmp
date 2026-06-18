@@ -398,7 +398,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const thStyle: React.CSSProperties = {
     padding: '10px 16px', fontWeight: 700, fontSize: 10,
     letterSpacing: '0.05em', textTransform: 'uppercase',
-    color: 'var(--muted)', background: 'var(--surface)',
+    color: 'var(--muted)', background: 'var(--table-header-bg, var(--surface))',
     borderBottom: '1px solid var(--border)',
     position: 'sticky',
     top: 0,

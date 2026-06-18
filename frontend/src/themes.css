@@ -51,6 +51,7 @@
   --bg: #1f2228;
   --bg-deep: #181a1f;
   --surface: rgba(255, 255, 255, 0.03);
+  --table-header-bg: #1f2228;
   --surface-warm: rgba(255, 255, 255, 0.05);
   --card: rgba(255, 255, 255, 0.04);
   --card-hover: rgba(255, 255, 255, 0.07);
@@ -129,6 +130,7 @@
   --bg: #faf9f7;
   --bg-deep: #f0ede8;
   --surface: #ffffff;
+  --table-header-bg: #faf9f7;
   --surface-warm: #f5f2ed;
   --card: #ffffff;
   --card-hover: #faf8f4;
@@ -207,6 +209,7 @@
   --bg: #f0ebe0;
   --bg-deep: #e8e2d4;
   --surface: #faf7f0;
+  --table-header-bg: #faf7f0;
   --surface-warm: #f5f0e4;
   --card: #fffef8;
   --card-hover: #fff9e8;
@@ -406,6 +409,7 @@ html[data-theme="sketch"] .terminal-log-content .whitespace-pre-wrap>div {
   --bg: #1f2228;
   --bg-deep: #181a1f;
   --surface: rgba(255, 255, 255, 0.03);
+  --table-header-bg: #1f2228;
   --surface-warm: rgba(255, 255, 255, 0.05);
   --card: rgba(255, 255, 255, 0.04);
   --card-hover: rgba(255, 255, 255, 0.07);
