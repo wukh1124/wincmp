@@ -366,6 +366,8 @@ export const enTranslations: Record<string, string> = {
   "使用自訂執行指令": "Use Custom Command",
   "Custom": "Custom",
   "例如: npm run dev -- --port %PORT%": "e.g., npm run dev -- --port %PORT%",
+  "此專案為單一倉庫內的其中一個項目 (Monorepo)": "This project is part of a Monorepo",
+  "勾選後，將以『project-folder』格式預設專案名稱": "If checked, the project name defaults to 'project-folder'",
   "網域別名 (Domains)": "Domain Aliases (Domains)",
   "例如: my-site.test": "e.g., my-site.test",
   "移除": "Remove",

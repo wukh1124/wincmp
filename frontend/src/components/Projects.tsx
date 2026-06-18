@@ -43,6 +43,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [showGuide, setShowGuide] = useState(false);
   const [useCustomCmd, setUseCustomCmd] = useState(false);
   const [savedRuntimeType, setSavedRuntimeType] = useState('node');
+  const [isMonorepo, setIsMonorepo] = useState(false);
   const effectivelyUseCustomCmd = useCustomCmd || editingProject?.type === 'custom';
 
   useEffect(() => {
@@ -243,6 +244,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
         command: '', use_wincmp_bin: false
       });
       setDetected(false);
+      setIsMonorepo(false);
     }
     setEditIndex(idx);
     setIsModalOpen(true);
@@ -256,9 +258,29 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       const res = await DetectProjectPath(path);
       if (res) {
         const hasBin = hasBundledRuntime(res.runtime_type);
+        let finalName = res.name;
+        let finalDomains = res.domains?.length > 0 ? res.domains : [`local-${res.name.toLowerCase().replace(/_/g, '-')}.test`];
+
+        if (isMonorepo) {
+          const cleanPath = path.replace(/\\/g, '/').replace(/\/+$/, '');
+          const parts = cleanPath.split('/');
+          const folderName = parts[parts.length - 1] || '';
+          let parentName = '';
+          if (parts.length > 1) {
+            const parent = parts[parts.length - 2];
+            if (parent && !parent.endsWith(':')) {
+              parentName = parent;
+            }
+          }
+          if (parentName) {
+            finalName = `${parentName}-${folderName}`.replace(/_/g, '-').replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-');
+            finalDomains = [`local-${finalName.toLowerCase()}.test`];
+          }
+        }
+
         setEditingProject({
-          ...editingProject, root_path: path, name: res.name,
-          domains: res.domains?.length > 0 ? res.domains : [`local-${res.name.toLowerCase().replace(/_/g, '-')}.test`],
+          ...editingProject, root_path: path, name: finalName,
+          domains: finalDomains,
           type: res.type || 'static', runtime_type: res.runtime_type || 'none',
           runtime_port: res.runtime_port || 3000,
           php_version: res.php_version || scanResult?.PHPList?.[0]?.MajorMin || '',
@@ -269,6 +291,40 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       }
     } catch (err) { console.error("自動偵測專案失敗:", err); (window as any).customAlert(`${t("自動偵測專案失敗")}: ${err}`); }
     finally { setIsDetecting(false); }
+  };
+
+  const handleMonorepoChange = (checked: boolean) => {
+    setIsMonorepo(checked);
+    if (!editingProject || !editingProject.root_path.trim()) return;
+
+    const path = editingProject.root_path.trim();
+    const cleanPath = path.replace(/\\/g, '/').replace(/\/+$/, '');
+    const parts = cleanPath.split('/');
+    const folderName = parts[parts.length - 1] || '';
+    let parentName = '';
+    if (parts.length > 1) {
+      const parent = parts[parts.length - 2];
+      if (parent && !parent.endsWith(':')) {
+        parentName = parent;
+      }
+    }
+
+    let finalName = folderName;
+    if (checked && parentName) {
+      finalName = `${parentName}-${folderName}`;
+    }
+
+    finalName = finalName.replace(/_/g, '-').replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-');
+    const finalDomain = `local-${finalName.toLowerCase()}.test`;
+
+    setEditingProject(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        name: finalName,
+        domains: [finalDomain]
+      };
+    });
   };
 
   const handleSelectRootPath = async () => {
@@ -613,6 +669,27 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       <button onClick={handleSelectRootPath} className="px-3 py-2 font-semibold transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)', borderRadius: 'var(--radius-md)' }}>{t("選擇")}</button>
                     </div>
                   </div>
+                  {editIndex === null && detected && (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-start gap-2 select-none">
+                        <input
+                          type="checkbox"
+                          id="isMonorepo"
+                          checked={isMonorepo}
+                          onChange={(e) => handleMonorepoChange(e.target.checked)}
+                          className="w-3.5 h-3.5 mt-0.5 cursor-pointer accent-blue-500"
+                        />
+                        <div className="flex flex-col">
+                          <label htmlFor="isMonorepo" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)' }}>
+                            {t("此專案為單一倉庫內的其中一個項目 (Monorepo)")}
+                          </label>
+                          <span className="text-[10px] mt-0.5 leading-relaxed" style={{ color: 'var(--meta)' }}>
+                            {t("勾選後，將以『project-folder』格式預設專案名稱")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {(editIndex !== null || detected) && (
                     <div className="space-y-1.5 animate-fade-in">
                       <label style={labelStyle}>{t("專案名稱")}</label>
@@ -650,14 +727,14 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         </div>
                         <div className="space-y-1.5">
                           <label style={labelStyle}>{t("執行器 (Runtime)")}</label>
-                          <select 
-                            value={effectivelyUseCustomCmd ? 'custom' : editingProject.runtime_type} 
+                          <select
+                            value={effectivelyUseCustomCmd ? 'custom' : editingProject.runtime_type}
                             disabled={effectivelyUseCustomCmd}
-                            onChange={(e) => { 
-                              const newRt = e.target.value; 
-                              setEditingProject({ ...editingProject, runtime_type: newRt, use_wincmp_bin: hasBundledRuntime(newRt) }); 
-                            }} 
-                            className="w-full cursor-pointer font-semibold" 
+                            onChange={(e) => {
+                              const newRt = e.target.value;
+                              setEditingProject({ ...editingProject, runtime_type: newRt, use_wincmp_bin: hasBundledRuntime(newRt) });
+                            }}
+                            className="w-full cursor-pointer font-semibold"
                             style={{
                               ...inputStyle,
                               opacity: effectivelyUseCustomCmd ? 0.6 : 1,
@@ -716,34 +793,34 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                           )}
                           <div className="space-y-1.5">
                             <label style={labelStyle}>{t("執行啟動指令 (支援 %PORT% 作佔位符)")}</label>
-                            <input 
-                              type="text" 
-                              value={editingProject.command || ''} 
+                            <input
+                              type="text"
+                              value={editingProject.command || ''}
                               onChange={(e) => {
                                 if (effectivelyUseCustomCmd) {
                                   setEditingProject({ ...editingProject, command: e.target.value });
                                 }
-                              }} 
+                              }}
                               readOnly={!effectivelyUseCustomCmd}
-                              placeholder={t("例如: npm run dev -- --port %PORT%")} 
-                              className="w-full font-mono text-xs" 
+                              placeholder={t("例如: npm run dev -- --port %PORT%")}
+                              className="w-full font-mono text-xs"
                               style={{
                                 ...inputStyle,
                                 backgroundColor: !effectivelyUseCustomCmd ? 'var(--input-bg-readonly, var(--border-soft))' : 'var(--input-bg)',
                                 color: !effectivelyUseCustomCmd ? 'var(--meta)' : 'var(--fg)',
                                 opacity: !effectivelyUseCustomCmd ? 0.75 : 1,
                                 cursor: !effectivelyUseCustomCmd ? 'not-allowed' : 'text'
-                              }} 
+                              }}
                             />
                           </div>
                           <div className="flex items-center gap-2 pt-1">
-                            <input 
-                              type="checkbox" 
-                              id="useCustomCmd" 
-                              checked={effectivelyUseCustomCmd} 
+                            <input
+                              type="checkbox"
+                              id="useCustomCmd"
+                              checked={effectivelyUseCustomCmd}
                               disabled={editingProject.type === 'custom'}
-                              onChange={(e) => handleUseCustomCmdChange(e.target.checked)} 
-                              className="w-3.5 h-3.5 cursor-pointer accent-blue-500" 
+                              onChange={(e) => handleUseCustomCmdChange(e.target.checked)}
+                              className="w-3.5 h-3.5 cursor-pointer accent-blue-500"
                             />
                             <label htmlFor="useCustomCmd" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)', opacity: editingProject.type === 'custom' ? 0.6 : 1 }}>
                               {t("使用自訂執行指令")}
@@ -841,7 +918,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     else if (type === 'go_api') { rt = 'go_air'; port = 8080; }
     else if (type === 'pocketbase') { rt = 'go_run'; port = 8090; }
     else if (type === 'custom') { rt = 'custom'; port = 3000; }
-    
+
     const finalRt = useCustomCmd ? 'custom' : rt;
     const hasBin = hasBundledRuntime(rt);
     setEditingProject({ ...editingProject, type, runtime_type: finalRt, runtime_port: port, runtime_version: rt === 'bun' ? scanResult?.BunList?.[0]?.Version : scanResult?.NodeList?.[0]?.Version, use_wincmp_bin: shouldDefaultUseWinCMPBin(rt) });
