@@ -6,6 +6,7 @@
 - **Monorepo Project Support**: Added a Monorepo helper checkbox during project creation to automatically adapt default project names and domain aliases.
 - **Quick Settings Onboarding Guide**: Added step-by-step onboarding guide bubbles for sidebar Quick Settings (Theme/Language/Font).
 - **Custom Start Command Configuration**: Refactored project properties to introduce a "Use Custom Command" option, dynamically displaying read-only default commands as a reference.
+- **Sidebar Lock/Unlock**: Added a lock/unlock button to prevent the sidebar from collapsing automatically when switching pages.
 
 ### Changed
 - **Auto-Update Check Optimization**: Optimized background auto-update check intervals and cached status to improve startup performance and bandwidth efficiency.
