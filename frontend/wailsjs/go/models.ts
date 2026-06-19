@@ -51,6 +51,7 @@ export namespace config {
 	    auto_update_hosts: boolean;
 	    terminal_shell: string;
 	    auto_check_update: boolean;
+	    last_check_update_time: number;
 	    php?: PHPSettings;
 	    mariadb_external: boolean;
 	    mariadb_basedir: string;
@@ -87,6 +88,7 @@ export namespace config {
 	        this.auto_update_hosts = source["auto_update_hosts"];
 	        this.terminal_shell = source["terminal_shell"];
 	        this.auto_check_update = source["auto_check_update"];
+	        this.last_check_update_time = source["last_check_update_time"];
 	        this.php = this.convertValues(source["php"], PHPSettings);
 	        this.mariadb_external = source["mariadb_external"];
 	        this.mariadb_basedir = source["mariadb_basedir"];

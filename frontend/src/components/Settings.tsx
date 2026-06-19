@@ -266,7 +266,6 @@ export default function Settings() {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="font-semibold block" style={{ color: 'var(--fg-2)' }}>{t("定時自動檢查新版本")}</span>
-                  <span className="text-[10px] mt-0.5 block" style={{ color: 'var(--meta)' }}>{t("每 6 小時自動檢查新版本")}</span>
                 </div>
                 <input
                   type="checkbox"

@@ -41,9 +41,10 @@ type GlobalConfig struct {
 	MaxLogRetention int    `json:"max_log_retention"` // 天數
 	MaxLogLines     int    `json:"max_log_lines"`     // UI 顯示行數限制
 
-	AutoUpdateHosts bool `json:"auto_update_hosts"` // 自動更新 Hosts
-	TerminalShell   string `json:"terminal_shell"`   // 終端 Shell 設定: "powershell.exe", "cmd.exe" 等
-	AutoCheckUpdate bool   `json:"auto_check_update"` // 背景定時檢查更新
+	AutoUpdateHosts     bool   `json:"auto_update_hosts"`      // 自動更新 Hosts
+	TerminalShell       string `json:"terminal_shell"`         // 終端 Shell 設定: "powershell.exe", "cmd.exe" 等
+	AutoCheckUpdate     bool   `json:"auto_check_update"`      // 背景定時檢查更新
+	LastCheckUpdateTime int64  `json:"last_check_update_time"` // 上次背景自動檢查更新的時間戳記
 
 	PHP PHPSettings `json:"php,omitempty"`
 

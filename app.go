@@ -668,19 +668,34 @@ func (a *App) restoreLastState() {
 	}
 }
 
-// startUpdateCheckTimer 定時檢查更新 (每 6 小時檢查一次)
-func (a *App) startUpdateCheckTimer() {
-	// 啟動 5 秒後先進行首次檢查
-	time.Sleep(5 * time.Second)
-	a.performUpdateCheck()
+// shouldCheckUpdate 判斷是否需要執行更新檢查
+func (a *App) shouldCheckUpdate() bool {
+	if a.appCfg == nil || !a.appCfg.Global.AutoCheckUpdate {
+		return false
+	}
+	now := time.Now().Unix()
+	// 判斷是否距離上一次檢查超過 24 小時（86400 秒）
+	return now-a.appCfg.Global.LastCheckUpdateTime >= 86400
+}
 
-	ticker := time.NewTicker(6 * time.Hour)
+// startUpdateCheckTimer 定時檢查更新
+func (a *App) startUpdateCheckTimer() {
+	// 啟動 5 秒後先判斷是否需要檢查
+	time.Sleep(5 * time.Second)
+	if a.shouldCheckUpdate() {
+		a.performUpdateCheck()
+	}
+
+	// 每 1 小時輪詢一次，符合 24 小時條件才觸發
+	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			a.performUpdateCheck()
+			if a.shouldCheckUpdate() {
+				a.performUpdateCheck()
+			}
 		}
 	}
 }
@@ -695,6 +710,13 @@ func (a *App) performUpdateCheck() {
 	if err != nil {
 		a.handleErrorLog("system", "定時檢查版本更新失敗", err)
 		return
+	}
+
+	// 檢查成功後（無論是否有更新），更新上次檢查時間戳記並存檔
+	a.appCfg.Global.LastCheckUpdateTime = time.Now().Unix()
+	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
+	if err := a.appCfg.Save(cfgPath); err != nil {
+		a.handleErrorLog("system", "儲存更新檢查時間失敗", err)
 	}
 
 	if info.HasUpdate && a.ctx != nil {
