@@ -226,7 +226,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               <HardDrive size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-bold tracking-wide" style={{ fontFamily: 'var(--font-display)' }}>{t("WinCMP 依賴庫管理")}</h2>
+              <h2 className="text-lg font-bold tracking-wide">{t("WinCMP 依賴庫管理")}</h2>
               <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{t("下載或升級本機 Web 開發依賴")}</p>
             </div>
           </div>
@@ -249,7 +249,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           ) : (
             <>
               <div style={cardStyle}>
-                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)', fontFamily: 'var(--font-display)' }}>
+                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
                   <Cpu size={13} /> {t("核心執行環境")}
                 </h3>
                 <div className="divide-y divide-[var(--border-soft)]">
@@ -259,7 +259,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               </div>
 
               <div style={cardStyle}>
-                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2" style={{ color: 'var(--status-ok)', borderBottom: '1px solid var(--border-soft)', fontFamily: 'var(--font-display)' }}>
+                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2" style={{ color: 'var(--status-ok)', borderBottom: '1px solid var(--border-soft)' }}>
                   <Server size={13} /> {t("PHP FastCGI 環境")}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -275,7 +275,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               </div>
 
               <div style={cardStyle}>
-                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2" style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border-soft)', fontFamily: 'var(--font-display)' }}>
+                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2" style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border-soft)' }}>
                   <SettingsIcon size={13} /> {t("開發輔助工具與實用工具")}
                 </h3>
                 <div className="divide-y divide-[var(--border-soft)]">

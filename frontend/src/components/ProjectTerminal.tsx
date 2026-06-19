@@ -11,9 +11,9 @@ import '@xterm/xterm/css/xterm.css';
 // 取得 xterm.js 主題配色的輔助函式
 const getTerminalTheme = (themeId: string) => {
   switch (themeId) {
-    case 'claude':
+    case 'cream':
       return {
-        background: '#faf9f7', // Claude 暖乳白底色
+        background: '#faf9f7', // Cream 暖乳白底色
         foreground: '#1a1916', // 暖深灰文字
         cursor: '#c96442',     // 陶土橘游標
         cursorAccent: '#faf9f7',
@@ -198,7 +198,7 @@ export default function ProjectTerminal({ projectName, isOpen, onClose }: Projec
           {/* Footer */}
           <div className="px-6 py-3 flex justify-between items-center shrink-0 text-[10px]" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-deep)', color: 'var(--meta)' }}>
             <div>{t("💡 支援完整互動指令、Ctrl+C 中斷與 TAB 自動補齊。")}</div>
-            <button onClick={() => { onClose(); setTimeout(() => onClose(), 100); }} className="px-2.5 py-1 border rounded transition flex items-center gap-1 font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--fg-2)' }}>
+            <button onClick={() => { onClose(); setTimeout(() => onClose(), 100); }} className="btn-custom-hover px-2.5 py-1 border rounded transition flex items-center gap-1 font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--fg-2)' }}>
               <RefreshCw size={10} /> {t("重啟")}
             </button>
           </div>

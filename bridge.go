@@ -430,7 +430,7 @@ func (a *App) StartProjectRuntime(projectName string) error {
 			} else if hasBun {
 				resolvedRT = "bun"
 			} else {
-				resolvedRT = "node"
+				return fmt.Errorf("%s", i18n.T("本機或內建環境中未偵測到 Node.js 或 Bun，請先下載並安裝 Node.js 運行環境"))
 			}
 		} else {
 			if _, err := exec.LookPath("node"); err == nil {
@@ -438,7 +438,34 @@ func (a *App) StartProjectRuntime(projectName string) error {
 			} else if _, err := exec.LookPath("bun"); err == nil {
 				resolvedRT = "bun"
 			} else {
-				resolvedRT = "node"
+				return fmt.Errorf("%s", i18n.T("系統環境中未偵測到 Node.js 或 Bun，請先安裝 Node.js 運行環境"))
+			}
+		}
+	}
+
+	if resolvedRT == "custom" {
+		// 為了讓自訂指令也能使用內建的 node/bun
+		if proj.UseWinCMPBin {
+			if hasNode {
+				for _, n := range a.scanRes.NodeList {
+					if n.Version == proj.RuntimeVersion {
+						exePath = n.ExePath
+						break
+					}
+				}
+				if exePath == "" && len(a.scanRes.NodeList) > 0 {
+					exePath = a.scanRes.NodeList[0].ExePath
+				}
+			} else if hasBun {
+				for _, b := range a.scanRes.BunList {
+					if b.Version == proj.RuntimeVersion {
+						exePath = b.ExePath
+						break
+					}
+				}
+				if exePath == "" && len(a.scanRes.BunList) > 0 {
+					exePath = a.scanRes.BunList[0].ExePath
+				}
 			}
 		}
 	}
@@ -943,6 +970,46 @@ func (a *App) DetectProjectPath(path string) (*ProjectDetectResult, error) {
 	runtimePort := detRes.Port
 	phpVersion := ""
 
+	// 當偵測到 runtime 屬於 node/bun 項目時，實施精確環境偵測，直接解析為 node 或是 bun，全無則提示錯誤
+	if runtimeType == preset.RuntimeAuto {
+		hasNode := false
+		hasBun := false
+
+		// 1. 檢查系統環境中是否有 node
+		if _, err := exec.LookPath("node"); err == nil {
+			hasNode = true
+		}
+		// 2. 檢查系統環境中是否有 bun
+		if _, err := exec.LookPath("bun"); err == nil {
+			hasBun = true
+		}
+
+		// 3. 如果系統都沒有，檢查內建 /bin 目錄
+		if !hasNode && !hasBun {
+			if a.scanRes == nil {
+				res, _ := scanner.ScanBinDir(a.baseDir)
+				a.scanRes = res
+			}
+			if a.scanRes != nil {
+				if len(a.scanRes.NodeList) > 0 {
+					hasNode = true
+				}
+				if len(a.scanRes.BunList) > 0 {
+					hasBun = true
+				}
+			}
+		}
+
+		// 優先有 node 用 node，有 bun 用 bun，如果都沒有，拋出錯誤提示
+		if hasNode {
+			runtimeType = preset.RuntimeNode
+		} else if hasBun {
+			runtimeType = preset.RuntimeBun
+		} else {
+			return nil, fmt.Errorf("%s", i18n.T("偵測到此項目為 Node.js 專案，但您的系統與內建環境中皆未安裝 Node.js 或 Bun 運行環境。\n\n請先安裝 Node.js 或 Bun 運行環境，以確保專案能正常啟動。"))
+		}
+	}
+
 	// 4. Laravel PHP 專屬匹配
 	if projectType == preset.TypeLaravel {
 		laravelRes := detect.DetectLaravel(path)
@@ -1445,6 +1512,32 @@ func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
 	}()
 
 	return nil
+}
+
+// GetDefaultCommandTemplate 根據專案類型與執行器類型取得預設指令模板
+func (a *App) GetDefaultCommandTemplate(typeID string, runtimeType string) (string, error) {
+	hasNode := false
+	hasBun := false
+
+	// 檢查系統環境
+	if _, err := exec.LookPath("node"); err == nil {
+		hasNode = true
+	}
+	if _, err := exec.LookPath("bun"); err == nil {
+		hasBun = true
+	}
+
+	// 檢查內建環境
+	if a.scanRes != nil {
+		if len(a.scanRes.NodeList) > 0 {
+			hasNode = true
+		}
+		if len(a.scanRes.BunList) > 0 {
+			hasBun = true
+		}
+	}
+
+	return preset.GetDefaultCommandTemplate(typeID, runtimeType, hasNode, hasBun), nil
 }
 
 

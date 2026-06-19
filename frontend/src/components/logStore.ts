@@ -24,9 +24,7 @@ class LogStore {
     mariadb: [],
     mailpit: [],
     php: [],
-    runtime: {
-      System: []
-    }
+    runtime: {}
   };
 
   private listeners: Set<LogListener> = new Set();
@@ -69,19 +67,7 @@ class LogStore {
         }
       }
 
-      // 2. 載入 runtime 分類歷史日誌 (System 和各專案)
-      const systemRuntimeEntries = await GetCategoryLogs("runtime", "System");
-      if (systemRuntimeEntries && systemRuntimeEntries.length > 0) {
-        const existing = this.logs.runtime["System"] || [];
-        const combined = [...systemRuntimeEntries.map((e: any) => ({ text: e.text || '', time: e.time || '' }))];
-        for (const item of existing) {
-          const isDup = combined.some(c => c.time === item.time && c.text === item.text);
-          if (!isDup) {
-            combined.push(item);
-          }
-        }
-        this.logs.runtime["System"] = combined;
-      }
+      // 2. 載入 runtime 分類歷史日誌 (各專案)
 
       const cfg = await GetConfig();
       if (cfg && cfg.projects) {
@@ -166,13 +152,15 @@ class LogStore {
         const text = data.message || '';
         
         if (category === 'runtime') {
-          const proj = data.projectName || 'System';
-          if (!this.logs.runtime[proj]) {
-            this.logs.runtime[proj] = [];
-          }
-          this.logs.runtime[proj].push({ text, time });
-          if (this.logs.runtime[proj].length > this.maxLogLines) {
-            this.logs.runtime[proj].shift();
+          const proj = data.projectName;
+          if (proj) {
+            if (!this.logs.runtime[proj]) {
+              this.logs.runtime[proj] = [];
+            }
+            this.logs.runtime[proj].push({ text, time });
+            if (this.logs.runtime[proj].length > this.maxLogLines) {
+              this.logs.runtime[proj].shift();
+            }
           }
         } else {
           const cat = category as keyof Omit<LogData, 'runtime'>;
@@ -203,8 +191,10 @@ class LogStore {
 
   public clearLogs(category: string, subCategory?: string) {
     if (category === 'runtime') {
-      const proj = subCategory || 'System';
-      this.logs.runtime[proj] = [];
+      const proj = subCategory;
+      if (proj && this.logs.runtime[proj]) {
+        this.logs.runtime[proj] = [];
+      }
     } else if (category in this.logs) {
       this.logs[category as keyof Omit<LogData, 'runtime'>] = [];
     }

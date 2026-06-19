@@ -115,11 +115,11 @@ export default function ResourceMonitor() {
 
       {/* 標頭 */}
       <div className="flex justify-between items-center">
-        <div>
+        <div className="flex items-baseline gap-3">
           <h1 className="text-xl font-bold tracking-tight flex items-center gap-2" style={{ color: 'var(--fg)' }}>
             {t("資源監控")}
           </h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>
             {t("即時監控系統總體、主程式、Web 視窗介面及各背景服務的 CPU 與 RAM 使用狀況")}
           </p>
         </div>
@@ -302,7 +302,7 @@ export default function ResourceMonitor() {
                     style={{ borderColor: 'var(--border)', background: 'var(--bg-deep)', color: 'var(--meta)' }}
                   >
                     <th className="px-5 py-3">{t("服務名稱")}</th>
-                    <th className="px-5 py-3">{t("狀態")}</th>
+                    <th className="px-5 py-3 w-28 whitespace-nowrap">{t("狀態")}</th>
                     <th className="px-5 py-3">{t("CPU 佔用")}</th>
                     <th className="px-5 py-3">{t("記憶體 (RAM)")}</th>
                     <th className="px-5 py-3 font-mono">{t("進程 ID (PIDs)")}</th>
@@ -322,18 +322,18 @@ export default function ResourceMonitor() {
                         <td className="px-5 py-4 flex items-center gap-2">
                           <span className="font-bold" style={{ color: 'var(--fg)' }}>{svc.name}</span>
                         </td>
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 whitespace-nowrap">
                           <span
-                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full"
+                            className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full whitespace-nowrap"
                             style={{
                               color: 'var(--status-ok)',
                               background: 'var(--status-ok-bg)',
                               border: '1px solid color-mix(in srgb, var(--status-ok) 15%, transparent)',
                             }}
                           >
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
-                              <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: 'var(--status-ok)' }}></span>
+                            <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                              <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
+                              <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: 'var(--status-ok)' }}></span>
                             </span>
                             {t("運行中")}
                           </span>

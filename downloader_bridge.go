@@ -175,6 +175,7 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 		}
 		if !strings.EqualFold(shaVal, item.SHA256) {
 			mismatchErr := fmt.Errorf(
+				"%s",
 				i18n.Tfmt("SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。\n\n💡 建議指引：\n1. 請先嘗試在依賴管理面板點擊「獲取最新」，然後重試下載。\n2. 若問題持續，請手動下載：%s\n3. 並解壓放置於以下 bin 目錄位置：%s", item.URL, destDir),
 			)
 			a.handleErrorLog("system", i18n.Tfmt("❌ %s 的完整性校驗失敗", name), mismatchErr)

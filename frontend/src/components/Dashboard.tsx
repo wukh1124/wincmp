@@ -27,10 +27,22 @@ export default function Dashboard() {
   const [showDepGuide, setShowDepGuide] = useState(false);
 
   useEffect(() => {
-    const isShown = localStorage.getItem('wincmp_dep_onboarding_shown') === 'true';
-    if (!isShown) {
-      setShowDepGuide(true);
-    }
+    const checkGuides = () => {
+      const sidebarGuideShown = localStorage.getItem('wincmp_sidebar_guide_shown') === 'true';
+      const depGuideShown = localStorage.getItem('wincmp_dep_onboarding_shown') === 'true';
+      if (sidebarGuideShown && !depGuideShown) {
+        setShowDepGuide(true);
+      } else {
+        setShowDepGuide(false);
+      }
+    };
+
+    checkGuides();
+
+    window.addEventListener('wincmp_sidebar_guide_dismissed', checkGuides);
+    return () => {
+      window.removeEventListener('wincmp_sidebar_guide_dismissed', checkGuides);
+    };
   }, []);
 
   const dismissDepGuide = () => {
@@ -178,36 +190,29 @@ export default function Dashboard() {
       {/* ─── Header ─────────────────────────────────────────── */}
       <div className="flex justify-between items-center select-none">
         <div className="flex items-baseline gap-3">
-          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("儀表板")}</h1>
+          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("儀表板")}</h1>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>{t("管理 Caddy, MariaDB, PHP-CGI 與背景開發服務")}</p>
         </div>
         <div className="flex gap-2.5">
           <div className="relative">
-            <button id="btn-open-dep-manager" onClick={handleOpenDepManager} className="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
+            <button id="btn-open-dep-manager" onClick={handleOpenDepManager} className="btn-custom-hover px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
               <Package size={13} style={{ color: 'var(--status-info)' }} />
               <span>{t("依賴庫管理")}</span>
             </button>
             {showDepGuide && (
-              <div className="absolute right-0 top-10 z-50 animate-fade-in w-72 text-left p-4 rounded-xl border font-normal" style={{
-                background: 'var(--bg-deep)',
-                borderColor: 'var(--border)',
-                boxShadow: 'var(--shadow-lg)',
-                color: 'var(--fg)',
+              <div className="guide-bubble absolute right-0 top-10 z-50 animate-fade-in w-72 text-left p-4 rounded-xl border font-normal" style={{
                 textTransform: 'none',
                 letterSpacing: 'normal',
               }}>
                 {/* 氣泡小箭頭 */}
-                <div className="absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" style={{
-                  background: 'var(--bg-deep)',
-                  borderColor: 'var(--border)'
-                }} />
+                <div className="guide-bubble-arrow absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" />
 
                 <div className="space-y-3">
                   <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
                     <span>💡 {t("依賴管理指南")}</span>
                   </div>
                   <div className="space-y-2 text-[11px]" style={{ color: 'var(--fg-2)', lineHeight: '1.4' }}>
-                    <p>{t("在此您可以一鍵下載並安裝 Web 開發必備的依賴元件，包含：")}</p>
+                    <p>{t("在此您可以一鍵下載並安裝 Web 開發所需的依賴元件，包含：")}</p>
                     <ul className="space-y-1 list-disc list-inside pl-1 text-[10px]" style={{ color: 'var(--fg)' }}>
                       <li>{t("Caddy Web 伺服器 (反向代理)")}</li>
                       <li>{t("MariaDB (本地資料庫)")}</li>
@@ -218,14 +223,14 @@ export default function Dashboard() {
 
                   <div className="flex justify-end pt-1">
                     <button onClick={(e) => { e.stopPropagation(); dismissDepGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90" style={{ background: 'var(--status-info)' }}>
-                      {t("好的，我知道了")}
+                      {t("我知道了")}
                     </button>
                   </div>
                 </div>
               </div>
             )}
           </div>
-          <button onClick={handleScan} disabled={isScanning} className="px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)', opacity: isScanning ? 0.5 : 1 }}>
+          <button onClick={handleScan} disabled={isScanning} className="btn-custom-hover px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)', opacity: isScanning ? 0.5 : 1 }}>
             <RefreshCw size={13} className={isScanning ? 'animate-spin' : ''} />
             {isScanning ? t("掃描中...") : t("重新掃描服務")}
           </button>
@@ -238,7 +243,7 @@ export default function Dashboard() {
       <div className="space-y-4">
         <div className="flex items-center gap-2 select-none border-b pb-2" style={{ borderColor: 'var(--border-soft)' }}>
           <LayoutGrid size={15} style={{ color: 'var(--status-info)' }} />
-          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("核心系統服務")}</h3>
+          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("核心系統服務")}</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -253,9 +258,9 @@ export default function Dashboard() {
             return (
               <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
                 <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                  <span className="relative flex h-2 w-2">
-                    {running && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                    <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
                   </span>
                   <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
                     {running ? t("運行中") : t("已停止")}
@@ -275,15 +280,15 @@ export default function Dashboard() {
 
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
                   {!running ? (
-                    <button onClick={() => handleServiceAction('caddy', 'start', caddy)} disabled={loadingStart || !caddy} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !caddy ? 0.5 : 1 }}>
+                    <button onClick={() => handleServiceAction('caddy', 'start', caddy)} disabled={loadingStart || !caddy} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !caddy ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
                   ) : (
                     <>
-                      <button onClick={() => handleServiceAction('caddy', 'stop', caddy)} disabled={loadingStop} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
+                      <button onClick={() => handleServiceAction('caddy', 'stop', caddy)} disabled={loadingStop} className="btn-danger-hover flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
                         <Square size={12} /> {loadingStop ? t("停止中...") : t("停止")}
                       </button>
-                      <button onClick={() => handleServiceAction('caddy', 'reload', caddy)} disabled={loadingReload} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
+                      <button onClick={() => handleServiceAction('caddy', 'reload', caddy)} disabled={loadingReload} className="btn-custom-hover flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
                         <RefreshCw size={12} /> {loadingReload ? t("重載中...") : t("重載")}
                       </button>
                     </>
@@ -305,9 +310,9 @@ export default function Dashboard() {
             return (
               <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
                 <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                  <span className="relative flex h-2 w-2">
-                    {running && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                    <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
                   </span>
                   <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
                     {running ? t("運行中") : t("已停止")}
@@ -327,11 +332,11 @@ export default function Dashboard() {
 
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
                   {!running ? (
-                    <button onClick={() => handleServiceAction(serviceKey, 'start', mariadb)} disabled={loadingStart || !mariadb} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !mariadb ? 0.5 : 1 }}>
+                    <button onClick={() => handleServiceAction(serviceKey, 'start', mariadb)} disabled={loadingStart || !mariadb} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !mariadb ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
                   ) : (
-                    <button onClick={() => handleServiceAction(serviceKey, 'stop', mariadb)} disabled={loadingStop} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
+                    <button onClick={() => handleServiceAction(serviceKey, 'stop', mariadb)} disabled={loadingStop} className="btn-danger-hover w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
                       <Square size={12} /> {loadingStop ? t("停止中...") : t("停止服務")}
                     </button>
                   )}
@@ -352,9 +357,9 @@ export default function Dashboard() {
             return (
               <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
                 <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                  <span className="relative flex h-2 w-2">
-                    {running && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                    <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
                   </span>
                   <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
                     {running ? t("運行中") : t("已停止")}
@@ -374,11 +379,11 @@ export default function Dashboard() {
 
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
                   {!running ? (
-                    <button onClick={() => handleServiceAction('mailpit', 'start', mailpit)} disabled={loadingStart || !mailpit} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !mailpit ? 0.5 : 1 }}>
+                    <button onClick={() => handleServiceAction('mailpit', 'start', mailpit)} disabled={loadingStart || !mailpit} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !mailpit ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
                   ) : (
-                    <button onClick={() => handleServiceAction('mailpit', 'stop', mailpit)} disabled={loadingStop} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
+                    <button onClick={() => handleServiceAction('mailpit', 'stop', mailpit)} disabled={loadingStop} className="btn-danger-hover w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
                       <Square size={12} /> {loadingStop ? t("停止中...") : t("停止服務")}
                     </button>
                   )}
@@ -393,7 +398,7 @@ export default function Dashboard() {
       <div className="space-y-4 pt-2">
         <div className="flex items-center gap-2 select-none border-b pb-2" style={{ borderColor: 'var(--border-soft)' }}>
           <Server size={15} style={{ color: 'var(--status-ok)' }} />
-          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("PHP FastCGI 伺服器 (多端口負載平衡)")}</h3>
+          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("PHP FastCGI 伺服器 (多端口負載平衡)")}</h3>
         </div>
 
         {scanResult?.PHPList && scanResult.PHPList.length > 0 ? (
@@ -411,9 +416,9 @@ export default function Dashboard() {
               return (
                 <div key={`php-${idx}`} className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
                   <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                    <span className="relative flex h-2 w-2">
-                      {running && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                      <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                    <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                      {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                      <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
                     </span>
                     <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
                       {running ? t("運行中") : t("已停止")}
@@ -448,11 +453,11 @@ export default function Dashboard() {
 
                     <div className="flex gap-2">
                       {!running ? (
-                        <button onClick={() => handleServiceAction(serviceKey, 'start', php)} disabled={loadingStart} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff' }}>
+                        <button onClick={() => handleServiceAction(serviceKey, 'start', php)} disabled={loadingStart} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff' }}>
                           <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動 PHP")}
                         </button>
                       ) : (
-                        <button onClick={() => handleServiceAction(serviceKey, 'stop', php)} disabled={loadingStop} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
+                        <button onClick={() => handleServiceAction(serviceKey, 'stop', php)} disabled={loadingStop} className="btn-danger-hover w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
                           <Square size={12} /> {loadingStop ? t("停止中...") : t("停止 PHP")}
                         </button>
                       )}
@@ -473,7 +478,7 @@ export default function Dashboard() {
       <div className="space-y-4 pt-2">
         <div className="flex items-center gap-2 select-none border-b pb-2" style={{ borderColor: 'var(--border-soft)' }}>
           <Layers size={15} style={{ color: 'var(--status-info)' }} />
-          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("系統狀態概覽")}</h3>
+          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("系統狀態概覽")}</h3>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 select-none">

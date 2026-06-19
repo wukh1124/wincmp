@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages, Type } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages, Type, Lock, Unlock } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -13,8 +13,6 @@ import logo from './assets/images/icon.svg';
 import { t, setLanguage, useLanguage, getLanguage } from './i18n';
 import { useTheme, THEMES } from './components/ThemeContext';
 
-// 追蹤在本次 App 生命週期中是否已觸發過 Projects 自動收合 sidebar
-let projectsCollapsedTriggered = false;
 
 // 防抖儲存主題、語言與字體大小設定的定時器
 let quickSaveTimer: any = null;
@@ -40,6 +38,23 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'resources' | 'settings' | 'logs' | 'update'>('dashboard');
   const [showLogs, setShowLogs] = useState(false);
+  const [showSidebarGuide, setShowSidebarGuide] = useState(false);
+  const [isSidebarLocked, setIsSidebarLocked] = useState(() => {
+    return localStorage.getItem('wincmp_sidebar_locked') === 'true';
+  });
+
+  useEffect(() => {
+    const isShown = localStorage.getItem('wincmp_sidebar_guide_shown') === 'true';
+    if (!isShown) {
+      setShowSidebarGuide(true);
+    }
+  }, []);
+
+  const dismissSidebarGuide = () => {
+    localStorage.setItem('wincmp_sidebar_guide_shown', 'true');
+    setShowSidebarGuide(false);
+    window.dispatchEvent(new CustomEvent('wincmp_sidebar_guide_dismissed'));
+  };
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [customAlertChecked, setCustomAlertChecked] = useState(false);
@@ -96,7 +111,7 @@ export default function App() {
         }
 
         // 主題回退：若無此值或格式有誤，則預設回退至 'carbon'
-        const validThemes = ['carbon', 'claude', 'sketch'];
+        const validThemes = ['carbon', 'cream', 'sketch'];
         const savedTheme = cfg.global.theme;
         if (savedTheme && validThemes.includes(savedTheme)) {
           setTheme(savedTheme);
@@ -142,6 +157,9 @@ export default function App() {
 
   // 4. Tab 切換阻斷 (設定頁未儲存防禦機制)
   const handleTabChange = async (tabId: typeof activeTab) => {
+    if (showSidebarGuide) {
+      dismissSidebarGuide();
+    }
     if (activeTab === 'settings' && tabId !== 'settings') {
       if ((window as any).isSettingsDirty) {
         const choice = await askUnsavedSettings();
@@ -163,13 +181,12 @@ export default function App() {
     (window as any).isSettingsDirty = false;
     setActiveTab(tabId);
 
-    if (tabId === 'projects' && !projectsCollapsedTriggered) {
-      projectsCollapsedTriggered = true;
-      GetConfig().then((cfg: any) => {
-        if (cfg && cfg.projects && cfg.projects.length > 0) {
-          setIsCollapsed(true);
-        }
-      }).catch((err: any) => console.error("首次進入專案頁面獲取設定失敗:", err));
+    if (!isSidebarLocked) {
+      if (tabId === 'projects') {
+        setIsCollapsed(true);
+      } else {
+        setIsCollapsed(false);
+      }
     }
   };
 
@@ -302,6 +319,9 @@ export default function App() {
     if ((window as any).saveQuickSettingsDebounced) {
       (window as any).saveQuickSettingsDebounced(next.id, getLanguage(), fontSize);
     }
+    if (showSidebarGuide) {
+      dismissSidebarGuide();
+    }
   };
 
   const cycleFontSize = () => {
@@ -310,6 +330,9 @@ export default function App() {
     setFontSize(next.id);
     if ((window as any).saveQuickSettingsDebounced) {
       (window as any).saveQuickSettingsDebounced(theme, getLanguage(), next.id);
+    }
+    if (showSidebarGuide) {
+      dismissSidebarGuide();
     }
   };
 
@@ -320,6 +343,9 @@ export default function App() {
     setLanguage(next);
     if ((window as any).saveQuickSettingsDebounced) {
       (window as any).saveQuickSettingsDebounced(theme, next, fontSize);
+    }
+    if (showSidebarGuide) {
+      dismissSidebarGuide();
     }
   };
 
@@ -341,7 +367,7 @@ export default function App() {
             className="py-5 border-b flex items-center transition-all duration-300"
             style={{
               borderColor: 'var(--border)',
-              padding: isCollapsed ? '20px 12px' : '20px 20px',
+              padding: isCollapsed ? '20px 12px 10px 12px' : '20px 20px',
               flexDirection: isCollapsed ? 'column' : 'row',
               gap: isCollapsed ? 12 : 12,
               justifyContent: isCollapsed ? 'center' : 'space-between',
@@ -356,14 +382,31 @@ export default function App() {
                 </div>
               )}
             </div>
-            <button
-              onClick={toggleSidebar}
-              className="p-1.5 rounded-md transition-colors"
-              style={{ color: 'var(--muted)' }}
-              title={isCollapsed ? t('展開側邊欄') : t('收起側邊欄')}
-            >
-              {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
-            </button>
+            <div className="flex flex-col gap-1 items-center flex-shrink-0">
+              <button
+                id="btn-lock-sidebar"
+                onClick={() => {
+                  const newLocked = !isSidebarLocked;
+                  setIsSidebarLocked(newLocked);
+                  localStorage.setItem('wincmp_sidebar_locked', String(newLocked));
+                }}
+                className={`p-1 rounded transition-colors hover:bg-[var(--border-soft)] ${
+                  isSidebarLocked ? 'text-[var(--accent)] hover:text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--fg)]'
+                }`}
+                title={isSidebarLocked ? t('解鎖側邊欄自動收合') : t('鎖定側邊欄自動收合')}
+              >
+                {isSidebarLocked ? <Lock size={14} /> : <Unlock size={14} />}
+              </button>
+              <button
+                id="btn-toggle-sidebar"
+                onClick={toggleSidebar}
+                className="p-1 rounded transition-colors hover:bg-[var(--border-soft)] hover:text-[var(--fg)]"
+                style={{ color: 'var(--muted)' }}
+                title={isCollapsed ? t('展開側邊欄') : t('收起側邊欄')}
+              >
+                {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+              </button>
+            </div>
           </div>
 
           {/* Menu */}
@@ -376,10 +419,10 @@ export default function App() {
                   id={`nav-btn-${item.id}`}
                   onClick={() => handleTabChange(item.id)}
                   title={isCollapsed ? item.label : undefined}
-                  className="w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 relative"
+                  className={`nav-item w-full text-left py-2.5 text-sm font-semibold flex items-center transition-all duration-150 relative ${isActive ? 'active' : ''}`}
                   style={{
                     justifyContent: isCollapsed ? 'center' : 'flex-start',
-                    padding: isCollapsed ? '10px 0' : '10px 16px',
+                    padding: isCollapsed ? '14px 0' : '14px 16px',
                     gap: isCollapsed ? 0 : 12,
                     color: isActive ? 'var(--sidebar-active-fg)' : 'var(--fg-2)',
                     background: isActive ? 'var(--sidebar-active-bg)' : 'transparent',
@@ -394,14 +437,19 @@ export default function App() {
                   {!isCollapsed && <span className="whitespace-nowrap transition-opacity duration-300">{item.label}</span>}
                   {item.id === 'update' && hasUpdate && (
                     <span
-                      className="w-2 h-2 rounded-full absolute"
+                      className="relative flex"
                       style={{
-                        background: 'var(--status-error)',
+                        position: 'absolute',
                         top: isCollapsed ? 6 : '50%',
                         right: isCollapsed ? 6 : 16,
                         transform: isCollapsed ? 'none' : 'translateY(-50%)',
+                        width: '8px',
+                        height: '8px',
                       }}
-                    />
+                    >
+                      <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-error)' }}></span>
+                      <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: 'var(--status-error)' }}></span>
+                    </span>
                   )}
                 </button>
               );
@@ -419,11 +467,35 @@ export default function App() {
           }}
         >
           {/* 快速設定按鈕組：展開時橫向排列以節省垂直空間，收合時垂直排列 */}
-          <div className={isCollapsed ? "flex flex-col gap-2 mb-3" : "flex flex-row gap-1.5 mb-3"}>
+          <div className={isCollapsed ? "flex flex-col gap-2 mb-3 relative" : "flex flex-row gap-1.5 mb-3 relative"}>
+            {showSidebarGuide && (
+              <div className="guide-bubble absolute left-0 bottom-full mb-2.5 z-50 animate-fade-in w-64 text-left p-4 rounded-xl border font-normal" style={{
+                textTransform: 'none',
+                letterSpacing: 'normal',
+              }}>
+                {/* 氣泡小箭頭 */}
+                <div className="guide-bubble-arrow absolute -bottom-1.5 left-6 w-3 h-3 rotate-45 border-b border-r" />
+
+                <div className="space-y-3">
+                  <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
+                    <span>💡 {t("快速設定指南")}</span>
+                  </div>
+                  <div className="text-[11px] leading-relaxed" style={{ color: 'var(--fg-2)' }}>
+                    {t("您可以在此快速切換介面語系、調整外觀主題，以及變更面板的字型大小。")}
+                  </div>
+                  <div className="flex justify-end pt-1">
+                    <button onClick={(e) => { e.stopPropagation(); dismissSidebarGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90 active:scale-95" style={{ background: 'var(--status-info)' }}>
+                      {t("我知道了")}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Language Quick Switch */}
             <button
               onClick={cycleLanguage}
-              className={`flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              className={`quick-setting-btn flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
               style={{
                 color: 'var(--fg-2)',
                 background: 'var(--surface-warm)',
@@ -438,7 +510,7 @@ export default function App() {
             {/* Theme Quick Switch */}
             <button
               onClick={cycleTheme}
-              className={`flex items-center gap-1.5 py-2 px-2 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              className={`quick-setting-btn flex items-center gap-1.5 py-2 px-2 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
               style={{
                 color: 'var(--fg-2)',
                 background: 'var(--surface-warm)',
@@ -453,7 +525,7 @@ export default function App() {
             {/* Font Size Quick Switch */}
             <button
               onClick={cycleFontSize}
-              className={`flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
+              className={`quick-setting-btn flex items-center gap-1.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold transition-all duration-200 ${isCollapsed ? 'w-full justify-center' : 'flex-1 justify-center'}`}
               style={{
                 color: 'var(--fg-2)',
                 background: 'var(--surface-warm)',
@@ -622,9 +694,9 @@ export default function App() {
 
             {/* Connection Status */}
             <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--fg-2)' }}>
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: 'var(--status-ok)' }}></span>
+              <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
+                <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: 'var(--status-ok)' }}></span>
               </span>
               <span>{t("Go 核心已連線")}</span>
             </div>
@@ -680,7 +752,7 @@ export default function App() {
               <span>{customAlert.title || t("系統提示")}</span>
             </div>
             <p className="text-xs leading-relaxed break-all whitespace-pre-line" style={{ color: 'var(--fg-2)' }}>{customAlert.message}</p>
-            
+
             {customAlert.showCheckbox && (
               <label className="flex items-center gap-2 text-xs select-none cursor-pointer" style={{ color: 'var(--fg-2)' }}>
                 <input

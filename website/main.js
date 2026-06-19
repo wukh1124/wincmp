@@ -2,11 +2,46 @@ document.addEventListener('DOMContentLoaded', () => {
     let cachedReleaseData = null;
 
     // ==========================================================================
-    // 0. 主題切換邏輯 (Theme Switching)
+    // 0. 圖片載入優化與主題切換邏輯 (Image Loading & Theme Switching)
     // ==========================================================================
     const themeBtn = document.getElementById('theme-switch-btn');
 
-    function updateScreenshotThemes(theme) {
+    // 漸變切換圖片函數，防白屏與閃爍
+    function changeImage(imgEl, newSrc, onSrcChangeCallback, useFade = true) {
+        if (!imgEl) return;
+        if (imgEl.getAttribute('src') === newSrc) {
+            if (onSrcChangeCallback) onSrcChangeCallback();
+            return;
+        }
+
+        if (!useFade) {
+            imgEl.src = newSrc;
+            if (onSrcChangeCallback) onSrcChangeCallback();
+            return;
+        }
+
+        // 先讓圖片透明度降低 (淡出)
+        imgEl.style.opacity = '0.3';
+
+        // 建立臨時 Image 物件來載入圖片，完成後才切換
+        const tempImg = new Image();
+        tempImg.onload = () => {
+            imgEl.src = newSrc;
+            if (onSrcChangeCallback) onSrcChangeCallback();
+            // 切換完 src 後，讓它淡入
+            setTimeout(() => {
+                imgEl.style.opacity = '1';
+            }, 50);
+        };
+        tempImg.onerror = () => {
+            imgEl.src = newSrc;
+            if (onSrcChangeCallback) onSrcChangeCallback();
+            imgEl.style.opacity = '1';
+        };
+        tempImg.src = newSrc;
+    }
+
+    function updateScreenshotThemes(theme, useFade = true) {
         const isSketch = (theme === 'sketch');
         const tabs = document.querySelectorAll('.gallery-tab');
         tabs.forEach(tab => {
@@ -19,13 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeTab = document.querySelector('.gallery-tab.active');
         if (displayImg && activeTab) {
             const currentImgSrc = activeTab.getAttribute('data-img');
-            if (displayImg.getAttribute('src') !== currentImgSrc) {
-                displayImg.style.opacity = '0.3';
-                setTimeout(() => {
-                    displayImg.src = currentImgSrc;
-                    displayImg.style.opacity = '1';
-                }, 100);
-            }
+            changeImage(displayImg, currentImgSrc, null, useFade);
         }
 
         const heroImg = document.getElementById('hero-main-img');
@@ -33,32 +62,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const darkPath = heroImg.getAttribute('data-img-dark');
             const sketchPath = heroImg.getAttribute('data-img-sketch');
             const currentHeroSrc = isSketch ? sketchPath : darkPath;
-            if (heroImg.getAttribute('src') !== currentHeroSrc) {
-                heroImg.src = currentHeroSrc;
-            }
+            changeImage(heroImg, currentHeroSrc, null, useFade);
         }
     }
 
-    function applyTheme(theme) {
+    function applyTheme(theme, useFade = true) {
         if (theme === 'sketch') {
             document.documentElement.setAttribute('data-theme', 'sketch');
         } else {
             document.documentElement.removeAttribute('data-theme');
         }
         localStorage.setItem('wincmp_theme', theme);
-        updateScreenshotThemes(theme);
+        updateScreenshotThemes(theme, useFade);
     }
 
     // 載入時恢復已儲存的主題偏好，預設為 'sketch' (亮色手繪風)
     const savedTheme = localStorage.getItem('wincmp_theme') || 'sketch';
-    applyTheme(savedTheme);
+    applyTheme(savedTheme, false); // 初始載入時不使用淡出淡入
 
     // 監聽主題切換按鈕
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const nextTheme = currentTheme === 'sketch' ? 'dark' : 'sketch';
-            applyTheme(nextTheme);
+            applyTheme(nextTheme, true); // 手動切換主題時使用淡出淡入
         });
     }
 
@@ -299,14 +326,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const imgSrc = tab.getAttribute('data-img');
             const tabName = tab.querySelector('span').innerText;
 
-            // 漸變淡出淡入效果
-            displayImg.style.opacity = '0.3';
-            setTimeout(() => {
-                displayImg.src = imgSrc;
+            // 使用 changeImage 進行漸變切換，等待圖片載入完成後才淡入，防閃爍
+            changeImage(displayImg, imgSrc, () => {
                 displayImg.alt = `WinCMP ${tabName}`;
                 windowTitle.innerText = `WinCMP - ${tabName}`;
-                displayImg.style.opacity = '1';
-            }, 150);
+            }, true);
         });
     });
 
@@ -385,9 +409,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'en';
     }
 
+    // 預加載圖片函數，防止切換主題或 Tab 時白屏閃爍
+    function preloadImages() {
+        const urls = [];
+        // 收集 tabs 中的圖片
+        document.querySelectorAll('.gallery-tab').forEach(tab => {
+            const dark = tab.getAttribute('data-img-dark');
+            const sketch = tab.getAttribute('data-img-sketch');
+            if (dark) urls.push(dark);
+            if (sketch) urls.push(sketch);
+        });
+        // 收集 hero 中的圖片
+        const hero = document.getElementById('hero-main-img');
+        if (hero) {
+            const dark = hero.getAttribute('data-img-dark');
+            const sketch = hero.getAttribute('data-img-sketch');
+            if (dark) urls.push(dark);
+            if (sketch) urls.push(sketch);
+        }
+
+        // 去重並在背景載入
+        const uniqueUrls = [...new Set(urls)];
+        uniqueUrls.forEach(url => {
+            const img = new Image();
+            img.src = url;
+        });
+    }
+
     const savedLang = localStorage.getItem('wincmp_lang') || detectBrowserLanguage();
     switchLanguage(savedLang);
     getLatestRelease();
+    preloadImages(); // 啟動預加載
 
     // ==========================================================================
     // 5. 手機版選單切換 (Hamburger Menu)

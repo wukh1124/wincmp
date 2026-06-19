@@ -3,7 +3,7 @@
  *
  * Carbon: Dark-first monospace brutalism. #1f2228 canvas, white
  *         as the sole voice, GeistMono display, zero shadows.
- * Claude:  Warm cream light with terracotta accent. Clean,
+ * Cream:   Warm cream light with terracotta accent. Clean,
  *          modern, approachable — Anthropic's signature warmth.
  * sketch: Hand-drawn wireframe on graph paper. Marker headlines,
  *          sticky-note annotations, hatched placeholders, pencil
@@ -51,6 +51,7 @@
   --bg: #1f2228;
   --bg-deep: #181a1f;
   --surface: rgba(255, 255, 255, 0.03);
+  --table-header-bg: #1f2228;
   --surface-warm: rgba(255, 255, 255, 0.05);
   --card: rgba(255, 255, 255, 0.04);
   --card-hover: rgba(255, 255, 255, 0.07);
@@ -113,16 +114,23 @@
   --scrollbar-thumb: rgba(255, 255, 255, 0.1);
   --scrollbar-hover: rgba(255, 255, 255, 0.2);
   --overlay-bg: rgba(0, 0, 0, 0.95);
+
+  /* Guide Bubble */
+  --guide-bg: #2a2e36;
+  --guide-border: rgba(255, 255, 255, 0.2);
+  --guide-fg: #ffffff;
+  --guide-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * THEME: Claude — Warm cream light
+ * THEME: Cream — Warm cream light
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-:root[data-theme="claude"] {
+:root[data-theme="cream"] {
   /* Surface — warm cream foundation */
   --bg: #faf9f7;
   --bg-deep: #f0ede8;
   --surface: #ffffff;
+  --table-header-bg: #faf9f7;
   --surface-warm: #f5f2ed;
   --card: #ffffff;
   --card-hover: #faf8f4;
@@ -139,7 +147,7 @@
   --border-strong: #cdc6ba;
   --border-soft: #eee9e2;
 
-  /* Accent — Claude terracotta / burnt sienna */
+  /* Accent — Cream terracotta / burnt sienna */
   --accent: #c96442;
   --accent-on: #ffffff;
   --accent-hover: #b85535;
@@ -185,6 +193,12 @@
   --scrollbar-thumb: #d5cfc5;
   --scrollbar-hover: #bfb8ac;
   --overlay-bg: rgba(0, 0, 0, 0.45);
+
+  /* Guide Bubble */
+  --guide-bg: #ffffff;
+  --guide-border: #cdc6ba;
+  --guide-fg: #1a1916;
+  --guide-shadow: 0 10px 25px -5px rgba(26, 25, 22, 0.15), 0 8px 10px -6px rgba(26, 25, 22, 0.15);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -195,6 +209,7 @@
   --bg: #f0ebe0;
   --bg-deep: #e8e2d4;
   --surface: #faf7f0;
+  --table-header-bg: #faf7f0;
   --surface-warm: #f5f0e4;
   --card: #fffef8;
   --card-hover: #fff9e8;
@@ -218,9 +233,9 @@
   --accent-muted: rgba(43, 108, 176, 0.1);
 
   /* Sticky-note accent (used via CSS vars for special surfaces) */
-  --sticky-bg: #fff4a3;
+  --sticky-bg: #fffbda;
   --sticky-fg: #4a4520;
-  --sticky-border: #e6d86a;
+  --sticky-border: #d8dba5;
   --sticky-pink: #ffcdd2;
   --sticky-blue: #bbdefb;
   --sticky-green: #c8e6c9;
@@ -276,6 +291,12 @@
   --hatch-color: rgba(140, 130, 110, 0.15);
   --hatch-size: 8px;
   --main-content-bg: transparent;
+
+  /* Guide Bubble */
+  --guide-bg: var(--sticky-bg);
+  --guide-border: var(--sticky-border);
+  --guide-fg: var(--sticky-fg);
+  --guide-shadow: 3px 3px 0 var(--border-strong);
 }
 
 /* ─── Sketch theme: graph paper background ─────────────────────
@@ -288,6 +309,12 @@ html[data-theme="sketch"] #root>div {
 html[data-theme="sketch"] {
   background-color: var(--bg);
   background-image: none;
+}
+
+/* Sketch theme: Comic Neue display font scaling */
+html[data-theme="sketch"] [style*="font-family: var(--font-display)"],
+html[data-theme="sketch"] [style*="font-family:var(--font-display)"] {
+  font-size: 1.03em;
 }
 
 html[data-theme="sketch"] main {
@@ -382,6 +409,7 @@ html[data-theme="sketch"] .terminal-log-content .whitespace-pre-wrap>div {
   --bg: #1f2228;
   --bg-deep: #181a1f;
   --surface: rgba(255, 255, 255, 0.03);
+  --table-header-bg: #1f2228;
   --surface-warm: rgba(255, 255, 255, 0.05);
   --card: rgba(255, 255, 255, 0.04);
   --card-hover: rgba(255, 255, 255, 0.07);
@@ -442,4 +470,10 @@ html[data-theme="sketch"] .terminal-log-content .whitespace-pre-wrap>div {
   --scrollbar-thumb: rgba(255, 255, 255, 0.1);
   --scrollbar-hover: rgba(255, 255, 255, 0.2);
   --overlay-bg: rgba(0, 0, 0, 0.95);
+
+  /* Guide Bubble */
+  --guide-bg: #2a2e36;
+  --guide-border: rgba(255, 255, 255, 0.2);
+  --guide-fg: #ffffff;
+  --guide-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 }

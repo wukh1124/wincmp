@@ -58,15 +58,15 @@ export default function DBExplorer() {
     <div className="p-6 h-full flex flex-col space-y-6">
       {/* 標頭 */}
       <div className="flex justify-between items-center select-none">
-        <div>
+        <div className="flex items-baseline gap-3">
           <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("資料庫瀏覽器")}</h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{t("內建極簡 Schema / 資料表結構速覽，或一鍵透過外部工具管理")}</p>
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>{t("內建極簡 Schema / 資料表結構速覽，或一鍵透過外部工具管理")}</p>
         </div>
         <div className="flex gap-2.5">
           <button
             onClick={checkDBStatus}
             disabled={isLoading}
-            className="px-3.5 py-2 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition duration-200"
+            className="btn-custom-hover px-3.5 py-2 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition duration-200"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)', color: 'var(--fg-2)' }}
           >
             <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
@@ -108,7 +108,7 @@ export default function DBExplorer() {
                 <button
                   key={db}
                   onClick={() => handleSelectSchema(db)}
-                  className={`w-full text-left px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2.5 transition duration-150 ${selectedSchema === db
+                  className={`w-full text-left px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2.5 transition duration-150 db-list-item-btn ${selectedSchema === db
                     ? 'border'
                     : ''
                     }`}

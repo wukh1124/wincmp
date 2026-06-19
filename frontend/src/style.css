@@ -66,7 +66,33 @@ body {
   overflow: hidden;
   user-select: none;
   transition: background-color var(--motion-slow) var(--ease-standard),
-              color var(--motion-slow) var(--ease-standard);
+    color var(--motion-slow) var(--ease-standard);
+}
+
+/* 全域按鈕游標與對齊樣式 */
+button {
+  cursor: pointer;
+  line-height: 1 !important;
+}
+
+button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-btn) {
+  padding: 10px 16px !important;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* 左側選單懸停效果 */
+.nav-item:hover:not(.active) {
+  background-color: var(--surface-warm) !important;
+}
+
+/* 底部快速設定按鈕懸停效果 */
+.quick-setting-btn:hover {
+  background-color: var(--accent-muted) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--fg) !important;
 }
 
 /* ─── Scrollbar ──────────────────────────────────────────────── */
@@ -90,8 +116,13 @@ body {
 
 /* ─── Animations ─────────────────────────────────────────────── */
 @keyframes slideInRight {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
 }
 
 .animate-slide-in {
@@ -99,9 +130,20 @@ body {
 }
 
 @keyframes highlightFade {
-  0%   { background-color: var(--status-info-bg); box-shadow: inset 0 0 10px var(--status-info-bg); }
-  50%  { background-color: var(--status-info-bg); box-shadow: inset 0 0 5px var(--status-info-bg); }
-  100% { background-color: transparent; box-shadow: none; }
+  0% {
+    background-color: var(--status-info-bg);
+    box-shadow: inset 0 0 10px var(--status-info-bg);
+  }
+
+  50% {
+    background-color: var(--status-info-bg);
+    box-shadow: inset 0 0 5px var(--status-info-bg);
+  }
+
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
 }
 
 .animate-highlight {
@@ -109,20 +151,19 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .animate-fade-in {
   animation: fadeIn 0.2s var(--ease-standard) forwards;
 }
 
-/* ─── Theme transition ───────────────────────────────────────── */
-*, *::before, *::after {
-  transition-property: background-color, border-color, color, box-shadow;
-  transition-duration: var(--motion-slow);
-  transition-timing-function: var(--ease-standard);
-}
 
 /* Opt out of transition for animations and transforms */
 .animate-spin,
@@ -132,4 +173,135 @@ body {
 .animate-highlight,
 .animate-fade-in {
   transition: none !important;
+}
+
+/* ─── Custom Buttons Hover Effects ───────────────────────────── */
+
+/* 1. 輔助有邊框按鈕 (Secondary / Bordered Buttons) - 參考 sidebar 快速設定按鈕 */
+.btn-custom-hover {
+  transition: all var(--motion-fast) var(--ease-standard) !important;
+}
+
+.btn-custom-hover:hover:not(:disabled) {
+  background-color: var(--accent-muted) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--fg) !important;
+}
+
+/* 針對 sketch 主題使用實心不透明淡藍色背景，防止主內容區的網格線穿透按鈕 */
+html[data-theme="sketch"] .btn-custom-hover:hover:not(:disabled) {
+  background-color: #ebebeb !important;
+}
+
+/* 2. 危險按鈕 (Danger / Delete Buttons) */
+.btn-danger-hover {
+  transition: all var(--motion-fast) var(--ease-standard) !important;
+}
+
+.btn-danger-hover:hover:not(:disabled) {
+  background-color: var(--status-error) !important;
+  border-color: var(--status-error) !important;
+  color: #ffffff !important;
+}
+
+/* 3. 主按鈕 (Accent / Primary Buttons) */
+button[style*="var(--accent)"]:not(:disabled):hover,
+.version-update-btn:not(:disabled):hover {
+  background-color: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+  opacity: 0.95;
+}
+
+/* 3.5. 資料庫列表按鈕懸停效果 (Database Explorer List Item Hover) */
+button.db-list-item-btn:not(:disabled):hover {
+  background-color: var(--surface-warm) !important;
+  color: var(--fg) !important;
+}
+
+button.db-list-item-btn[style*="var(--accent)"]:not(:disabled):hover {
+  background-color: var(--accent-muted) !important;
+  border-color: var(--border-soft) !important;
+  color: var(--accent) !important;
+  opacity: 0.85;
+}
+
+/* 4. 亮藍色資訊主按鈕 (Status Info Buttons) */
+button[style*="var(--status-info)"]:not([style*="var(--border)"]):not(:disabled):hover {
+  opacity: 0.9 !important;
+}
+
+/* 5. 亮綠色成功主按鈕 (Status OK Buttons) */
+button[style*="var(--status-ok)"]:not([style*="var(--border)"]):not(:disabled):hover {
+  opacity: 0.9 !important;
+}
+
+/* 6. 自動滾動按鈕懸停效果 (Auto Scroll Button Hover) */
+button.btn-autoscroll-hover {
+  transition: all var(--motion-fast) var(--ease-standard) !important;
+}
+
+button.btn-autoscroll-hover:hover:not(:disabled) {
+  background-color: var(--accent-muted) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+html[data-theme="sketch"] button.btn-autoscroll-hover:hover:not(:disabled) {
+  background-color: #ebebeb !important;
+}
+
+/* ─── Guide Popover / Bubble ─────────────────────────────────── */
+.guide-bubble {
+  background-color: var(--guide-bg) !important;
+  border-color: var(--guide-border) !important;
+  box-shadow: var(--guide-shadow) !important;
+  color: var(--guide-fg) !important;
+}
+
+.guide-bubble-arrow {
+  background-color: var(--guide-bg) !important;
+  border-color: var(--guide-border) !important;
+  z-index: 10 !important;
+}
+
+/* 全域優化：將箭頭向內推進 (從原本的 -6px 調整為 -2.5px)，以增加與氣泡主體的重疊度，
+   防止在頁面初次載入、字型變更或縮放導致 layout 抖動時，箭頭與氣泡產生視覺分離或縫隙 */
+.guide-bubble-arrow[class*="-top-"] {
+  top: -8px !important;
+}
+
+.guide-bubble-arrow[class*="-bottom-"] {
+  bottom: -8px !important;
+}
+
+/* Sketch theme layout adjustments: tilt the sticky-note guides */
+html[data-theme="sketch"] .guide-bubble {
+  transform: rotate(-0.5deg);
+  border-width: 2px !important;
+  border-style: solid !important;
+}
+
+/* Sketch 主題下加粗邊框，同時必須將無須顯示的下半部/上半部邊框設為 0px，
+   否則 border-width 會將四邊都設為 2px，畫出一個完整的菱形框，導致視覺上箭頭被橫線截斷 */
+html[data-theme="sketch"] .guide-bubble-arrow {
+  border-top-width: 2px !important;
+  border-left-width: 2px !important;
+  border-bottom-width: 0px !important;
+  border-right-width: 0px !important;
+}
+
+html[data-theme="sketch"] .guide-bubble-arrow[class*="-bottom-"] {
+  border-top-width: 0px !important;
+  border-left-width: 0px !important;
+  border-bottom-width: 2px !important;
+  border-right-width: 2px !important;
+}
+
+/* Sketch 主題微調：由於 2px 邊框較粗且有旋轉，將箭頭進一步往內推進至 -2px，確保完美貼合 */
+html[data-theme="sketch"] .guide-bubble-arrow[class*="-top-"] {
+  top: -8px !important;
+}
+
+html[data-theme="sketch"] .guide-bubble-arrow[class*="-bottom-"] {
+  bottom: -8px !important;
 }

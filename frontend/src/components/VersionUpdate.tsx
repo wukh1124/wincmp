@@ -153,9 +153,9 @@ export default function VersionUpdate() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* 標頭 */}
       <div className="p-6 pb-4 flex justify-between items-center select-none shrink-0" style={{ borderBottom: '1px solid var(--border-soft)' }}>
-        <div>
+        <div className="flex items-baseline gap-3">
           <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("版本更新")}</h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{t("檢查 WinCMP 最新發布版本，並進行一鍵自動替換升級")}</p>
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>{t("檢查 WinCMP 最新發布版本，並進行一鍵自動替換升級")}</p>
         </div>
       </div>
 
@@ -196,8 +196,8 @@ export default function VersionUpdate() {
                   {updateStatus === 'idle' && (
                     <button
                       onClick={handleStartUpdate}
-                      className="px-5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 active:scale-[0.98] shrink-0"
-                      style={{ background: 'var(--accent)', color: 'var(--accent-on)', boxShadow: 'var(--shadow-md)' }}
+                      className="px-5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 active:scale-[0.98] shrink-0 version-update-btn"
+                      style={{ background: 'var(--accent)', color: 'var(--accent-on)', boxShadow: 'var(--shadow-md)', padding: '14px 26px' }}
                     >
                       <span>{t("立即更新")}</span>
                     </button>
@@ -297,7 +297,7 @@ export default function VersionUpdate() {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={handleStartUpdate}
-                        className="px-4 py-2 rounded-lg font-semibold transition duration-200 text-xs active:scale-[0.98]"
+                        className="btn-custom-hover px-4 py-2 rounded-lg font-semibold transition duration-200 text-xs active:scale-[0.98]"
                         style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
                       >
                         <span>{t("重試更新")}</span>

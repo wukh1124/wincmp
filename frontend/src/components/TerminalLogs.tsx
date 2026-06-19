@@ -16,7 +16,7 @@ const CATEGORIES = [
 export default function TerminalLogs() {
   useLanguage(); // 訂閱語系變更
   const [activeTab, setActiveTab] = useState('system');
-  const [activeRuntimeProject, setActiveRuntimeProject] = useState('System');
+  const [activeRuntimeProject, setActiveRuntimeProject] = useState('');
   const [logs, setLogs] = useState<LogData>(logStore.getLogs());
   const [autoScroll, setAutoScroll] = useState(true);
 
@@ -49,7 +49,7 @@ export default function TerminalLogs() {
     const handleAutoSwitch = (data: any) => {
       if (!data || !data.category) return;
       const category = data.category === 'node' ? 'runtime' : data.category;
-      const projName = category === 'runtime' ? (data.projectName || 'System') : undefined;
+      const projName = category === 'runtime' ? data.projectName : undefined;
 
       const isValidCategory = ['system', 'caddy', 'mariadb', 'mailpit', 'php', 'runtime'].includes(category);
       if (!isValidCategory) return;
@@ -100,7 +100,7 @@ export default function TerminalLogs() {
         if (runtimeProjects.length > 0) {
           setActiveRuntimeProject(runtimeProjects[0]);
         } else {
-          setActiveRuntimeProject('System');
+          setActiveRuntimeProject('');
         }
       }
     }
@@ -217,7 +217,7 @@ export default function TerminalLogs() {
                     </option>
                   ))
                 ) : (
-                  <option value="System" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg-2)' }}>System</option>
+                  <option value="" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg-2)' }}>{t("無運行中的專案")}</option>
                 )}
               </select>
             </div>
@@ -229,7 +229,7 @@ export default function TerminalLogs() {
                 setAutoScroll(true);
                 logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold hover:border-[color:var(--accent-muted)]"
+              className="btn-autoscroll-hover px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--accent)' }}
             >
               <ArrowDown size={11} /> {t("自動滾動")}
@@ -237,7 +237,7 @@ export default function TerminalLogs() {
           )}
           <button
             onClick={handleClearLogs}
-            className="px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold hover:border-[color:var(--status-error)]"
+            className="btn-danger-hover px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--status-error)' }}
           >
             <Trash2 size={11} /> {t("清空日誌")}

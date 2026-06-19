@@ -155,14 +155,14 @@ export default function Settings() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* 標頭 */}
       <div className="p-6 pb-4 flex justify-between items-center select-none shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("系統全域設定")}</h1>
-          <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{t("配置開發路徑、資料庫參數以及 WinCMP 全域行為")}</p>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("系統設定")}</h1>
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>{t("配置開發路徑、資料庫參數以及 WinCMP 全域行為")}</p>
         </div>
         <div className="flex gap-2.5">
           <button
             onClick={() => setShowDepManager(true)}
-            className="px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 hover:border-gray-600"
+            className="btn-custom-hover px-3.5 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200"
             style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}
           >
             <Package size={14} style={{ color: 'var(--accent)' }} />
@@ -171,11 +171,11 @@ export default function Settings() {
           <button
             onClick={() => handleSave()}
             disabled={isSaving}
-            className="px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 disabled:opacity-50"
             style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-on)' }}
           >
             <Save size={14} />
-            <span>{isSaving ? t("儲存中...") : t("儲存全域設定")}</span>
+            <span>{isSaving ? t("儲存中...") : t("儲存設定")}</span>
           </button>
         </div>
       </div>
@@ -202,7 +202,7 @@ export default function Settings() {
                 />
                 <button
                   onClick={() => handleSelectFolder('default_www')}
-                  className="px-3 py-1.5 rounded-lg transition font-semibold hover:border-gray-500"
+                  className="btn-custom-hover px-3 py-1.5 rounded-lg transition font-semibold"
                   style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
                 >
                   {t("選擇")}
@@ -223,7 +223,7 @@ export default function Settings() {
                 />
                 <button
                   onClick={() => handleSelectFolder('default_ssl')}
-                  className="px-3 py-1.5 rounded-lg transition font-semibold hover:border-gray-500"
+                  className="btn-custom-hover px-3 py-1.5 rounded-lg transition font-semibold"
                   style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
                 >
                   {t("選擇")}
@@ -266,7 +266,6 @@ export default function Settings() {
               <div className="flex items-center justify-between">
                 <div>
                   <span className="font-semibold block" style={{ color: 'var(--fg-2)' }}>{t("定時自動檢查新版本")}</span>
-                  <span className="text-[10px] mt-0.5 block" style={{ color: 'var(--meta)' }}>{t("每 6 小時自動檢查新版本")}</span>
                 </div>
                 <input
                   type="checkbox"
@@ -416,7 +415,7 @@ export default function Settings() {
                     />
                     <button
                       onClick={() => handleSelectFolder('mariadb_basedir')}
-                      className="px-3 py-1 rounded-lg transition font-semibold hover:border-gray-500"
+                      className="btn-custom-hover px-3 py-1 rounded-lg transition font-semibold"
                       style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
                     >
                       {t("選擇")}
@@ -436,7 +435,7 @@ export default function Settings() {
                     />
                     <button
                       onClick={() => handleSelectFolder('mariadb_datadir')}
-                      className="px-3 py-1 rounded-lg transition font-semibold hover:border-gray-500"
+                      className="btn-custom-hover px-3 py-1 rounded-lg transition font-semibold"
                       style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
                     >
                       {t("選擇")}
@@ -495,7 +494,7 @@ export default function Settings() {
             <div className="grid grid-cols-3 gap-3 select-none">
               <button
                 onClick={() => handleOpenLocalPath('hosts')}
-                className="py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition hover:border-orange-500/40 hover:bg-orange-500/[0.02]"
+                className="btn-custom-hover py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition"
                 style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
               >
                 <Shield size={16} style={{ color: 'var(--status-warn)' }} />
@@ -504,7 +503,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={() => handleOpenLocalPath('phpini')}
-                className="py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition hover:border-emerald-500/40 hover:bg-emerald-500/[0.02]"
+                className="btn-custom-hover py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition"
                 style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
               >
                 <SettingsIcon size={16} style={{ color: 'var(--status-ok)' }} />
@@ -513,7 +512,7 @@ export default function Settings() {
               </button>
               <button
                 onClick={() => handleOpenLocalPath('wincmpjson')}
-                className="py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition hover:border-blue-500/40 hover:bg-blue-500/[0.02]"
+                className="btn-custom-hover py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition"
                 style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
               >
                 <Info size={16} style={{ color: 'var(--accent)' }} />
@@ -534,7 +533,7 @@ export default function Settings() {
                 const isActive = theme === th.id;
                 const themeColors: Record<ThemeId, { bg: string; fg: string; accent: string; border: string }> = {
                   carbon: { bg: '#1f2228', fg: '#ffffff', accent: '#ffffff', border: 'rgba(255,255,255,0.2)' },
-                  claude: { bg: '#faf9f7', fg: '#1a1916', accent: '#c96442', border: '#e5e0d8' },
+                  cream: { bg: '#faf9f7', fg: '#1a1916', accent: '#c96442', border: '#e5e0d8' },
                   sketch: { bg: '#f0ebe0', fg: '#2d2b28', accent: '#2b6cb0', border: '#c8c0b0' },
                 };
                 const tc = themeColors[th.id];

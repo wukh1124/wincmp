@@ -44,6 +44,8 @@ export const enTranslations: Record<string, string> = {
   "終端日誌": "Terminal Logs",
   "展開側邊欄": "Expand Sidebar",
   "收起側邊欄": "Collapse Sidebar",
+  "解鎖側邊欄自動收合": "Unlock sidebar auto collapse",
+  "鎖定側邊欄自動收合": "Lock sidebar auto collapse",
   "系統監控 (WinCMP Core)": "WinCMP Core Monitor",
   "CPU 佔用": "CPU Usage",
   "記憶體 (RAM)": "Memory (RAM)",
@@ -68,10 +70,8 @@ export const enTranslations: Record<string, string> = {
   "取消": "Cancel",
 
   // Settings.tsx
-  "系統全域設定": "System Settings",
   "配置開發路徑、資料庫參數以及 WinCMP 全域行為": "Configure development paths, database and global settings",
   "依賴庫管理": "Dependencies",
-  "儲存全域設定": "Save",
   "儲存設定": "Save Settings",
   "儲存中...": "Saving...",
   "設定儲存成功！部分設定 (如語言) 可能需要重新啟動以完全套用。": "Settings saved successfully! Some changes (e.g. language) may require a restart to apply completely.",
@@ -122,7 +122,6 @@ export const enTranslations: Record<string, string> = {
   "PHP 執行環境": "PHP Runtime",
   "Mailpit 郵件測試伺服器": "Mailpit Mail Test Server",
   "、": ", ",
-  "儀表板 (Dashboard)": "Dashboard",
   "管理 Caddy, MariaDB, PHP-CGI 與背景開發服務": "Manage Caddy, MariaDB, PHP-CGI and background runtimes",
   "重新掃描服務": "Rescan Services",
   "掃描中...": "Scanning...",
@@ -173,7 +172,6 @@ export const enTranslations: Record<string, string> = {
   "保存設定失敗": "Failed to save settings",
 
   // Projects.tsx
-  "專案管理面板": "Projects Management Panel",
   "管理與運行網頁專案，支援靜態、PHP 及 Node/Python/Go 自訂專案": "Manage and run web projects; supports Static, PHP and Node/Python/Go custom runtimes",
   "掃描 WWW 目錄": "Scan WWW Dir",
   "手動新增專案": "Add Project Manual",
@@ -346,8 +344,8 @@ export const enTranslations: Record<string, string> = {
   "不可包含底線(_)、埠號(:)或路徑(/)，僅限英數字、連字號(-)與點(.)": "Underscores (_), ports (:), or paths (/) are forbidden; only alphanumeric, hyphens (-), and dots (.) are allowed",
   "目前尚未加入任何開發專案喔！": "No development projects added yet!",
   "快速新增首個專案": "Add your first project",
-  "✨ 新增開發專案": "✨ Add New Project",
-  "⚙️ 編輯專案屬性": "⚙️ Edit Project Properties",
+  "新增開發專案": "Add New Project",
+  "編輯專案屬性": "Edit Project Properties",
   "基本設定 (General)": "General Settings",
   "專案物理根目錄": "Physical Root Directory",
   "請選擇或填寫完整目錄路徑...": "Please choose or enter a valid directory path...",
@@ -366,8 +364,12 @@ export const enTranslations: Record<string, string> = {
   "使用 WinCMP 內建執行檔 (Bundled Runtime)": "Use WinCMP Bundled Executable (Bundled Runtime)",
   "選擇內建版本": "Select Bundled Version",
   "無可用版本 (請確認 ./bin/)": "No version available (Please check ./bin/)",
-  "自訂啟動指令 (可選，空白將使用預設)": "Custom Startup Command (Optional, blank for default)",
-  "例如: npm run dev -- --port 3000": "e.g., npm run dev -- --port 3000",
+  "執行啟動指令 (支援 %PORT% 作佔位符)": "Startup Command (Supports %PORT% placeholder)",
+  "使用自訂執行指令": "Use Custom Command",
+  "Custom": "Custom",
+  "例如: npm run dev -- --port %PORT%": "e.g., npm run dev -- --port %PORT%",
+  "此專案為單一倉庫內的其中一個項目 (Monorepo)": "This project is part of a Monorepo",
+  "勾選後，將以『project-folder』格式預設專案名稱": "If checked, the project name defaults to 'project-folder'",
   "網域別名 (Domains)": "Domain Aliases (Domains)",
   "例如: my-site.test": "e.g., my-site.test",
   "移除": "Remove",
@@ -379,7 +381,7 @@ export const enTranslations: Record<string, string> = {
 
   // 專案操作引導教學
   "操作按鈕快速指南": "Actions Guide",
-  "好的，我知道了": "Got it!",
+  "我知道了": "Got it!",
   "啟動專案的 Node/Python/Go 運行環境": "Start the project's Node/Python/Go execution environment",
   "進入專案的 CLI 交互終端偵錯": "Enter the project's CLI interactive terminal for debugging",
   "開啟專案在硬碟上的物理根目錄": "Open the project's physical root directory on disk",
@@ -388,7 +390,7 @@ export const enTranslations: Record<string, string> = {
 
   // 依賴管理引導教學
   "依賴管理指南": "Dependency Management Guide",
-  "在此您可以一鍵下載並安裝 Web 開發必備的依賴元件，包含：": "Here you can download and install essential Web development dependencies with one click, including:",
+  "在此您可以一鍵下載並安裝 Web 開發所需的依賴元件，包含：": "Here you can download and install Web development dependencies with one click, including:",
   "Caddy Web 伺服器 (反向代理)": "Caddy Web Server (Reverse Proxy)",
   "MariaDB (本地資料庫)": "MariaDB (Local Database)",
   "PHP-CGI (PHP 多版本運行環境)": "PHP-CGI (PHP Multi-version Runtime)",
@@ -397,7 +399,7 @@ export const enTranslations: Record<string, string> = {
   // DBExplorer.tsx
   "載入失敗": "Load Failed",
   "開啟 HeidiSQL 失敗": "Failed to open HeidiSQL",
-  "資料庫瀏覽器": "Database Explorer",
+  "資料庫瀏覽器": "Database",
   "內建極簡 Schema / 資料表結構速覽，或一鍵透過外部工具管理": "Built-in basic schema / table structure viewer, or one-click external tool access",
   "重新整理": "Refresh",
   "Open in HeidiSQL": "Open in HeidiSQL",
@@ -410,7 +412,7 @@ export const enTranslations: Record<string, string> = {
   "正在載入系統與服務資源數據...": "Loading system and service resources data...",
   "載入資源監控失敗": "Failed to load resource monitor",
   "重新嘗試": "Retry",
-  "即時監控系統總體、主程式、Web 視窗介面及各背景服務的 CPU 與 RAM 使用狀況": "Real-time tracking of CPU and RAM usage for the system, core engine, UI render engine and background services",
+  "即時監控系統總體、主程式、Web 視窗介面及各背景服務的 CPU 與 RAM 使用狀況": "Tracking of CPU and RAM usage for the system, core, UI render engine and background services",
   "手動整理": "Refresh",
   "整理中...": "Refreshing...",
   "WinCMP CPU 總佔用": "WinCMP Total CPU Usage",
@@ -430,6 +432,7 @@ export const enTranslations: Record<string, string> = {
   "專案:": "Project:",
   "自動滾動": "Auto Scroll",
   "暫時沒有日誌輸出": "No log output yet",
+  "無運行中的專案": "No running projects",
 
   // ProjectTerminal.tsx
   "正在啟動專案終端會話...": "Starting project terminal session...",
@@ -486,6 +489,10 @@ export const enTranslations: Record<string, string> = {
   "小": "Small",
   "中": "Medium",
   "大": "Large",
+
+  // Sidebar Quick Settings Guide
+  "快速設定指南": "Quick Settings Guide",
+  "您可以在此快速切換介面語系、調整外觀主題，以及變更面板的字型大小。": "You can quickly switch the interface language, adjust appearance themes, and change editor & panel font sizes here.",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

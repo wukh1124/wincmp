@@ -130,8 +130,8 @@ var presets = map[string]Preset{
 		DefaultRuntime: RuntimeAuto,
 		RuntimeOptions: []string{RuntimeAuto, RuntimeBun, RuntimeNode, RuntimeCustom},
 		CommandTemplates: map[string]string{
-			RuntimeBun:  "bun run dev -- --host 0.0.0.0 --port %PORT%",
-			RuntimeNode: "npm run dev -- --host 0.0.0.0 --port %PORT%",
+			RuntimeBun:  "bun run dev -- --port %PORT%",
+			RuntimeNode: "npm run dev -- --port %PORT%",
 		},
 		SupportsBundled:  true,
 		IsRuntimeProject: true,
@@ -272,11 +272,14 @@ func IsRuntimeProject(typeID string) bool {
 }
 
 // ResolveRuntime 將 "auto" 解析為實際的 Runtime
-// 檢查 bin/ 目錄是否有 bun，優先回傳 bun，否則回傳 node
-func ResolveRuntime(typeID string, hasBun bool) string {
+// 優先檢查是否有 node，再檢查是否有 bun
+func ResolveRuntime(typeID string, hasNode, hasBun bool) string {
 	p := GetPreset(typeID)
 	switch p.DefaultRuntime {
 	case RuntimeAuto:
+		if hasNode {
+			return RuntimeNode
+		}
 		if hasBun {
 			return RuntimeBun
 		}
@@ -287,14 +290,58 @@ func ResolveRuntime(typeID string, hasBun bool) string {
 }
 
 // ResolveRuntimeFromProject 根據專案設定解析實際 Runtime
-func ResolveRuntimeFromProject(typeID, runtimeType string, hasBun bool) string {
+func ResolveRuntimeFromProject(typeID, runtimeType string, hasNode, hasBun bool) string {
 	if runtimeType == RuntimeAuto {
-		return ResolveRuntime(typeID, hasBun)
+		return ResolveRuntime(typeID, hasNode, hasBun)
 	}
 	if runtimeType == RuntimeNone || runtimeType == "" {
 		return RuntimeNone
 	}
 	return runtimeType
+}
+
+// GetDefaultCommandTemplate 根據專案類型、執行器與環境資訊回傳預設指令模板
+func GetDefaultCommandTemplate(typeID, runtimeType string, hasNode, hasBun bool) string {
+	p := GetPreset(typeID)
+
+	resolved := runtimeType
+	if resolved == RuntimeAuto {
+		if hasNode {
+			resolved = RuntimeNode
+		} else if hasBun {
+			resolved = RuntimeBun
+		} else {
+			resolved = RuntimeNode // fallback
+		}
+	}
+
+	if IsPythonType(typeID) {
+		tmpl, ok := p.CommandTemplates[RuntimePython]
+		if ok {
+			return tmpl
+		}
+		return "python -m http.server %PORT% --bind 0.0.0.0"
+	}
+
+	if typeID == TypeGoAPI {
+		if resolved == RuntimeGoRun {
+			return "go run main.go"
+		}
+		return "air"
+	}
+
+	if typeID == TypePocketBase {
+		return "go run main.go serve --http=0.0.0.0:%PORT%"
+	}
+
+	tmpl, ok := p.CommandTemplates[resolved]
+	if !ok {
+		tmpl, ok = p.CommandTemplates[RuntimeNode]
+	}
+	if ok {
+		return tmpl
+	}
+	return ""
 }
 
 // BuildStartCommand 根據 Preset、Runtime 與 Port 組合產生啟動指令
@@ -557,13 +604,13 @@ func GetDefaultPort(typeID string) int {
 }
 
 // GetFullTypeLabel 取得 "Framework (Runtime)" 格式的顯示標籤
-func GetFullTypeLabel(typeID, runtimeType string, hasBun bool) string {
+func GetFullTypeLabel(typeID, runtimeType string, hasNode, hasBun bool) string {
 	p := GetPreset(typeID)
 	if !p.IsRuntimeProject {
 		return p.Label
 	}
 
-	resolved := ResolveRuntimeFromProject(typeID, runtimeType, hasBun)
+	resolved := ResolveRuntimeFromProject(typeID, runtimeType, hasNode, hasBun)
 	if resolved == RuntimeNone || resolved == "" {
 		return p.Label
 	}

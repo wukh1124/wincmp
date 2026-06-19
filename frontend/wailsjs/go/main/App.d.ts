@@ -24,6 +24,8 @@ export function GetCategoryLogs(arg1:string,arg2:string):Promise<Array<main.LogE
 
 export function GetConfig():Promise<config.WincmpConfig>;
 
+export function GetDefaultCommandTemplate(arg1:string,arg2:string):Promise<string>;
+
 export function GetDependencyConfig():Promise<config.DependencyConfig>;
 
 export function GetDetailedResources():Promise<resource.DetailedResources>;

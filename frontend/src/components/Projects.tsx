@@ -4,7 +4,8 @@ import ProjectTerminal from './ProjectTerminal';
 import {
   GetConfig, SaveConfig, GetScanResult, GetServicesStatus,
   StartProjectRuntime, StopProjectRuntime, ReloadCaddy,
-  OpenFolder, SelectFolder, DetectProjectPath, OpenProjectCaddyfile
+  OpenFolder, SelectFolder, DetectProjectPath, OpenProjectCaddyfile,
+  GetDefaultCommandTemplate
 } from '../../wailsjs/go/main/App';
 import { t, useLanguage } from '../i18n';
 
@@ -40,6 +41,10 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [terminalProject, setTerminalProject] = useState<string | null>(null);
   const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
+  const [useCustomCmd, setUseCustomCmd] = useState(false);
+  const [savedRuntimeType, setSavedRuntimeType] = useState('node');
+  const [isMonorepo, setIsMonorepo] = useState(false);
+  const effectivelyUseCustomCmd = useCustomCmd || editingProject?.type === 'custom';
 
   useEffect(() => {
     if (config?.projects && config.projects.length > 0) {
@@ -81,12 +86,11 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     { value: 'python_flask', label: t('Python Flask') },
     { value: 'go_api', label: t('Go Web API') },
     { value: 'pocketbase', label: t('PocketBase') },
-    { value: 'custom', label: t('Custom Command') }
+    { value: 'custom', label: t('Custom') }
   ];
 
   const runtimeTypes = [
     { value: 'none', label: t('無 Runtime') },
-    { value: 'auto', label: t('Auto (Node/Bun)') },
     { value: 'node', label: t('Node.js') },
     { value: 'bun', label: t('Bun') },
     { value: 'python', label: t('Python') },
@@ -132,6 +136,55 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     return () => clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    if (isModalOpen && editingProject && !effectivelyUseCustomCmd) {
+      const type = editingProject.type || 'static';
+      const rt = editingProject.runtime_type || 'none';
+      let isSubscribed = true;
+      GetDefaultCommandTemplate(type, rt)
+        .then(cmd => {
+          if (isSubscribed) {
+            setEditingProject(prev => {
+              if (!prev) return null;
+              if (prev.command === cmd) return prev;
+              return { ...prev, command: cmd };
+            });
+          }
+        })
+        .catch(err => {
+          console.error("獲取預設指令模板失敗:", err);
+        });
+      return () => {
+        isSubscribed = false;
+      };
+    }
+  }, [editingProject?.type, editingProject?.runtime_type, effectivelyUseCustomCmd, isModalOpen]);
+
+  const handleUseCustomCmdChange = (checked: boolean) => {
+    setUseCustomCmd(checked);
+    if (checked) {
+      if (editingProject?.runtime_type && editingProject.runtime_type !== 'custom') {
+        setSavedRuntimeType(editingProject.runtime_type);
+      }
+      setEditingProject(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          runtime_type: 'custom',
+        };
+      });
+    } else {
+      const restoredRt = savedRuntimeType === 'custom' ? 'node' : savedRuntimeType;
+      setEditingProject(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          runtime_type: restoredRt,
+        };
+      });
+    }
+  };
+
   const updateStatus = async () => {
     try { setServicesStatus(await GetServicesStatus()); } catch (err) { console.error("更新狀態失敗:", err); }
   };
@@ -174,9 +227,14 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const handleOpenEditModal = (proj: Project | null, idx: number | null) => {
     if (proj) {
       const hasBin = hasBundledRuntime(proj.runtime_type);
+      const isCustom = proj.runtime_type === 'custom' && proj.type !== 'custom';
+      setUseCustomCmd(isCustom);
+      setSavedRuntimeType(isCustom ? 'node' : (proj.runtime_type || 'node'));
       setEditingProject({ ...proj, use_wincmp_bin: hasBin ? proj.use_wincmp_bin : false });
       setDetected(true);
     } else {
+      setUseCustomCmd(false);
+      setSavedRuntimeType('node');
       setEditingProject({
         name: '', domains: [''], type: 'static', runtime_type: 'none',
         php_version: scanResult?.PHPList?.[0]?.MajorMin || '', root_path: '',
@@ -186,6 +244,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
         command: '', use_wincmp_bin: false
       });
       setDetected(false);
+      setIsMonorepo(false);
     }
     setEditIndex(idx);
     setIsModalOpen(true);
@@ -199,9 +258,29 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       const res = await DetectProjectPath(path);
       if (res) {
         const hasBin = hasBundledRuntime(res.runtime_type);
+        let finalName = res.name;
+        let finalDomains = res.domains?.length > 0 ? res.domains : [`local-${res.name.toLowerCase().replace(/_/g, '-')}.test`];
+
+        if (isMonorepo) {
+          const cleanPath = path.replace(/\\/g, '/').replace(/\/+$/, '');
+          const parts = cleanPath.split('/');
+          const folderName = parts[parts.length - 1] || '';
+          let parentName = '';
+          if (parts.length > 1) {
+            const parent = parts[parts.length - 2];
+            if (parent && !parent.endsWith(':')) {
+              parentName = parent;
+            }
+          }
+          if (parentName) {
+            finalName = `${parentName}-${folderName}`.replace(/_/g, '-').replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-');
+            finalDomains = [`local-${finalName.toLowerCase()}.test`];
+          }
+        }
+
         setEditingProject({
-          ...editingProject, root_path: path, name: res.name,
-          domains: res.domains?.length > 0 ? res.domains : [`local-${res.name.toLowerCase().replace(/_/g, '-')}.test`],
+          ...editingProject, root_path: path, name: finalName,
+          domains: finalDomains,
           type: res.type || 'static', runtime_type: res.runtime_type || 'none',
           runtime_port: res.runtime_port || 3000,
           php_version: res.php_version || scanResult?.PHPList?.[0]?.MajorMin || '',
@@ -212,6 +291,40 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       }
     } catch (err) { console.error("自動偵測專案失敗:", err); (window as any).customAlert(`${t("自動偵測專案失敗")}: ${err}`); }
     finally { setIsDetecting(false); }
+  };
+
+  const handleMonorepoChange = (checked: boolean) => {
+    setIsMonorepo(checked);
+    if (!editingProject || !editingProject.root_path.trim()) return;
+
+    const path = editingProject.root_path.trim();
+    const cleanPath = path.replace(/\\/g, '/').replace(/\/+$/, '');
+    const parts = cleanPath.split('/');
+    const folderName = parts[parts.length - 1] || '';
+    let parentName = '';
+    if (parts.length > 1) {
+      const parent = parts[parts.length - 2];
+      if (parent && !parent.endsWith(':')) {
+        parentName = parent;
+      }
+    }
+
+    let finalName = folderName;
+    if (checked && parentName) {
+      finalName = `${parentName}-${folderName}`;
+    }
+
+    finalName = finalName.replace(/_/g, '-').replace(/[^a-zA-Z0-9_-]/g, '-').replace(/-+/g, '-');
+    const finalDomain = `local-${finalName.toLowerCase()}.test`;
+
+    setEditingProject(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        name: finalName,
+        domains: [finalDomain]
+      };
+    });
   };
 
   const handleSelectRootPath = async () => {
@@ -237,6 +350,9 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     }
     const newCfg = { ...config };
     const cleanProj = { ...editingProject }; cleanProj.name = trimName;
+    if (cleanProj.type === 'custom') {
+      cleanProj.runtime_type = 'custom';
+    }
     if (cleanProj.type !== 'laravel' && cleanProj.type !== 'php') cleanProj.php_version = '';
     cleanProj.domains = cleanProj.domains.filter(d => d.trim() !== "");
     if (cleanProj.domains.length === 0) cleanProj.domains = [`local-${cleanProj.name.toLowerCase().replace(/_/g, '-')}.test`];
@@ -282,7 +398,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const thStyle: React.CSSProperties = {
     padding: '10px 16px', fontWeight: 700, fontSize: 10,
     letterSpacing: '0.05em', textTransform: 'uppercase',
-    color: 'var(--muted)', background: 'var(--surface)',
+    color: 'var(--muted)', background: 'var(--table-header-bg, var(--surface))',
     borderBottom: '1px solid var(--border)',
     position: 'sticky',
     top: 0,
@@ -309,13 +425,73 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     <div className="flex flex-col h-full overflow-hidden select-none" style={{ background: 'var(--main-content-bg, var(--bg))' }}>
       {/* Header */}
       <div className="flex justify-between items-center px-4 py-2.5 shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
-        <div className="flex items-center gap-2">
-          <h1 className="text-xs font-bold" style={{ color: 'var(--fg)', fontFamily: 'var(--font-display)' }}>{t("專案管理面板")}</h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-xs font-bold" style={{ color: 'var(--fg)' }}>{t("專案管理")}</h1>
           <span className="text-[10px] hidden sm:inline" style={{ color: 'var(--meta)' }}> {t("管理與運行網頁專案，支援靜態、PHP 及 Node/Python/Go 自訂專案")}</span>
         </div>
-        <button id="btn-add-project" onClick={() => handleOpenEditModal(null, null)} className="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition duration-200" style={{ background: 'var(--status-info)', color: '#fff' }}>
-          <Plus size={12} /> {t("新增專案")}
-        </button>
+        <div className="relative">
+          <button id="btn-add-project" onClick={() => handleOpenEditModal(null, null)} className="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition duration-200" style={{ background: 'var(--status-info)', color: '#fff' }}>
+            <Plus size={12} /> {t("新增專案")}
+          </button>
+          {showGuide && (
+            <div className="guide-bubble absolute right-0 top-full mt-2.5 z-50 animate-fade-in w-80 text-left p-4 rounded-xl border font-normal" style={{
+              textTransform: 'none',
+              letterSpacing: 'normal',
+            }}>
+              {/* 氣泡小箭頭 指向 新增專案 按鈕 */}
+              <div className="guide-bubble-arrow absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" />
+
+              <div className="space-y-3">
+                <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
+                  <span>💡 {t("操作按鈕快速指南")}</span>
+                </div>
+                <div className="space-y-2.5 text-[11px]" style={{ color: 'var(--fg-2)' }}>
+                  <div className="flex items-start gap-2">
+                    <span className="p-1 rounded text-white flex items-center shrink-0" style={{ background: 'var(--status-ok)' }}><Play size={10} /></span>
+                    <div className="leading-tight">
+                      <strong>{t("啟動專案 Runtime")}</strong>
+                      <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("啟動專案的 Node/Python/Go 運行環境")}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }}><Terminal size={10} /></span>
+                    <div className="leading-tight">
+                      <strong>{t("開啟專案終端")}</strong>
+                      <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("進入專案的 CLI 交互終端偵錯")}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)' }}><FolderOpen size={10} /></span>
+                    <div className="leading-tight">
+                      <strong>{t("開啟專案資料夾")}</strong>
+                      <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("開啟專案在硬碟上的物理根目錄")}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }}><Edit size={10} /></span>
+                    <div className="leading-tight">
+                      <strong>{t("編輯專案設定")}</strong>
+                      <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("調整網域、SSL 憑證、連接埠與啟動指令")}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-error)' }}><Trash2 size={10} /></span>
+                    <div className="leading-tight">
+                      <strong>{t("刪除專案")}</strong>
+                      <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("從面板移除（不會刪除硬碟檔案喔）")}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button onClick={(e) => { e.stopPropagation(); dismissGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90 active:scale-95" style={{ background: 'var(--status-info)' }}>
+                    {t("我知道了")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Project List */}
@@ -329,73 +505,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                 <th style={thStyle}>{t("本機網域")}</th>
                 <th style={thStyle}>{t("狀態")}</th>
                 <th style={thStyle}>{t("啟用")}</th>
-                <th style={{ ...thStyle, textAlign: 'center', position: 'relative' }}>
+                <th style={{ ...thStyle, textAlign: 'center' }}>
                   {t("操作")}
-                  {showGuide && (
-                    <div className="absolute right-0 top-10 z-50 animate-fade-in w-80 text-left p-4 rounded-xl border font-normal" style={{
-                      background: 'var(--bg-deep)',
-                      borderColor: 'var(--border)',
-                      boxShadow: 'var(--shadow-lg)',
-                      color: 'var(--fg)',
-                      textTransform: 'none',
-                      letterSpacing: 'normal',
-                    }}>
-                      {/* 氣泡小箭頭 */}
-                      <div className="absolute -top-1.5 right-6 w-3 h-3 rotate-45 border-t border-l" style={{
-                        background: 'var(--bg-deep)',
-                        borderColor: 'var(--border)'
-                      }} />
-                      
-                      <div className="space-y-3">
-                        <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
-                          <span>💡 {t("操作按鈕快速指南")}</span>
-                        </div>
-                        <div className="space-y-2.5 text-[11px]" style={{ color: 'var(--fg-2)' }}>
-                          <div className="flex items-start gap-2">
-                            <span className="p-1 rounded text-white flex items-center shrink-0" style={{ background: 'var(--status-ok)' }}><Play size={10} /></span>
-                            <div className="leading-tight">
-                              <strong>{t("啟動專案 Runtime")}</strong>
-                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("啟動專案的 Node/Python/Go 運行環境")}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }}><Terminal size={10} /></span>
-                            <div className="leading-tight">
-                              <strong>{t("開啟專案終端")}</strong>
-                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("進入專案的 CLI 交互終端偵錯")}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)' }}><FolderOpen size={10} /></span>
-                            <div className="leading-tight">
-                              <strong>{t("開啟專案資料夾")}</strong>
-                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("開啟專案在硬碟上的物理根目錄")}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }}><Edit size={10} /></span>
-                            <div className="leading-tight">
-                              <strong>{t("編輯專案設定")}</strong>
-                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("調整網域、SSL 憑證、連接埠與啟動指令")}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="p-1 rounded flex items-center shrink-0" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-error)' }}><Trash2 size={10} /></span>
-                            <div className="leading-tight">
-                              <strong>{t("刪除專案")}</strong>
-                              <span className="block text-[10px]" style={{ color: 'var(--meta)' }}>{t("從面板移除（不會刪除硬碟檔案喔）")}</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-end pt-1">
-                          <button onClick={(e) => { e.stopPropagation(); dismissGuide(); }} className="px-2.5 py-1 rounded text-[10px] font-bold text-white transition hover:opacity-90" style={{ background: 'var(--status-info)' }}>
-                            {t("好的，我知道了")}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </th>
               </tr>
             </thead>
@@ -458,9 +569,9 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       {hasRuntime ? (
                         running ? (
                           <span className="flex items-center gap-1.5 font-semibold text-xs" style={{ color: 'var(--status-ok)' }}>
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: 'var(--status-ok)' }}></span>
+                            <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                              <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
+                              <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: 'var(--status-ok)' }}></span>
                             </span>
                             <span>{t("運行中")}</span>
                           </span>
@@ -490,16 +601,16 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                             </button>
                           )
                         )}
-                        <button onClick={() => setTerminalProject(proj.name)} className="p-1.5 rounded-lg transition btn-open-terminal" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("開啟專案終端")}>
+                        <button onClick={() => setTerminalProject(proj.name)} className="btn-custom-hover p-1.5 rounded-lg transition btn-open-terminal" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("開啟專案終端")}>
                           <Terminal size={11} />
                         </button>
-                        <button onClick={() => handleOpenFolder(proj.root_path)} className="p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)' }} title={t("開啟專案資料夾")}>
+                        <button onClick={() => handleOpenFolder(proj.root_path)} className="btn-custom-hover p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)' }} title={t("開啟專案資料夾")}>
                           <FolderOpen size={11} />
                         </button>
-                        <button onClick={() => handleOpenEditModal(proj, idx)} className="p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("編輯專案設定")}>
+                        <button onClick={() => handleOpenEditModal(proj, idx)} className="btn-custom-hover p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("編輯專案設定")}>
                           <Edit size={11} />
                         </button>
-                        <button onClick={() => handleDeleteProject(idx)} className="p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-error)' }} title={t("刪除專案")}>
+                        <button onClick={() => handleDeleteProject(idx)} className="btn-danger-hover p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-error)' }} title={t("刪除專案")}>
                           <Trash2 size={11} />
                         </button>
                       </div>
@@ -528,8 +639,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
               {/* Header */}
               <div className="px-6 py-5 flex justify-between items-center shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
                 <div>
-                  <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--muted)', fontFamily: 'var(--font-display)' }}>
-                    {editIndex === null ? t('✨ 新增開發專案') : t('⚙️ 編輯專案屬性')}
+                  <h3 className="text-sm font-bold uppercase tracking-wider">
+                    {editIndex === null ? t('新增開發專案') : t('編輯專案屬性')}
                   </h3>
                   {editIndex !== null && <p className="text-[11px] mt-0.5" style={{ color: 'var(--meta)', fontFamily: 'var(--font-mono)' }}>{editingProject.name}</p>}
                 </div>
@@ -540,7 +651,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
               <div className="flex-1 p-6 space-y-5 overflow-y-auto text-xs" style={{ color: 'var(--fg-2)' }}>
                 {/* General */}
                 <div className="space-y-4">
-                  <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--status-info)', fontFamily: 'var(--font-display)' }}>{t("基本設定 (General)")}</h4>
+                  <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--status-info)' }}>{t("基本設定 (General)")}</h4>
                   <div className="space-y-1.5">
                     <label style={labelStyle}>{t("專案物理根目錄")}</label>
                     <div className="flex gap-2">
@@ -548,9 +659,30 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         onBlur={(e) => { if (editIndex === null && e.target.value.trim()) runAutoDetection(e.target.value.trim()); }}
                         onKeyDown={(e) => { if (e.key === 'Enter' && editIndex === null && (e.target as HTMLInputElement).value.trim()) runAutoDetection((e.target as HTMLInputElement).value.trim()); }}
                         placeholder={t("請選擇或填寫完整目錄路徑...")} className="flex-1" style={inputStyle} />
-                      <button onClick={handleSelectRootPath} className="px-3 py-2 font-semibold transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)', borderRadius: 'var(--radius-md)' }}>{t("選擇")}</button>
+                      <button onClick={handleSelectRootPath} className="btn-custom-hover px-3 py-2 font-semibold transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)', borderRadius: 'var(--radius-md)' }}>{t("選擇")}</button>
                     </div>
                   </div>
+                  {editIndex === null && detected && (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-start gap-2 select-none">
+                        <input
+                          type="checkbox"
+                          id="isMonorepo"
+                          checked={isMonorepo}
+                          onChange={(e) => handleMonorepoChange(e.target.checked)}
+                          className="w-3.5 h-3.5 mt-0.5 cursor-pointer accent-blue-500"
+                        />
+                        <div className="flex flex-col">
+                          <label htmlFor="isMonorepo" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)' }}>
+                            {t("此專案為單一倉庫內的其中一個項目 (Monorepo)")}
+                          </label>
+                          <span className="text-[10px] mt-0.5 leading-relaxed" style={{ color: 'var(--meta)' }}>
+                            {t("勾選後，將以『project-folder』格式預設專案名稱")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {(editIndex !== null || detected) && (
                     <div className="space-y-1.5 animate-fade-in">
                       <label style={labelStyle}>{t("專案名稱")}</label>
@@ -578,7 +710,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                   <div className="space-y-5 animate-fade-in">
                     {/* Runtime */}
                     <div className="space-y-4 pt-4" style={{ borderTop: '1px solid var(--border-soft)' }}>
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)' }}>{t("執行環境 (Runtime)")}</h4>
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent)' }}>{t("執行環境 (Runtime)")}</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                           <label style={labelStyle}>{t("專案框架 / 類型")}</label>
@@ -588,7 +720,20 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         </div>
                         <div className="space-y-1.5">
                           <label style={labelStyle}>{t("執行器 (Runtime)")}</label>
-                          <select value={editingProject.runtime_type} onChange={(e) => { const newRt = e.target.value; setEditingProject({ ...editingProject, runtime_type: newRt, use_wincmp_bin: hasBundledRuntime(newRt) }); }} className="w-full cursor-pointer font-semibold" style={inputStyle}>
+                          <select
+                            value={effectivelyUseCustomCmd ? 'custom' : editingProject.runtime_type}
+                            disabled={effectivelyUseCustomCmd}
+                            onChange={(e) => {
+                              const newRt = e.target.value;
+                              setEditingProject({ ...editingProject, runtime_type: newRt, use_wincmp_bin: hasBundledRuntime(newRt) });
+                            }}
+                            className="w-full cursor-pointer font-semibold"
+                            style={{
+                              ...inputStyle,
+                              opacity: effectivelyUseCustomCmd ? 0.6 : 1,
+                              cursor: effectivelyUseCustomCmd ? 'not-allowed' : 'pointer'
+                            }}
+                          >
                             {runtimeTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                           </select>
                         </div>
@@ -640,8 +785,39 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                             </div>
                           )}
                           <div className="space-y-1.5">
-                            <label style={labelStyle}>{t("自訂啟動指令 (可選，空白將使用預設)")}</label>
-                            <input type="text" value={editingProject.command || ''} onChange={(e) => setEditingProject({ ...editingProject, command: e.target.value })} placeholder={t("例如: npm run dev -- --port 3000")} className="w-full" style={inputStyle} />
+                            <label style={labelStyle}>{t("執行啟動指令 (支援 %PORT% 作佔位符)")}</label>
+                            <input
+                              type="text"
+                              value={editingProject.command || ''}
+                              onChange={(e) => {
+                                if (effectivelyUseCustomCmd) {
+                                  setEditingProject({ ...editingProject, command: e.target.value });
+                                }
+                              }}
+                              readOnly={!effectivelyUseCustomCmd}
+                              placeholder={t("例如: npm run dev -- --port %PORT%")}
+                              className="w-full font-mono text-xs"
+                              style={{
+                                ...inputStyle,
+                                backgroundColor: !effectivelyUseCustomCmd ? 'var(--input-bg-readonly, var(--border-soft))' : 'var(--input-bg)',
+                                color: !effectivelyUseCustomCmd ? 'var(--meta)' : 'var(--fg)',
+                                opacity: !effectivelyUseCustomCmd ? 0.75 : 1,
+                                cursor: !effectivelyUseCustomCmd ? 'not-allowed' : 'text'
+                              }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 pt-1">
+                            <input
+                              type="checkbox"
+                              id="useCustomCmd"
+                              checked={effectivelyUseCustomCmd}
+                              disabled={editingProject.type === 'custom'}
+                              onChange={(e) => handleUseCustomCmdChange(e.target.checked)}
+                              className="w-3.5 h-3.5 cursor-pointer accent-blue-500"
+                            />
+                            <label htmlFor="useCustomCmd" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)', opacity: editingProject.type === 'custom' ? 0.6 : 1 }}>
+                              {t("使用自訂執行指令")}
+                            </label>
                           </div>
                         </div>
                       )}
@@ -649,13 +825,13 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
                     {/* Domains */}
                     <div className="space-y-4 pt-4" style={{ borderTop: '1px solid var(--border-soft)' }}>
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--status-ok)', fontFamily: 'var(--font-display)' }}>{t("網域別名 (Domains)")}</h4>
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--status-ok)' }}>{t("網域別名 (Domains)")}</h4>
                       <div className="space-y-2">
                         {editingProject.domains.map((dom, dIdx) => (
                           <div key={dIdx} className="flex gap-2">
                             <input type="text" value={dom} onChange={(e) => handleDomainChange(dIdx, e.target.value)} placeholder={t("例如: my-site.test")} className="flex-1" style={inputStyle} />
                             {editingProject.domains.length > 1 && (
-                              <button onClick={() => handleRemoveDomain(dIdx)} className="px-3 py-2 font-semibold transition" style={{ background: 'var(--status-error-bg)', color: 'var(--status-error)', border: '1px solid var(--status-error-bg)', borderRadius: 'var(--radius-md)' }}>{t("移除")}</button>
+                              <button onClick={() => handleRemoveDomain(dIdx)} className="btn-danger-hover px-3 py-2 font-semibold transition" style={{ background: 'var(--status-error-bg)', color: 'var(--status-error)', border: '1px solid var(--status-error-bg)', borderRadius: 'var(--radius-md)' }}>{t("移除")}</button>
                             )}
                           </div>
                         ))}
@@ -700,7 +876,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
               {/* Footer */}
               <div className="px-6 py-4 flex justify-end gap-3 shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
-                <button id="btn-cancel-add" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-lg text-xs font-semibold transition" style={{ border: '1px solid var(--border)', color: 'var(--fg-2)' }}>{t("取消")}</button>
+                <button id="btn-cancel-add" onClick={() => setIsModalOpen(false)} className="btn-custom-hover px-4 py-2 rounded-lg text-xs font-semibold transition" style={{ border: '1px solid var(--border)', color: 'var(--fg-2)' }}>{t("取消")}</button>
                 {(editIndex !== null || detected) && (
                   <button onClick={handleSaveProject} className="px-4 py-2 rounded-lg text-xs font-semibold transition" style={{ background: 'var(--status-info)', color: '#fff' }}>{t("儲存設定")}</button>
                 )}
@@ -725,12 +901,19 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   function handleTypeChange(type: string) {
     if (!editingProject) return;
     let rt = 'none'; let port = 0;
-    if (['next', 'nuxt', 'astro', 'vite'].includes(type)) { rt = 'auto'; port = 3000; }
+    if (['next', 'nuxt', 'astro', 'vite'].includes(type)) {
+      const hasNode = !!(scanResult?.NodeList && scanResult.NodeList.length > 0) || !!scanResult?.has_global_node;
+      const hasBun = !!(scanResult?.BunList && scanResult.BunList.length > 0) || !!scanResult?.has_global_bun;
+      rt = hasNode ? 'node' : (hasBun ? 'bun' : 'node');
+      port = 3000;
+    }
     else if (type.startsWith('python')) { rt = 'python'; port = 8000; }
     else if (type === 'go_api') { rt = 'go_air'; port = 8080; }
     else if (type === 'pocketbase') { rt = 'go_run'; port = 8090; }
     else if (type === 'custom') { rt = 'custom'; port = 3000; }
+
+    const finalRt = useCustomCmd ? 'custom' : rt;
     const hasBin = hasBundledRuntime(rt);
-    setEditingProject({ ...editingProject, type, runtime_type: rt, runtime_port: port, runtime_version: rt === 'bun' ? scanResult?.BunList?.[0]?.Version : scanResult?.NodeList?.[0]?.Version, use_wincmp_bin: shouldDefaultUseWinCMPBin(rt) });
+    setEditingProject({ ...editingProject, type, runtime_type: finalRt, runtime_port: port, runtime_version: rt === 'bun' ? scanResult?.BunList?.[0]?.Version : scanResult?.NodeList?.[0]?.Version, use_wincmp_bin: shouldDefaultUseWinCMPBin(rt) });
   }
 }
