@@ -331,9 +331,9 @@ export default function ResourceMonitor() {
                               border: '1px solid color-mix(in srgb, var(--status-ok) 15%, transparent)',
                             }}
                           >
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
-                              <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: 'var(--status-ok)' }}></span>
+                            <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                              <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
+                              <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: 'var(--status-ok)' }}></span>
                             </span>
                             {t("運行中")}
                           </span>

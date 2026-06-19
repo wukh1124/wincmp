@@ -258,9 +258,9 @@ export default function Dashboard() {
             return (
               <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
                 <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                  <span className="relative flex h-2 w-2">
-                    {running && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                    <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
                   </span>
                   <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
                     {running ? t("運行中") : t("已停止")}
@@ -310,9 +310,9 @@ export default function Dashboard() {
             return (
               <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
                 <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                  <span className="relative flex h-2 w-2">
-                    {running && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                    <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
                   </span>
                   <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
                     {running ? t("運行中") : t("已停止")}
@@ -357,9 +357,9 @@ export default function Dashboard() {
             return (
               <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
                 <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                  <span className="relative flex h-2 w-2">
-                    {running && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                    <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
                   </span>
                   <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
                     {running ? t("運行中") : t("已停止")}
@@ -416,9 +416,9 @@ export default function Dashboard() {
               return (
                 <div key={`php-${idx}`} className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
                   <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                    <span className="relative flex h-2 w-2">
-                      {running && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                      <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                    <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                      {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                      <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
                     </span>
                     <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
                       {running ? t("運行中") : t("已停止")}

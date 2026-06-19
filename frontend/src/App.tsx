@@ -420,16 +420,18 @@ export default function App() {
                   {!isCollapsed && <span className="whitespace-nowrap transition-opacity duration-300">{item.label}</span>}
                   {item.id === 'update' && hasUpdate && (
                     <span
-                      className="relative flex h-1.5 w-1.5"
+                      className="relative flex"
                       style={{
                         position: 'absolute',
                         top: isCollapsed ? 6 : '50%',
                         right: isCollapsed ? 6 : 16,
                         transform: isCollapsed ? 'none' : 'translateY(-50%)',
+                        width: '8px',
+                        height: '8px',
                       }}
                     >
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-error)' }}></span>
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: 'var(--status-error)' }}></span>
+                      <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-error)' }}></span>
+                      <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: 'var(--status-error)' }}></span>
                     </span>
                   )}
                 </button>
@@ -675,9 +677,9 @@ export default function App() {
 
             {/* Connection Status */}
             <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--fg-2)' }}>
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: 'var(--status-ok)' }}></span>
+              <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>
+                <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: 'var(--status-ok)' }}></span>
               </span>
               <span>{t("Go 核心已連線")}</span>
             </div>
