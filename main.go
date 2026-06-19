@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v2"
@@ -15,8 +16,23 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-// AppVersion 定義應用程式版本，可在 build 時透過 -ldflags "-X main.AppVersion=vX.Y.Z" 動態注入
-var AppVersion = "v2.0.0"
+//go:embed VERSION
+var versionFile string
+
+// AppVersion 定義應用程式版本，可在 build 時透過 -ldflags "-X main.AppVersion=vX.Y.Z" 動態注入。
+// 如果沒有透過 -ldflags 注入，則會從 VERSION 檔案中自動讀取。
+var AppVersion string
+
+func init() {
+	if AppVersion == "" {
+		trimmed := strings.TrimSpace(versionFile)
+		if trimmed != "" {
+			AppVersion = "v" + trimmed
+		} else {
+			AppVersion = "v2.0.0" // 若 VERSION 檔案內容為空，則使用預設版號
+		}
+	}
+}
 
 func main() {
 	isRestart := false
