@@ -108,7 +108,7 @@ export default function DBExplorer() {
                 <button
                   key={db}
                   onClick={() => handleSelectSchema(db)}
-                  className={`w-full text-left px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2.5 transition duration-150 ${selectedSchema === db
+                  className={`w-full text-left px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2.5 transition duration-150 db-list-item-btn ${selectedSchema === db
                     ? 'border'
                     : ''
                     }`}

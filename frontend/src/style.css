@@ -212,6 +212,19 @@ button[style*="var(--accent)"]:not(:disabled):hover,
   opacity: 0.95;
 }
 
+/* 3.5. 資料庫列表按鈕懸停效果 (Database Explorer List Item Hover) */
+button.db-list-item-btn:not(:disabled):hover {
+  background-color: var(--surface-warm) !important;
+  color: var(--fg) !important;
+}
+
+button.db-list-item-btn[style*="var(--accent)"]:not(:disabled):hover {
+  background-color: var(--accent-muted) !important;
+  border-color: var(--border-soft) !important;
+  color: var(--accent) !important;
+  opacity: 0.85;
+}
+
 /* 4. 亮藍色資訊主按鈕 (Status Info Buttons) */
 button[style*="var(--status-info)"]:not([style*="var(--border)"]):not(:disabled):hover {
   opacity: 0.9 !important;
