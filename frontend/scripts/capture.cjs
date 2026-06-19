@@ -94,6 +94,7 @@ const themes = [
     await context.addInitScript(() => {
         localStorage.setItem('wincmp_onboarding_shown', 'true');
         localStorage.setItem('wincmp_dep_onboarding_shown', 'true');
+        localStorage.setItem('wincmp_sidebar_guide_shown', 'true');
     });
 
     const page = await context.newPage();
@@ -108,6 +109,7 @@ const themes = [
         await page.evaluate(() => {
             localStorage.setItem('wincmp_dep_onboarding_shown', 'true');
             localStorage.setItem('wincmp_onboarding_shown', 'true');
+            localStorage.setItem('wincmp_sidebar_guide_shown', 'true');
         });
     } catch (e) {
         console.error('❌ 無法連線到 Wails 開發伺服器。請確保您已在 `wincmp` 目錄執行 `wails dev`！');
@@ -163,6 +165,18 @@ const themes = [
         const outputDir = path.join(__dirname, '..', '..', 'screenshot', theme.folder);
         if (!fs.existsSync(outputDir)) {
             fs.mkdirSync(outputDir, { recursive: true });
+        }
+
+        // 確保 Sidebar 是展開的，防止它在前一輪主題被自動收合，導致 Dashboard 擷圖時的狀態不一致
+        const sidebar = page.locator('aside');
+        const sidebarBox = await sidebar.boundingBox();
+        if (sidebarBox && sidebarBox.width < 100) {
+            console.log('   ℹ 偵測到 Sidebar 已收合，正在手動點擊展開以維持截圖一致性...');
+            const toggleSidebarBtn = page.locator('#btn-toggle-sidebar');
+            if (await toggleSidebarBtn.isVisible()) {
+                await toggleSidebarBtn.click();
+                await page.waitForTimeout(500); // 等待側邊欄展開動畫
+            }
         }
 
         // 開始逐項擷圖

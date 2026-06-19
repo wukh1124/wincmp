@@ -15,7 +15,7 @@ Inspired by XAMPP and Laragon, WinCMP aims to provide a more lightweight, **port
 
 ## 📸 Preview
 
-![WinCMP Dashboard](screenshot/dashboard.png)
+![WinCMP Dashboard](screenshot/sketch/dashboard.png)
 
 ---
 

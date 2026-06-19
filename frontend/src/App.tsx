@@ -383,6 +383,7 @@ export default function App() {
               )}
             </div>
             <button
+              id="btn-toggle-sidebar"
               onClick={toggleSidebar}
               className="p-1.5 rounded-md transition-colors"
               style={{ color: 'var(--muted)' }}
