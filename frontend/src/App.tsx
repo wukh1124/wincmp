@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages, Type } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages, Type, Lock, Unlock } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -13,8 +13,6 @@ import logo from './assets/images/icon.svg';
 import { t, setLanguage, useLanguage, getLanguage } from './i18n';
 import { useTheme, THEMES } from './components/ThemeContext';
 
-// 追蹤在本次 App 生命週期中是否已觸發過 Projects 自動收合 sidebar
-let projectsCollapsedTriggered = false;
 
 // 防抖儲存主題、語言與字體大小設定的定時器
 let quickSaveTimer: any = null;
@@ -41,6 +39,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'resources' | 'settings' | 'logs' | 'update'>('dashboard');
   const [showLogs, setShowLogs] = useState(false);
   const [showSidebarGuide, setShowSidebarGuide] = useState(false);
+  const [isSidebarLocked, setIsSidebarLocked] = useState(() => {
+    return localStorage.getItem('wincmp_sidebar_locked') === 'true';
+  });
 
   useEffect(() => {
     const isShown = localStorage.getItem('wincmp_sidebar_guide_shown') === 'true';
@@ -180,13 +181,12 @@ export default function App() {
     (window as any).isSettingsDirty = false;
     setActiveTab(tabId);
 
-    if (tabId === 'projects' && !projectsCollapsedTriggered) {
-      projectsCollapsedTriggered = true;
-      GetConfig().then((cfg: any) => {
-        if (cfg && cfg.projects && cfg.projects.length > 0) {
-          setIsCollapsed(true);
-        }
-      }).catch((err: any) => console.error("首次進入專案頁面獲取設定失敗:", err));
+    if (!isSidebarLocked) {
+      if (tabId === 'projects') {
+        setIsCollapsed(true);
+      } else {
+        setIsCollapsed(false);
+      }
     }
   };
 
@@ -382,15 +382,31 @@ export default function App() {
                 </div>
               )}
             </div>
-            <button
-              id="btn-toggle-sidebar"
-              onClick={toggleSidebar}
-              className="p-1.5 rounded-md transition-colors"
-              style={{ color: 'var(--muted)' }}
-              title={isCollapsed ? t('展開側邊欄') : t('收起側邊欄')}
-            >
-              {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
-            </button>
+            <div className="flex flex-col gap-1 items-center flex-shrink-0">
+              <button
+                id="btn-lock-sidebar"
+                onClick={() => {
+                  const newLocked = !isSidebarLocked;
+                  setIsSidebarLocked(newLocked);
+                  localStorage.setItem('wincmp_sidebar_locked', String(newLocked));
+                }}
+                className={`p-1 rounded transition-colors hover:bg-[var(--border-soft)] ${
+                  isSidebarLocked ? 'text-[var(--accent)] hover:text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--fg)]'
+                }`}
+                title={isSidebarLocked ? t('解鎖側邊欄自動收合') : t('鎖定側邊欄自動收合')}
+              >
+                {isSidebarLocked ? <Lock size={14} /> : <Unlock size={14} />}
+              </button>
+              <button
+                id="btn-toggle-sidebar"
+                onClick={toggleSidebar}
+                className="p-1 rounded transition-colors hover:bg-[var(--border-soft)] hover:text-[var(--fg)]"
+                style={{ color: 'var(--muted)' }}
+                title={isCollapsed ? t('展開側邊欄') : t('收起側邊欄')}
+              >
+                {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+              </button>
+            </div>
           </div>
 
           {/* Menu */}

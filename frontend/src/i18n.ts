@@ -44,6 +44,8 @@ export const enTranslations: Record<string, string> = {
   "終端日誌": "Terminal Logs",
   "展開側邊欄": "Expand Sidebar",
   "收起側邊欄": "Collapse Sidebar",
+  "解鎖側邊欄自動收合": "Unlock sidebar auto collapse",
+  "鎖定側邊欄自動收合": "Lock sidebar auto collapse",
   "系統監控 (WinCMP Core)": "WinCMP Core Monitor",
   "CPU 佔用": "CPU Usage",
   "記憶體 (RAM)": "Memory (RAM)",
