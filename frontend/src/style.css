@@ -235,6 +235,21 @@ button[style*="var(--status-ok)"]:not([style*="var(--border)"]):not(:disabled):h
   opacity: 0.9 !important;
 }
 
+/* 6. 自動滾動按鈕懸停效果 (Auto Scroll Button Hover) */
+button.btn-autoscroll-hover {
+  transition: all var(--motion-fast) var(--ease-standard) !important;
+}
+
+button.btn-autoscroll-hover:hover:not(:disabled) {
+  background-color: var(--accent-muted) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+html[data-theme="sketch"] button.btn-autoscroll-hover:hover:not(:disabled) {
+  background-color: #ebebeb !important;
+}
+
 /* ─── Guide Popover / Bubble ─────────────────────────────────── */
 .guide-bubble {
   background-color: var(--guide-bg) !important;

@@ -229,7 +229,7 @@ export default function TerminalLogs() {
                 setAutoScroll(true);
                 logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold hover:border-[color:var(--accent-muted)]"
+              className="btn-autoscroll-hover px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--accent)' }}
             >
               <ArrowDown size={11} /> {t("自動滾動")}
@@ -237,7 +237,7 @@ export default function TerminalLogs() {
           )}
           <button
             onClick={handleClearLogs}
-            className="px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold hover:border-[color:var(--status-error)]"
+            className="btn-danger-hover px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--status-error)' }}
           >
             <Trash2 size={11} /> {t("清空日誌")}
