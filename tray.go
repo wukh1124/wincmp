@@ -34,6 +34,9 @@ func (a *App) onTrayReady() {
 			select {
 			case <-a.trayShowItem.ClickedCh:
 				if a.ctx != nil {
+					a.windowHiddenMu.Lock()
+					a.windowHidden = false
+					a.windowHiddenMu.Unlock()
 					runtime.WindowShow(a.ctx)
 				}
 			case <-a.trayQuitItem.ClickedCh:

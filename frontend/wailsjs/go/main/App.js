@@ -122,6 +122,10 @@ export function SendTerminalInput(arg1, arg2) {
   return window['go']['main']['App']['SendTerminalInput'](arg1, arg2);
 }
 
+export function ShowMainWindow() {
+  return window['go']['main']['App']['ShowMainWindow']();
+}
+
 export function StartAutoUpdate(arg1, arg2) {
   return window['go']['main']['App']['StartAutoUpdate'](arg1, arg2);
 }

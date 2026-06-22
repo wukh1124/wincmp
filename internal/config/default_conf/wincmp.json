@@ -6,8 +6,9 @@
     "restore_last_state": true,
     "minimize_to_tray": false,
     "run_on_boot": false,
-    "theme": "Dark Gray",
-    "language": "en-US",
+    "theme": "sketch",
+    "language": "",
+    "font_size": "large",
     "last_service_state": {
       "caddy": false,
       "mariadb": false,

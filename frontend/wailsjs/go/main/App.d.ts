@@ -66,6 +66,8 @@ export function SelectFolder():Promise<string>;
 
 export function SendTerminalInput(arg1:string,arg2:string):Promise<void>;
 
+export function ShowMainWindow():Promise<void>;
+
 export function StartAutoUpdate(arg1:string,arg2:string):Promise<void>;
 
 export function StartCaddy(arg1:string,arg2:string):Promise<void>;

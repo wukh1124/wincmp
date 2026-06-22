@@ -1540,5 +1540,16 @@ func (a *App) GetDefaultCommandTemplate(typeID string, runtimeType string) (stri
 	return preset.GetDefaultCommandTemplate(typeID, runtimeType, hasNode, hasBun), nil
 }
 
+// ShowMainWindow 供前端完成初始化與主題套用後呼叫，用以顯示主視窗
+func (a *App) ShowMainWindow() error {
+	a.windowHiddenMu.Lock()
+	a.windowHidden = false
+	a.windowHiddenMu.Unlock()
+	if a.ctx != nil {
+		runtime.WindowShow(a.ctx)
+	}
+	return nil
+}
+
 
 

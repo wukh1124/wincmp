@@ -205,19 +205,39 @@ func Load(path string) (*WincmpConfig, error) {
 		cfg.Global.DependencyURL = DefaultDependencyURL
 	}
 
-	// 預設語言為自動偵測系統語言
-	if cfg.Global.Language == "" {
+	// 檢查並進行設定修正，若有修改則主動寫回 wincmp.json 檔
+	needsSave := false
+
+	// 1. 語言設定合法性檢查 (僅支援 zh-TW 與 en-US)
+	validLangs := map[string]bool{"zh-TW": true, "en-US": true}
+	if cfg.Global.Language == "" || !validLangs[cfg.Global.Language] {
 		cfg.Global.Language = GetSystemLanguage()
+		needsSave = true
 	}
 
-	// 預設字型大小為 small
-	if cfg.Global.FontSize == "" {
-		cfg.Global.FontSize = "small"
+	// 2. 主題設定合法性檢查 (支援 carbon, cream, sketch)
+	validThemes := map[string]bool{"carbon": true, "cream": true, "sketch": true}
+	if cfg.Global.Theme == "" || !validThemes[cfg.Global.Theme] {
+		cfg.Global.Theme = "sketch"
+		needsSave = true
 	}
 
-	// 預設終端為 powershell.exe
+	// 3. 字型大小設定合法性檢查 (支援 small, medium, large)
+	validFontSizes := map[string]bool{"small": true, "medium": true, "large": true}
+	if cfg.Global.FontSize == "" || !validFontSizes[cfg.Global.FontSize] {
+		cfg.Global.FontSize = "large"
+		needsSave = true
+	}
+
+	// 4. 預設終端為 powershell.exe
 	if cfg.Global.TerminalShell == "" {
 		cfg.Global.TerminalShell = "powershell.exe"
+		needsSave = true
+	}
+
+	// 如果有進行設定修正，在初次加載時立刻同步修正磁碟上的 json 檔案
+	if needsSave {
+		_ = cfg.Save(path)
 	}
 
 	// 向後相容：若舊版 wincmp.json 中不含 "auto_check_update" 欄位，預設為開啟
