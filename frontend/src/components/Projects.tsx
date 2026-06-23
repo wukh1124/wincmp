@@ -48,16 +48,26 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
   useEffect(() => {
     if (config?.projects && config.projects.length > 0) {
-      const isShown = localStorage.getItem('wincmp_onboarding_shown') === 'true';
+      const isShown = config.global?.wincmp_onboarding_shown;
       if (!isShown) {
         setShowGuide(true);
       }
     }
   }, [config]);
 
-  const dismissGuide = () => {
-    localStorage.setItem('wincmp_onboarding_shown', 'true');
-    setShowGuide(false);
+  const dismissGuide = async () => {
+    if (!config) return;
+    const newCfg = { ...config };
+    if (newCfg.global) {
+      newCfg.global.wincmp_onboarding_shown = true;
+      try {
+        await SaveConfig(newCfg);
+        setConfig(newCfg);
+        setShowGuide(false);
+      } catch (err) {
+        console.error("關閉專案引導失敗:", err);
+      }
+    }
   };
 
   useEffect(() => {

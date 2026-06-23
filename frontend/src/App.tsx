@@ -8,7 +8,7 @@ import ResourceMonitor from './components/ResourceMonitor';
 import TerminalLogs from './components/TerminalLogs';
 import VersionUpdate from './components/VersionUpdate';
 import { EventsOn } from '../wailsjs/runtime/runtime';
-import { GetAppVersion, IsAdmin, GetConfig, SaveQuickSettings, ShowMainWindow } from '../wailsjs/go/main/App';
+import { GetAppVersion, IsAdmin, GetConfig, SaveConfig, SaveQuickSettings, ShowMainWindow } from '../wailsjs/go/main/App';
 import logo from './assets/images/icon.svg';
 import { t, setLanguage, useLanguage, getLanguage } from './i18n';
 import { useTheme, THEMES } from './components/ThemeContext';
@@ -43,17 +43,18 @@ export default function App() {
     return localStorage.getItem('wincmp_sidebar_locked') === 'true';
   });
 
-  useEffect(() => {
-    const isShown = localStorage.getItem('wincmp_sidebar_guide_shown') === 'true';
-    if (!isShown) {
-      setShowSidebarGuide(true);
+  const dismissSidebarGuide = async () => {
+    try {
+      const cfg = await GetConfig();
+      if (cfg && cfg.global) {
+        cfg.global.wincmp_sidebar_guide_shown = true;
+        await SaveConfig(cfg);
+        setShowSidebarGuide(false);
+        window.dispatchEvent(new CustomEvent('wincmp_sidebar_guide_dismissed'));
+      }
+    } catch (err) {
+      console.error("關閉側邊欄引導失敗:", err);
     }
-  }, []);
-
-  const dismissSidebarGuide = () => {
-    localStorage.setItem('wincmp_sidebar_guide_shown', 'true');
-    setShowSidebarGuide(false);
-    window.dispatchEvent(new CustomEvent('wincmp_sidebar_guide_dismissed'));
   };
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -128,6 +129,12 @@ export default function App() {
           setFontSize(savedFontSize);
         } else {
           setFontSize('large');
+        }
+
+        // 側邊欄引導氣泡顯示狀態
+        const sidebarGuideShown = cfg.global.wincmp_sidebar_guide_shown;
+        if (!sidebarGuideShown) {
+          setShowSidebarGuide(true);
         }
       }
     }).catch((err: any) => {
