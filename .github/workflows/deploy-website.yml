@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'website/**'
+      - 'release_note/**'
       - '.github/workflows/deploy-website.yml'
   release:
     types: [published]
