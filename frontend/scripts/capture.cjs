@@ -90,11 +90,30 @@ const themes = [
         deviceScaleFactor: 2
     });
 
-    // 💡 透過 init script 在 HTML/JS 載入前預先寫入 localStorage，徹底關閉 onboarding 導引氣泡
+    // 💡 透過 init script 在 HTML/JS 載入前代理 window.go，攔截 GetConfig API 徹底關閉 onboarding 導引氣泡
     await context.addInitScript(() => {
-        localStorage.setItem('wincmp_onboarding_shown', 'true');
-        localStorage.setItem('wincmp_dep_onboarding_shown', 'true');
-        localStorage.setItem('wincmp_sidebar_guide_shown', 'true');
+        let goVal;
+        Object.defineProperty(window, 'go', {
+            get() {
+                return goVal;
+            },
+            set(val) {
+                goVal = val;
+                if (goVal && goVal.main && goVal.main.App) {
+                    const originalGetConfig = goVal.main.App.GetConfig;
+                    goVal.main.App.GetConfig = async function() {
+                        const cfg = await originalGetConfig();
+                        if (cfg && cfg.global) {
+                            cfg.global.wincmp_onboarding_shown = true;
+                            cfg.global.wincmp_dep_onboarding_shown = true;
+                            cfg.global.wincmp_sidebar_guide_shown = true;
+                        }
+                        return cfg;
+                    };
+                }
+            },
+            configurable: true
+        });
     });
 
     const page = await context.newPage();
@@ -105,12 +124,6 @@ const themes = [
     try {
         await page.goto(targetUrl);
         await page.waitForLoadState('networkidle');
-        // 💡 預先將 onboarding 教學標記為已看過，避免影響擷圖
-        await page.evaluate(() => {
-            localStorage.setItem('wincmp_dep_onboarding_shown', 'true');
-            localStorage.setItem('wincmp_onboarding_shown', 'true');
-            localStorage.setItem('wincmp_sidebar_guide_shown', 'true');
-        });
     } catch (e) {
         console.error('❌ 無法連線到 Wails 開發伺服器。請確保您已在 `wincmp` 目錄執行 `wails dev`！');
         process.exit(1);
@@ -153,11 +166,7 @@ const themes = [
 
         await page.waitForTimeout(500);
 
-        // 💡 再次確保 onboarding 教學被點掉，防止重載時氣泡彈出
-        await page.evaluate(() => {
-            localStorage.setItem('wincmp_dep_onboarding_shown', 'true');
-            localStorage.setItem('wincmp_onboarding_shown', 'true');
-        });
+        // 💡 再次等待穩定 (API 攔截已徹底關閉氣泡，無需再次 evaluate)
 
         await page.waitForTimeout(500);
 

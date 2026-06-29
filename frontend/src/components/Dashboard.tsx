@@ -27,13 +27,20 @@ export default function Dashboard() {
   const [showDepGuide, setShowDepGuide] = useState(false);
 
   useEffect(() => {
-    const checkGuides = () => {
-      const sidebarGuideShown = localStorage.getItem('wincmp_sidebar_guide_shown') === 'true';
-      const depGuideShown = localStorage.getItem('wincmp_dep_onboarding_shown') === 'true';
-      if (sidebarGuideShown && !depGuideShown) {
-        setShowDepGuide(true);
-      } else {
-        setShowDepGuide(false);
+    const checkGuides = async () => {
+      try {
+        const cfg = await GetConfig();
+        if (cfg && cfg.global) {
+          const sidebarGuideShown = cfg.global.wincmp_sidebar_guide_shown;
+          const depGuideShown = cfg.global.wincmp_dep_onboarding_shown;
+          if (sidebarGuideShown && !depGuideShown) {
+            setShowDepGuide(true);
+          } else {
+            setShowDepGuide(false);
+          }
+        }
+      } catch (err) {
+        console.error("檢查引導失敗:", err);
       }
     };
 
@@ -45,9 +52,17 @@ export default function Dashboard() {
     };
   }, []);
 
-  const dismissDepGuide = () => {
-    localStorage.setItem('wincmp_dep_onboarding_shown', 'true');
-    setShowDepGuide(false);
+  const dismissDepGuide = async () => {
+    try {
+      const cfg = await GetConfig();
+      if (cfg && cfg.global) {
+        cfg.global.wincmp_dep_onboarding_shown = true;
+        await SaveConfig(cfg);
+        setShowDepGuide(false);
+      }
+    } catch (err) {
+      console.error("關閉依賴引導失敗:", err);
+    }
   };
 
   const handleOpenDepManager = () => {

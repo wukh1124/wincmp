@@ -39,10 +39,10 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'carbon',
+  theme: 'sketch',
   setTheme: () => {},
   themes: THEMES,
-  fontSize: 'small',
+  fontSize: 'large',
   setFontSize: () => {},
   fontSizes: FONT_SIZES,
 });
@@ -57,10 +57,10 @@ function getInitialTheme(): ThemeId {
       return stored as ThemeId;
     }
     if (stored === 'xai') {
-      return 'carbon';
+      return 'sketch';
     }
   } catch {}
-  return 'carbon';
+  return 'sketch';
 }
 
 function getInitialFontSize(): FontSizeId {
@@ -70,7 +70,7 @@ function getInitialFontSize(): FontSizeId {
       return stored as FontSizeId;
     }
   } catch {}
-  return 'small'; /* 目前的大小視為小 */
+  return 'large'; /* 預設大小為大 */
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {

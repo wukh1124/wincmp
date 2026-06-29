@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	goruntime "runtime"
 
 	"fyne.io/systray"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -15,6 +16,7 @@ var trayIcon []byte
 // setupSystray 在背景啟動系統托盤服務
 func (a *App) setupSystray() {
 	go func() {
+		goruntime.LockOSThread()
 		systray.Run(a.onTrayReady, a.onTrayExit)
 	}()
 }
@@ -34,6 +36,9 @@ func (a *App) onTrayReady() {
 			select {
 			case <-a.trayShowItem.ClickedCh:
 				if a.ctx != nil {
+					a.windowHiddenMu.Lock()
+					a.windowHidden = false
+					a.windowHiddenMu.Unlock()
 					runtime.WindowShow(a.ctx)
 				}
 			case <-a.trayQuitItem.ClickedCh:

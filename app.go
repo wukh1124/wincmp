@@ -48,16 +48,19 @@ type App struct {
 
 	saveStateMu sync.Mutex
 
-	quitting     bool
-	quittingMu   sync.RWMutex
-	trayShowItem *systray.MenuItem
-	trayQuitItem *systray.MenuItem
+	quitting       bool
+	quittingMu     sync.RWMutex
+	trayShowItem   *systray.MenuItem
+	trayQuitItem   *systray.MenuItem
+	windowHidden   bool
+	windowHiddenMu sync.RWMutex
 }
 
 // NewApp 建立一個新的 App 實例
 func NewApp() *App {
 	return &App{
 		runtimeLogWriters: make(map[string]*lumberjack.Logger),
+		windowHidden:      true, // 預設隱藏啟動
 	}
 }
 
@@ -215,6 +218,9 @@ func (a *App) startup(ctx context.Context) {
 	// 10. 啟動啟動訊號監聽（用於單一實例喚回）
 	singleinstance.ListenForActivation(func() {
 		if a.ctx != nil {
+			a.windowHiddenMu.Lock()
+			a.windowHidden = false
+			a.windowHiddenMu.Unlock()
 			runtime.WindowShow(a.ctx)
 			runtime.WindowUnminimise(a.ctx)
 		}
@@ -223,6 +229,14 @@ func (a *App) startup(ctx context.Context) {
 
 	// 11. 啟動定時自動檢查更新
 	go a.startUpdateCheckTimer()
+
+	// 12. 安全兜底：5 秒後強行顯示主視窗，避免前端 JavaScript 崩潰導致視窗永久隱形
+	go func() {
+		time.Sleep(5 * time.Second)
+		if a.ctx != nil {
+			runtime.WindowShow(a.ctx)
+		}
+	}()
 }
 
 // shutdown 在應用程式關閉時由 Wails 自動呼叫，安全停止所有背景服務與子進程並關閉日誌
@@ -261,6 +275,9 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 
 	// 檢查是否設定了「點擊關閉視窗時縮小至系統托盤」
 	if a.appCfg != nil && a.appCfg.Global.MinimizeToTray {
+		a.windowHiddenMu.Lock()
+		a.windowHidden = true
+		a.windowHiddenMu.Unlock()
 		runtime.WindowHide(ctx)
 		return true // 阻止應用程式關閉
 	}
@@ -519,6 +536,13 @@ func (a *App) startResourceMonitoring() {
 					return
 				}
 				
+				a.windowHiddenMu.RLock()
+				hidden := a.windowHidden
+				a.windowHiddenMu.RUnlock()
+				if hidden {
+					continue
+				}
+
 				var cpu float64 = 0.0
 				var mem uint64 = 0
 				if a.resMonitor != nil {
@@ -730,4 +754,3 @@ func (a *App) performUpdateCheck() {
 		})
 	}
 }
-

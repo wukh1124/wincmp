@@ -8,7 +8,7 @@ import ResourceMonitor from './components/ResourceMonitor';
 import TerminalLogs from './components/TerminalLogs';
 import VersionUpdate from './components/VersionUpdate';
 import { EventsOn } from '../wailsjs/runtime/runtime';
-import { GetAppVersion, IsAdmin, GetConfig, SaveQuickSettings } from '../wailsjs/go/main/App';
+import { GetAppVersion, IsAdmin, GetConfig, SaveConfig, SaveQuickSettings, ShowMainWindow } from '../wailsjs/go/main/App';
 import logo from './assets/images/icon.svg';
 import { t, setLanguage, useLanguage, getLanguage } from './i18n';
 import { useTheme, THEMES } from './components/ThemeContext';
@@ -43,17 +43,18 @@ export default function App() {
     return localStorage.getItem('wincmp_sidebar_locked') === 'true';
   });
 
-  useEffect(() => {
-    const isShown = localStorage.getItem('wincmp_sidebar_guide_shown') === 'true';
-    if (!isShown) {
-      setShowSidebarGuide(true);
+  const dismissSidebarGuide = async () => {
+    try {
+      const cfg = await GetConfig();
+      if (cfg && cfg.global) {
+        cfg.global.wincmp_sidebar_guide_shown = true;
+        await SaveConfig(cfg);
+        setShowSidebarGuide(false);
+        window.dispatchEvent(new CustomEvent('wincmp_sidebar_guide_dismissed'));
+      }
+    } catch (err) {
+      console.error("關閉側邊欄引導失敗:", err);
     }
-  }, []);
-
-  const dismissSidebarGuide = () => {
-    localStorage.setItem('wincmp_sidebar_guide_shown', 'true');
-    setShowSidebarGuide(false);
-    window.dispatchEvent(new CustomEvent('wincmp_sidebar_guide_dismissed'));
   };
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -110,27 +111,37 @@ export default function App() {
           setLanguage(getLanguage());
         }
 
-        // 主題回退：若無此值或格式有誤，則預設回退至 'carbon'
+        // 主題回退：若無此值或格式有誤，則預設回退至 'sketch'
         const validThemes = ['carbon', 'cream', 'sketch'];
         const savedTheme = cfg.global.theme;
         if (savedTheme && validThemes.includes(savedTheme)) {
           setTheme(savedTheme);
         } else if (savedTheme === 'xai') {
-          setTheme('carbon');
+          setTheme('sketch');
         } else {
-          setTheme('carbon');
+          setTheme('sketch');
         }
 
-        // 字型大小回退：若無此值或格式有誤，則預設為 'small'
+        // 字型大小回退：若無此值或格式有誤，則預設為 'large'
         const validFontSizes = ['small', 'medium', 'large'];
         const savedFontSize = cfg.global.font_size;
         if (savedFontSize && validFontSizes.includes(savedFontSize)) {
           setFontSize(savedFontSize);
         } else {
-          setFontSize('small');
+          setFontSize('large');
+        }
+
+        // 側邊欄引導氣泡顯示狀態
+        const sidebarGuideShown = cfg.global.wincmp_sidebar_guide_shown;
+        if (!sidebarGuideShown) {
+          setShowSidebarGuide(true);
         }
       }
-    }).catch((err: any) => console.error("獲取語系、主題與字型大小失敗:", err));
+    }).catch((err: any) => {
+      console.error("獲取語系、主題與字型大小失敗:", err);
+    }).finally(() => {
+      ShowMainWindow().catch((err: any) => console.error("顯示主視窗失敗:", err));
+    });
   }, []);
 
   // 2. 監聽 Ctrl+K 快速鍵聚焦搜尋框
@@ -350,11 +361,11 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden select-none" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg)' }}>
+    <div className="theme-transition flex h-screen w-screen overflow-hidden select-none" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg)' }}>
 
       {/* ─── Sidebar ──────────────────────────────────────────── */}
       <aside
-        className="flex flex-col justify-between select-none transition-all duration-300 ease-in-out border-r"
+        className="flex flex-col justify-between select-none sidebar-transition border-r"
         style={{
           width: isCollapsed ? 64 : 256,
           background: 'var(--sidebar-bg)',
@@ -597,11 +608,11 @@ export default function App() {
       </aside>
 
       {/* ─── Main Content ─────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden theme-transition">
 
         {/* Topbar */}
         <header
-          className="relative z-30 h-14 border-b px-6 flex items-center justify-between select-none"
+          className="relative z-30 h-14 border-b px-6 flex items-center justify-between select-none theme-transition"
           style={{
             borderColor: 'var(--border)',
             background: 'var(--card)',
@@ -713,7 +724,7 @@ export default function App() {
         {/* Log Toggle Bar */}
         {activeTab !== 'logs' && (
           <div
-            className="h-9 border-t px-6 flex justify-between items-center select-none text-[11px]"
+            className="h-9 border-t px-6 flex justify-between items-center select-none text-[11px] theme-transition"
             style={{ borderColor: 'var(--border)', background: 'var(--bg-deep)' }}
           >
             <button
@@ -737,7 +748,7 @@ export default function App() {
 
         {/* Inline Logs Panel */}
         {activeTab !== 'logs' && showLogs && (
-          <div className="h-[35%] min-h-[150px] border-t overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}>
+          <div className="h-[35%] min-h-[150px] border-t overflow-hidden theme-transition" style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}>
             <TerminalLogs />
           </div>
         )}

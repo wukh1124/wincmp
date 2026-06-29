@@ -69,6 +69,25 @@ body {
     color var(--motion-slow) var(--ease-standard);
 }
 
+/* ─── Theme Transitions ──────────────────────────────────────── */
+/* 用於大面積主體元素的主題顏色平滑過渡 */
+.theme-transition {
+  transition: background-color var(--motion-slow) var(--ease-standard),
+              background-image var(--motion-slow) var(--ease-standard),
+              border-color var(--motion-slow) var(--ease-standard),
+              color var(--motion-slow) var(--ease-standard),
+              box-shadow var(--motion-slow) var(--ease-standard);
+}
+
+/* Sidebar 專屬過渡：寬度與顏色切換同步使用相同的慢速運動與標準曲線 */
+.sidebar-transition {
+  transition: width var(--motion-slow) var(--ease-standard),
+              background-color var(--motion-slow) var(--ease-standard),
+              background var(--motion-slow) var(--ease-standard),
+              border-color var(--motion-slow) var(--ease-standard),
+              color var(--motion-slow) var(--ease-standard);
+}
+
 /* 全域按鈕游標與對齊樣式 */
 button {
   cursor: pointer;
