@@ -4,6 +4,7 @@ import {updater} from '../models';
 import {main} from '../models';
 import {config} from '../models';
 import {resource} from '../models';
+import {process} from '../models';
 import {scanner} from '../models';
 
 export function CheckMissingCoreDependencies():Promise<Record<string, boolean>>;
@@ -30,6 +31,8 @@ export function GetDependencyConfig():Promise<config.DependencyConfig>;
 
 export function GetDetailedResources():Promise<resource.DetailedResources>;
 
+export function GetPortOccupiedProcess(arg1:number):Promise<process.OccupiedProcessInfo>;
+
 export function GetScanResult():Promise<scanner.ScanResult>;
 
 export function GetServicesStatus():Promise<Record<string, boolean>>;
@@ -39,6 +42,8 @@ export function IsAdmin():Promise<boolean>;
 export function IsMariaDBRunning():Promise<boolean>;
 
 export function IsServiceRunning(arg1:string):Promise<boolean>;
+
+export function KillProcessByPort(arg1:number):Promise<void>;
 
 export function OpenFolder(arg1:string):Promise<void>;
 

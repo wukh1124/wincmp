@@ -68,6 +68,8 @@ export const enTranslations: Record<string, string> = {
   "是，保存後離開": "Yes, save and leave",
   "確定": "OK",
   "取消": "Cancel",
+  "未知進程": "Unknown Process",
+  "端口 %d 目前已被進程 '%s' (PID: %d) 佔用。\n\n是否要強制結束該進程並啟動服務？": "Port %d is currently occupied by process '%s' (PID: %d).\n\nDo you want to force terminate this process and start the service?",
 
   // Settings.tsx
   "配置開發路徑、資料庫參數以及 WinCMP 全域行為": "Configure development paths, database and global settings",
@@ -366,6 +368,10 @@ export const enTranslations: Record<string, string> = {
   "無可用版本 (請確認 ./bin/)": "No version available (Please check ./bin/)",
   "執行啟動指令 (支援 %PORT% 作佔位符)": "Startup Command (Supports %PORT% placeholder)",
   "使用自訂執行指令": "Use Custom Command",
+  "此專案 Runtime 服務所佔用的本機連接埠，預設為 3000 或由系統自動分配。Caddy 反向代理將會指向此 PORT。": "The local port that this project's runtime service occupies. Default is 3000 or auto-allocated by the system. Caddy reverse proxy will point to this port.",
+  "選擇「背景執行」將在後端靜默運行；選擇「終端執行」則會開啟即時終端機視窗，方便查看即時日誌與偵錯輸出。": "Choose 'Background' to run silently in the background; choose 'Terminal' to open an interactive terminal window for viewing real-time logs and debugging.",
+  "啟用此選項將使用 WinCMP 內置（位於 bin 目錄下）的 Node.js 或 Bun 執行檔，免去您本機手動安裝與環境變數配置的煩惱。": "Enable this to use the bundled Node.js or Bun executable inside WinCMP's bin directory, saving you the hassle of manual local installation and path configuration.",
+  "勾選後，您可以自由修改執行啟動指令，不受框架預設範本限制。必須確保指令中包含或支援指定的連接埠。": "Once checked, you can freely customize the start command, bypassing the framework templates. Ensure your command supports or binds to the specified port.",
   "Custom": "Custom",
   "例如: npm run dev -- --port %PORT%": "e.g., npm run dev -- --port %PORT%",
   "此專案為單一倉庫內的其中一個項目 (Monorepo)": "This project is part of a Monorepo",

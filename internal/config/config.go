@@ -97,6 +97,7 @@ type ProjectConfig struct {
 	RuntimeMode    string   `json:"runtime_mode,omitempty"`    // "Background" 或 "Terminal"
 	RuntimeVersion string   `json:"runtime_version,omitempty"` // "24.14.1" 等
 	Command        string   `json:"command,omitempty"`         // 自定義啟動指令 (Custom 類型或手動覆寫)
+	CustomCommand  string   `json:"custom_command,omitempty"`  // 使用者自訂並填寫過的啟動指令備份
 	CommandDirty   bool     `json:"command_dirty,omitempty"`   // 使用者是否手動修改過 Command
 	UseWinCMPBin   bool     `json:"use_wincmp_bin,omitempty"`  // 是否使用 WinCMP 內建執行檔 (bundled runtime)
 

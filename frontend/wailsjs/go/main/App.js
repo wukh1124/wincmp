@@ -50,6 +50,10 @@ export function GetDetailedResources() {
   return window['go']['main']['App']['GetDetailedResources']();
 }
 
+export function GetPortOccupiedProcess(arg1) {
+  return window['go']['main']['App']['GetPortOccupiedProcess'](arg1);
+}
+
 export function GetScanResult() {
   return window['go']['main']['App']['GetScanResult']();
 }
@@ -68,6 +72,10 @@ export function IsMariaDBRunning() {
 
 export function IsServiceRunning(arg1) {
   return window['go']['main']['App']['IsServiceRunning'](arg1);
+}
+
+export function KillProcessByPort(arg1) {
+  return window['go']['main']['App']['KillProcessByPort'](arg1);
 }
 
 export function OpenFolder(arg1) {

@@ -63,6 +63,9 @@ var enTranslations = map[string]string{
 	"關閉":   "Close",
 	"重新啟動": "Restart",
 	"顯示語言": "Display Language",
+	"系統安全保護：此端口為系統核心保留端口，不允許進行操作": "System safety protection: This port is reserved for system core services and cannot be operated on",
+	"系統安全保護：此端口為系統核心保留端口，不允許強制結束進程": "System safety protection: This port is reserved for system core services. Forcing termination of this process is not allowed",
+	"無法強制結束進程": "Failed to force terminate process",
 
 	// 主選單與服務
 	"儀表板": "Dashboard",
@@ -255,6 +258,7 @@ var enTranslations = map[string]string{
 	"PHP %s 進程數變更為 %d (重啟後生效)":                        "PHP %s process count changed to %d (takes effect after restart)",
 	"PHP 進程配置已更變，請重載 (Reload) 或重啟 Caddy 以套用新端口":       "PHP process configuration changed. Please reload or restart Caddy to apply new ports",
 	"📋 已複製網址到剪貼簿: %s":                                 "📋 URL copied to clipboard: %s",
+	"端口 %d 已被專案 '%s' 佔用中（運行中）": "Port %d is already occupied by project '%s' (running)",
 	"✅ 已更新專案: %s":                                     "✅ Project updated: %s",
 	"✅ 已移除專案: %s":                                     "✅ Project removed: %s",
 	"📌 已新增專案: %s，即將自動開啟編輯器":                           "📌 Project added: %s, opening editor...",

@@ -47,6 +47,7 @@ type App struct {
 	dbPoolDSN string
 
 	saveStateMu sync.Mutex
+	startProjMu sync.Mutex
 
 	quitting       bool
 	quittingMu     sync.RWMutex

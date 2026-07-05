@@ -144,6 +144,7 @@ export namespace config {
 	    runtime_mode?: string;
 	    runtime_version?: string;
 	    command?: string;
+	    custom_command?: string;
 	    command_dirty?: boolean;
 	    use_wincmp_bin?: boolean;
 	    use_env_bin?: boolean;
@@ -172,6 +173,7 @@ export namespace config {
 	        this.runtime_mode = source["runtime_mode"];
 	        this.runtime_version = source["runtime_version"];
 	        this.command = source["command"];
+	        this.custom_command = source["custom_command"];
 	        this.command_dirty = source["command_dirty"];
 	        this.use_wincmp_bin = source["use_wincmp_bin"];
 	        this.use_env_bin = source["use_env_bin"];
@@ -251,6 +253,25 @@ export namespace main {
 	        this.runtime_type = source["runtime_type"];
 	        this.runtime_port = source["runtime_port"];
 	        this.php_version = source["php_version"];
+	    }
+	}
+
+}
+
+export namespace process {
+	
+	export class OccupiedProcessInfo {
+	    name: string;
+	    pid: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new OccupiedProcessInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.pid = source["pid"];
 	    }
 	}
 
