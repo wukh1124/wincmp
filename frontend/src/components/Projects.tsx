@@ -5,7 +5,7 @@ import {
   GetConfig, SaveConfig, GetScanResult, GetServicesStatus,
   StartProjectRuntime, StopProjectRuntime, ReloadCaddy,
   OpenFolder, SelectFolder, DetectProjectPath, OpenProjectCaddyfile,
-  GetDefaultCommandTemplate
+  GetDefaultCommandTemplate, GetPortOccupiedProcess, KillProcessByPort
 } from '../../wailsjs/go/main/App';
 import { t, useLanguage } from '../i18n';
 
@@ -214,8 +214,38 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   };
 
   const handleStartRuntime = async (name: string) => {
+    const proj = config?.projects?.find((p: any) => p.name === name);
+    if (!proj) return;
+    const port = proj.runtime_port || 3000;
+
     setLoadingProjects(prev => ({ ...prev, [name]: true }));
-    try { await StartProjectRuntime(name); await updateStatus(); }
+    try {
+      // 偵測端口佔用進程
+      try {
+        const info = await GetPortOccupiedProcess(port);
+        if (info && info.pid > 0) {
+          const procName = info.name || t("未知進程");
+          const confirmKill = await (window as any).customConfirm(
+            t("端口 %d 目前已被進程 '%s' (PID: %d) 佔用。\n\n是否要強制結束該進程並啟動服務？", port, procName, info.pid)
+          );
+          if (!confirmKill) {
+            setLoadingProjects(prev => ({ ...prev, [name]: false }));
+            return;
+          }
+          await KillProcessByPort(port);
+        }
+      } catch (err: any) {
+        if (err && err.toString().includes("系統安全保護")) {
+          (window as any).customAlert(err);
+          setLoadingProjects(prev => ({ ...prev, [name]: false }));
+          return;
+        }
+        console.warn("偵測端口佔用進程失敗:", err);
+      }
+
+      await StartProjectRuntime(name);
+      await updateStatus();
+    }
     catch (err) { (window as any).customAlert(`${t("啟動 Runtime 失敗")}: ${err}`); }
     finally { setLoadingProjects(prev => ({ ...prev, [name]: false })); }
   };

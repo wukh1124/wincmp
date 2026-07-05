@@ -504,7 +504,7 @@ func (m *Manager) trackRuntimePIDs(serviceKey, projectName string, port int, isT
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			pid := findPIDByPort(port)
+			pid := FindPIDByPort(port)
 			if pid > 0 {
 				pids := []int{pid}
 				pids = append(pids, m.getChildPIDs(pid)...)
@@ -615,7 +615,7 @@ func (m *Manager) StopRuntime(project config.ProjectConfig) error {
 	port := project.RuntimePort
 	if port > 0 {
 		time.Sleep(500 * time.Millisecond)
-		residualPID := findPIDByPort(port)
+		residualPID := FindPIDByPort(port)
 		if residualPID > 0 {
 			proc, err := os.FindProcess(residualPID)
 			if err == nil {
@@ -700,8 +700,8 @@ func (m *Manager) pipeRuntimeOutput(cmd *exec.Cmd, category string, serviceName 
 	}()
 }
 
-// findPIDByPort 透過 gopsutil 找到佔用某 Port 的 PID（取代 netstat shell 命令）
-func findPIDByPort(port int) int {
+// FindPIDByPort 透過 gopsutil 找到佔用某 Port 的 PID（取代 netstat shell 命令）
+func FindPIDByPort(port int) int {
 	if port <= 0 {
 		return 0
 	}
@@ -754,12 +754,64 @@ func findPIDByPortFallback(port int) int {
 
 // CheckRuntimeRunning 透過 netstat 檢測 Port 是否被佔用
 func CheckRuntimeRunning(port int) bool {
-	return findPIDByPort(port) > 0
+	return FindPIDByPort(port) > 0
 }
 
 // IsPortAvailable 檢查指定端口是否可用（未被佔用）
 func IsPortAvailable(port int) bool {
 	return !CheckRuntimeRunning(port)
+}
+
+// OccupiedProcessInfo 記錄佔用端口的進程資訊
+type OccupiedProcessInfo struct {
+	Name string `json:"name"`
+	PID  int    `json:"pid"`
+}
+
+// GetPortOccupiedProcess 獲取佔用指定端口的進程資訊
+func GetPortOccupiedProcess(port int) (*OccupiedProcessInfo, error) {
+	// 出於 Windows 系統安全防護，禁止操作系統保留端口 (<= 1024) 與特定關鍵端口 (如 3389)
+	if port <= 1024 || port == 3389 {
+		return nil, fmt.Errorf("%s", i18n.T("系統安全保護：此端口為系統核心保留端口，不允許進行操作"))
+	}
+
+	pid := FindPIDByPort(port)
+	if pid <= 0 {
+		return nil, nil
+	}
+
+	p, err := process.NewProcess(int32(pid))
+	if err != nil {
+		return &OccupiedProcessInfo{Name: "", PID: pid}, nil
+	}
+
+	name, err := p.Name()
+	if err != nil {
+		return &OccupiedProcessInfo{Name: "", PID: pid}, nil
+	}
+
+	return &OccupiedProcessInfo{Name: name, PID: pid}, nil
+}
+
+// KillProcessByPort 強制結束佔用指定端口的進程
+func KillProcessByPort(port int) error {
+	// 出於 Windows 系統安全防護，禁止強制結束系統保留端口 (<= 1024) 與特定關鍵端口 (如 3389) 的進程
+	if port <= 1024 || port == 3389 {
+		return fmt.Errorf("%s", i18n.T("系統安全保護：此端口為系統核心保留端口，不允許強制結束進程"))
+	}
+
+	pid := FindPIDByPort(port)
+	if pid <= 0 {
+		return nil // 進程已經不存在
+	}
+
+	killCmd := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(pid))
+	killCmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // 隱藏 CMD 視窗
+	if err := killCmd.Run(); err != nil {
+		return fmt.Errorf("%s (PID: %d): %w", i18n.T("無法強制結束進程"), pid, err)
+	}
+
+	return nil
 }
 
 // getChildPIDs 遞迴取得所有子進程 PID

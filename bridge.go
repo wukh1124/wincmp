@@ -1551,5 +1551,15 @@ func (a *App) ShowMainWindow() error {
 	return nil
 }
 
+// GetPortOccupiedProcess 獲取佔用指定端口的進程資訊
+func (a *App) GetPortOccupiedProcess(port int) (*process.OccupiedProcessInfo, error) {
+	return process.GetPortOccupiedProcess(port)
+}
+
+// KillProcessByPort 強制結束佔用指定端口的進程
+func (a *App) KillProcessByPort(port int) error {
+	return process.KillProcessByPort(port)
+}
+
 
 

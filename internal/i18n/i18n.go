@@ -63,6 +63,9 @@ var enTranslations = map[string]string{
 	"關閉":   "Close",
 	"重新啟動": "Restart",
 	"顯示語言": "Display Language",
+	"系統安全保護：此端口為系統核心保留端口，不允許進行操作": "System safety protection: This port is reserved for system core services and cannot be operated on",
+	"系統安全保護：此端口為系統核心保留端口，不允許強制結束進程": "System safety protection: This port is reserved for system core services. Forcing termination of this process is not allowed",
+	"無法強制結束進程": "Failed to force terminate process",
 
 	// 主選單與服務
 	"儀表板": "Dashboard",

@@ -258,6 +258,25 @@ export namespace main {
 
 }
 
+export namespace process {
+	
+	export class OccupiedProcessInfo {
+	    name: string;
+	    pid: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new OccupiedProcessInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.pid = source["pid"];
+	    }
+	}
+
+}
+
 export namespace resource {
 	
 	export class ServiceResource {

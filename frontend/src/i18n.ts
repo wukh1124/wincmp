@@ -68,6 +68,8 @@ export const enTranslations: Record<string, string> = {
   "是，保存後離開": "Yes, save and leave",
   "確定": "OK",
   "取消": "Cancel",
+  "未知進程": "Unknown Process",
+  "端口 %d 目前已被進程 '%s' (PID: %d) 佔用。\n\n是否要強制結束該進程並啟動服務？": "Port %d is currently occupied by process '%s' (PID: %d).\n\nDo you want to force terminate this process and start the service?",
 
   // Settings.tsx
   "配置開發路徑、資料庫參數以及 WinCMP 全域行為": "Configure development paths, database and global settings",
