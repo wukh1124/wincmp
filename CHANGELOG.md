@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.6] 2026-07-05
+
+### Added
+- **Port Occupancy Detection**: Automatically detects processes occupying the target port when starting a project, prompting the user and allowing safe termination directly from the UI.
+- **Custom Start Command Persistence**: Persists custom startup command configurations in the `wincmp.json` profile, preventing settings from being lost when toggling the configuration options or reloading the app.
+
+### Changed
+- **UI & Tooltip Polishing**: Enhanced project settings panels by increasing label font sizes and help icon dimensions, and optimized tooltip positioning for better usability.
+- **Localization Wording**: Refined UI translation strings and labels regarding custom start commands for clarity.
+
+### Fixed
+- **Race Condition in Concurrent Startup**: Implemented concurrency control to prevent multiple projects from starting simultaneously on the same port.
+
 ## [2.0.5] 2026-06-29
 
 ### Added
