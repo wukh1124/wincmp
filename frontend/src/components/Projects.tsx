@@ -24,6 +24,7 @@ interface Project {
   runtime_mode?: string;
   runtime_version?: string;
   command?: string;
+  custom_command?: string;
   use_wincmp_bin?: boolean;
 }
 
@@ -178,9 +179,12 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       }
       setEditingProject(prev => {
         if (!prev) return null;
+        const targetCmd = prev.custom_command || prev.command || '';
         return {
           ...prev,
           runtime_type: 'custom',
+          command: targetCmd,
+          custom_command: targetCmd
         };
       });
     } else {
@@ -251,7 +255,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
         ssl_crt: '', ssl_key: '', use_ssl: true, enabled: true,
         runtime_port: 3000, runtime_mode: 'Background',
         runtime_version: scanResult?.NodeList?.[0]?.Version || '',
-        command: '', use_wincmp_bin: false
+        command: '', custom_command: '', use_wincmp_bin: false
       });
       setDetected(false);
       setIsMonorepo(false);
@@ -828,7 +832,11 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                               value={editingProject.command || ''}
                               onChange={(e) => {
                                 if (effectivelyUseCustomCmd) {
-                                  setEditingProject({ ...editingProject, command: e.target.value });
+                                  setEditingProject({
+                                    ...editingProject,
+                                    command: e.target.value,
+                                    custom_command: e.target.value
+                                  });
                                 }
                               }}
                               readOnly={!effectivelyUseCustomCmd}

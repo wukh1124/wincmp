@@ -200,3 +200,43 @@ func TestRestoreDefaultConf(t *testing.T) {
 		t.Errorf("防覆蓋機制失效，檔案被重新覆蓋！預期為 %q, 實際為 %q", originalContent, string(data))
 	}
 }
+
+func TestConfig_LoadSaveCustomCommand(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "wincmp-config-test-*")
+	if err != nil {
+		t.Fatalf("無法建立暫時目錄: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	configPath := filepath.Join(tempDir, "wincmp.json")
+	cfg := &WincmpConfig{
+		Projects: []ProjectConfig{
+			{
+				Name:          "test-custom-cmd-proj",
+				Domains:       []string{"test.local"},
+				Type:          "vite",
+				RuntimeType:   "custom",
+				Command:       "npm run start -- --port %PORT%",
+				CustomCommand: "npm run start -- --port %PORT%",
+			},
+		},
+	}
+
+	if err := cfg.Save(configPath); err != nil {
+		t.Fatalf("儲存設定失敗: %v", err)
+	}
+
+	loaded, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("載入設定失敗: %v", err)
+	}
+
+	if len(loaded.Projects) != 1 {
+		t.Fatalf("載入的專案數量錯誤: %d", len(loaded.Projects))
+	}
+
+	p := loaded.Projects[0]
+	if p.CustomCommand != "npm run start -- --port %PORT%" {
+		t.Errorf("CustomCommand 欄位反序列化錯誤: 預期 'npm run start -- --port %%PORT%%', 實際 '%s'", p.CustomCommand)
+	}
+}
