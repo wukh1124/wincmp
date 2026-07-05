@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal } from 'lucide-react';
+import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle } from 'lucide-react';
 import ProjectTerminal from './ProjectTerminal';
 import {
   GetConfig, SaveConfig, GetScanResult, GetServicesStatus,
@@ -427,7 +427,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   };
 
   const labelStyle: React.CSSProperties = {
-    display: 'block', fontSize: 10, fontWeight: 700,
+    display: 'block', fontSize: 11, fontWeight: 700,
     textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--meta)',
   };
 
@@ -766,11 +766,29 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
-                              <label style={labelStyle}>{t("執行 Port")}</label>
+                              <div className="flex items-center gap-1">
+                                <label style={labelStyle}>{t("執行 Port")}</label>
+                                <div className="group relative inline-flex items-center select-none">
+                                  <HelpCircle size={13} className="cursor-help" style={{ color: 'var(--meta)' }} />
+                                  <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:block w-48 p-2 text-[10px] rounded shadow-md z-50 whitespace-normal pointer-events-none leading-relaxed transition-all text-left"
+                                       style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
+                                    {t("此專案 Runtime 服務所佔用的本機連接埠，預設為 3000 或由系統自動分配。Caddy 反向代理將會指向此 PORT。")}
+                                  </div>
+                                </div>
+                              </div>
                               <input type="number" value={editingProject.runtime_port || 3000} onChange={(e) => setEditingProject({ ...editingProject, runtime_port: parseInt(e.target.value) })} className="w-full" style={inputStyle} />
                             </div>
                             <div className="space-y-1">
-                              <label style={labelStyle}>{t("運行模式")}</label>
+                              <div className="flex items-center gap-1">
+                                <label style={labelStyle}>{t("運行模式")}</label>
+                                <div className="group relative inline-flex items-center select-none">
+                                  <HelpCircle size={13} className="cursor-help" style={{ color: 'var(--meta)' }} />
+                                  <div className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block w-48 p-2 text-[10px] rounded shadow-md z-50 whitespace-normal pointer-events-none leading-relaxed transition-all text-left"
+                                       style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
+                                    {t("選擇「背景執行」將在後端靜默運行；選擇「終端執行」則會開啟即時終端機視窗，方便查看即時日誌與偵錯輸出。")}
+                                  </div>
+                                </div>
+                              </div>
                               <select value={editingProject.runtime_mode || 'Background'} onChange={(e) => setEditingProject({ ...editingProject, runtime_mode: e.target.value })} className="w-full cursor-pointer font-semibold" style={inputStyle}>
                                 <option value="Background">{t("背景執行 (Background)")}</option>
                                 <option value="Terminal">{t("終端執行 (Terminal)")}</option>
@@ -781,7 +799,16 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                             <div className="space-y-3 pt-2">
                               <div className="flex items-center gap-2">
                                 <input type="checkbox" id="useWinCMPBin" checked={editingProject.use_wincmp_bin} onChange={(e) => setEditingProject({ ...editingProject, use_wincmp_bin: e.target.checked })} className="w-3.5 h-3.5 cursor-pointer accent-blue-500" />
-                                <label htmlFor="useWinCMPBin" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)' }}>{t("使用 WinCMP 內建執行檔 (Bundled Runtime)")}</label>
+                                <div className="flex items-center gap-1">
+                                  <label htmlFor="useWinCMPBin" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)' }}>{t("使用 WinCMP 內建執行檔 (Bundled Runtime)")}</label>
+                                  <div className="group relative inline-flex items-center select-none">
+                                    <HelpCircle size={13} className="cursor-help" style={{ color: 'var(--meta)' }} />
+                                    <div className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block w-48 p-2 text-[10px] rounded shadow-md z-50 whitespace-normal pointer-events-none leading-relaxed transition-all text-left"
+                                         style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
+                                      {t("啟用此選項將使用 WinCMP 內置（位於 bin 目錄下）的 Node.js 或 Bun 執行檔，免去您本機手動安裝與環境變數配置的煩惱。")}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                               {editingProject.use_wincmp_bin && (
                                 <div className="space-y-1">
@@ -825,9 +852,18 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                               onChange={(e) => handleUseCustomCmdChange(e.target.checked)}
                               className="w-3.5 h-3.5 cursor-pointer accent-blue-500"
                             />
-                            <label htmlFor="useCustomCmd" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)', opacity: editingProject.type === 'custom' ? 0.6 : 1 }}>
-                              {t("使用自訂執行指令")}
-                            </label>
+                            <div className="flex items-center gap-1" style={{ opacity: editingProject.type === 'custom' ? 0.6 : 1 }}>
+                              <label htmlFor="useCustomCmd" className="text-[11px] cursor-pointer font-medium" style={{ color: 'var(--fg-2)' }}>
+                                {t("使用自訂執行指令")}
+                              </label>
+                              <div className="group relative inline-flex items-center select-none">
+                                <HelpCircle size={13} className="cursor-help" style={{ color: 'var(--meta)' }} />
+                                <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:block w-48 p-2 text-[10px] rounded shadow-md z-50 whitespace-normal pointer-events-none leading-relaxed transition-all text-left"
+                                     style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
+                                  {t("勾選後，您可以自由修改下方的啟動指令，不受框架預設範本限制。必須確保指令中包含或支援指定的連接埠。")}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
