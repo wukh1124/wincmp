@@ -46,6 +46,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [savedRuntimeType, setSavedRuntimeType] = useState('node');
   const [isMonorepo, setIsMonorepo] = useState(false);
   const effectivelyUseCustomCmd = useCustomCmd || editingProject?.type === 'custom';
+  const isAnyLoading = Object.values(loadingProjects).some(Boolean);
 
   useEffect(() => {
     if (config?.projects && config.projects.length > 0) {
@@ -636,11 +637,11 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       <div className="flex gap-1.5 justify-center items-center">
                         {hasRuntime && proj.enabled && (
                           !running ? (
-                            <button onClick={() => handleStartRuntime(proj.name)} disabled={loading} className="p-1.5 rounded-lg transition" style={{ background: 'var(--status-ok)', color: '#fff' }} title={t("啟動專案 Runtime")}>
+                            <button onClick={() => handleStartRuntime(proj.name)} disabled={isAnyLoading} className="p-1.5 rounded-lg transition" style={{ background: 'var(--status-ok)', color: '#fff' }} title={t("啟動專案 Runtime")}>
                               <Play size={11} />
                             </button>
                           ) : (
-                            <button onClick={() => handleStopRuntime(proj.name)} disabled={loading} className="p-1.5 rounded-lg transition" style={{ background: 'var(--status-error)', color: '#fff' }} title={t("停止專案 Runtime")}>
+                            <button onClick={() => handleStopRuntime(proj.name)} disabled={isAnyLoading} className="p-1.5 rounded-lg transition" style={{ background: 'var(--status-error)', color: '#fff' }} title={t("停止專案 Runtime")}>
                               <Square size={11} />
                             </button>
                           )

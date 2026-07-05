@@ -394,6 +394,9 @@ func (a *App) StopPHP(version string) error {
 
 // StartProjectRuntime 啟動特定專案的背景/終端 Runtime
 func (a *App) StartProjectRuntime(projectName string) error {
+	a.startProjMu.Lock()
+	defer a.startProjMu.Unlock()
+
 	if a.procMgr == nil {
 		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
@@ -409,11 +412,36 @@ func (a *App) StartProjectRuntime(projectName string) error {
 		return fmt.Errorf(i18n.T("找不到專案 %s"), projectName)
 	}
 
-	// 1. 檢查端口佔用
+	// 1. 推導實際連接埠
 	portVal := proj.RuntimePort
 	if portVal == 0 {
-		portVal = 3000
+		preset_ := preset.GetPreset(proj.Type)
+		portVal = preset_.DefaultPort
+		if portVal == 0 {
+			portVal = 3000
+		}
 	}
+
+	// 2. 軟體連接埠佔用檢查 (檢查是否有其他運行中的專案宣告佔用相同連接埠)
+	for _, p := range a.appCfg.Projects {
+		if p.Name != projectName && p.Enabled && preset.IsRuntimeProject(p.Type) {
+			if a.procMgr.IsRunning(process.RuntimeServiceKey(p.Name)) {
+				pPort := p.RuntimePort
+				if pPort == 0 {
+					pPreset := preset.GetPreset(p.Type)
+					pPort = pPreset.DefaultPort
+					if pPort == 0 {
+						pPort = 3000
+					}
+				}
+				if pPort == portVal {
+					return fmt.Errorf("%s", i18n.Tfmt("端口 %d 已被專案 '%s' 佔用中（運行中）", portVal, p.Name))
+				}
+			}
+		}
+	}
+
+	// 3. 實體端口佔用檢查
 	if !process.IsPortAvailable(portVal) {
 		return fmt.Errorf(i18n.T("端口 %d 已被其他進程佔用"), portVal)
 	}
@@ -516,6 +544,9 @@ func (a *App) StartProjectRuntime(projectName string) error {
 
 // StopProjectRuntime 停止特定專案的 Runtime 服務
 func (a *App) StopProjectRuntime(projectName string) error {
+	a.startProjMu.Lock()
+	defer a.startProjMu.Unlock()
+
 	if a.procMgr == nil {
 		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}

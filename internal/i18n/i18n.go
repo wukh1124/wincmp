@@ -258,6 +258,7 @@ var enTranslations = map[string]string{
 	"PHP %s 進程數變更為 %d (重啟後生效)":                        "PHP %s process count changed to %d (takes effect after restart)",
 	"PHP 進程配置已更變，請重載 (Reload) 或重啟 Caddy 以套用新端口":       "PHP process configuration changed. Please reload or restart Caddy to apply new ports",
 	"📋 已複製網址到剪貼簿: %s":                                 "📋 URL copied to clipboard: %s",
+	"端口 %d 已被專案 '%s' 佔用中（運行中）": "Port %d is already occupied by project '%s' (running)",
 	"✅ 已更新專案: %s":                                     "✅ Project updated: %s",
 	"✅ 已移除專案: %s":                                     "✅ Project removed: %s",
 	"📌 已新增專案: %s，即將自動開啟編輯器":                           "📌 Project added: %s, opening editor...",
