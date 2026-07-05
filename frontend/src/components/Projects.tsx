@@ -806,7 +806,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                                 <div className="group relative inline-flex items-center select-none">
                                   <HelpCircle size={13} className="cursor-help" style={{ color: 'var(--meta)' }} />
                                   <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:block w-48 p-2 text-[10px] rounded shadow-md z-50 whitespace-normal pointer-events-none leading-relaxed transition-all text-left"
-                                       style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
+                                    style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
                                     {t("此專案 Runtime 服務所佔用的本機連接埠，預設為 3000 或由系統自動分配。Caddy 反向代理將會指向此 PORT。")}
                                   </div>
                                 </div>
@@ -819,7 +819,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                                 <div className="group relative inline-flex items-center select-none">
                                   <HelpCircle size={13} className="cursor-help" style={{ color: 'var(--meta)' }} />
                                   <div className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block w-48 p-2 text-[10px] rounded shadow-md z-50 whitespace-normal pointer-events-none leading-relaxed transition-all text-left"
-                                       style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
+                                    style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
                                     {t("選擇「背景執行」將在後端靜默運行；選擇「終端執行」則會開啟即時終端機視窗，方便查看即時日誌與偵錯輸出。")}
                                   </div>
                                 </div>
@@ -839,7 +839,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                                   <div className="group relative inline-flex items-center select-none">
                                     <HelpCircle size={13} className="cursor-help" style={{ color: 'var(--meta)' }} />
                                     <div className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block w-48 p-2 text-[10px] rounded shadow-md z-50 whitespace-normal pointer-events-none leading-relaxed transition-all text-left"
-                                         style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
+                                      style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
                                       {t("啟用此選項將使用 WinCMP 內置（位於 bin 目錄下）的 Node.js 或 Bun 執行檔，免去您本機手動安裝與環境變數配置的煩惱。")}
                                     </div>
                                   </div>
@@ -898,8 +898,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                               <div className="group relative inline-flex items-center select-none">
                                 <HelpCircle size={13} className="cursor-help" style={{ color: 'var(--meta)' }} />
                                 <div className="absolute bottom-full left-0 mb-1.5 hidden group-hover:block w-48 p-2 text-[10px] rounded shadow-md z-50 whitespace-normal pointer-events-none leading-relaxed transition-all text-left"
-                                     style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
-                                  {t("勾選後，您可以自由修改下方的啟動指令，不受框架預設範本限制。必須確保指令中包含或支援指定的連接埠。")}
+                                  style={{ background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--fg-2)', textTransform: 'none', letterSpacing: 'normal', fontWeight: 'normal' }}>
+                                  {t("勾選後，您可以自由修改執行啟動指令，不受框架預設範本限制。必須確保指令中包含或支援指定的連接埠。")}
                                 </div>
                               </div>
                             </div>
