@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, RefreshCw, Layers, Cpu, Database, Server, CheckCircle, XCircle, AlertTriangle, Package, Folder, LayoutGrid, Terminal, X, Zap, Lightbulb } from 'lucide-react';
+import { Play, Square, RefreshCw, Cpu, Database, Server, CheckCircle, XCircle, AlertTriangle, Package, LayoutGrid, Terminal, X, Zap, Lightbulb } from 'lucide-react';
 import {
   GetConfig, SaveConfig, ScanServices, GetScanResult, GetServicesStatus,
   StartCaddy, StopCaddy, ReloadCaddy, StartMariaDB, StopMariaDB,
   StartMailpit, StopMailpit, StartRedis, StopRedis, RestartRedis, StartPHP, StopPHP,
-  CheckMissingCoreDependencies, CheckPortConflicts
+  CheckMissingCoreDependencies
 } from '../../wailsjs/go/main/App';
 import { scanner } from '../../wailsjs/go/models';
 import DependencyManager from './DependencyManager';
@@ -23,7 +23,6 @@ export default function Dashboard() {
   const [showDepManager, setShowDepManager] = useState(false);
   const [missingCore, setMissingCore] = useState<{ caddy: boolean }>({ caddy: false });
   const [dismissBanner, setDismissBanner] = useState(false);
-  const [portConflicts, setPortConflicts] = useState<Record<string, boolean>>({});
   const [showDepGuide, setShowDepGuide] = useState(false);
 
   useEffect(() => {
@@ -78,7 +77,6 @@ export default function Dashboard() {
         const scan = await GetScanResult();
         setScanResult(scan);
         await updateStatus();
-        await updateConflicts();
         const missing = await CheckMissingCoreDependencies();
         setMissingCore({ caddy: !!missing?.caddy });
       } catch (err) { console.error("初始化資料失敗:", err); }
@@ -87,16 +85,12 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const timer = setInterval(() => { updateStatus(); updateConflicts(); }, 2000);
+    const timer = setInterval(() => { updateStatus(); }, 2000);
     return () => clearInterval(timer);
   }, [scanResult]);
 
   const updateStatus = async () => {
     try { setServicesStatus(await GetServicesStatus()); } catch (err) { console.error("更新服務狀態失敗:", err); }
-  };
-
-  const updateConflicts = async () => {
-    try { setPortConflicts((await CheckPortConflicts()) || {}); } catch (err) { console.error("更新埠口衝突失敗:", err); }
   };
 
   const handleScan = async () => {
@@ -171,14 +165,6 @@ export default function Dashboard() {
     boxShadow: 'var(--shadow-sm)',
   };
 
-  const sectionTitleStyle: React.CSSProperties = {
-    fontFamily: 'var(--font-display)',
-    fontSize: 13,
-    fontWeight: 700,
-    color: 'var(--fg)',
-    letterSpacing: '0.05em',
-    textTransform: 'uppercase' as const,
-  };
 
   return (
     <div className="p-6 overflow-y-auto h-full space-y-6">
@@ -567,108 +553,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ─── System Status Overview ────────────────────────── */}
-      <div className="space-y-4 pt-2">
-        <div className="flex items-center gap-2 select-none border-b pb-2" style={{ borderColor: 'var(--border-soft)' }}>
-          <Layers size={15} style={{ color: 'var(--status-info)' }} />
-          <h3 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("系統狀態概覽")}</h3>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 select-none">
-          {/* Dependencies Status */}
-          <div style={cardStyle}>
-            <div className="flex items-center justify-between" style={{ color: 'var(--muted)' }}>
-              <span style={sectionTitleStyle}>{t("依賴元件狀態")}</span>
-              <Package size={16} style={{ color: 'var(--status-info)' }} />
-            </div>
-            <div className="mt-2.5">
-              {(() => {
-                const hasCaddy = !!scanResult?.CaddyList?.length;
-                return (
-                  <>
-                    <span className="text-xl font-black tracking-tight" style={{ color: hasCaddy ? 'var(--fg)' : 'var(--status-warn)', fontFamily: 'var(--font-mono)' }}>
-                      {hasCaddy ? t("Caddy 已就緒") : t("Caddy 未就緒")}
-                    </span>
-                    <p className="text-[10px] mt-2 font-medium" style={{ color: 'var(--meta)' }}>
-                      {hasCaddy ? t("核心依賴配置正常") : t("核心依賴 Caddy 缺失")}
-                    </p>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Port Conflicts */}
-          <div style={cardStyle}>
-            <div className="flex items-center justify-between" style={{ color: 'var(--muted)' }}>
-              <span style={sectionTitleStyle}>{t("埠口衝突檢測")}</span>
-              <AlertTriangle size={16} style={{ color: Object.values(portConflicts).some(Boolean) ? 'var(--status-error)' : 'var(--status-ok)' }} />
-            </div>
-            <div className="mt-2.5">
-              {(() => {
-                const conflicts = Object.keys(portConflicts).filter(port => portConflicts[port]);
-                const hasConflict = conflicts.length > 0;
-                return (
-                  <>
-                    <span className="text-xl font-black tracking-tight" style={{ color: hasConflict ? 'var(--status-error)' : 'var(--status-ok)', fontFamily: 'var(--font-mono)' }}>
-                      {hasConflict ? t("%s 個衝突", conflicts.length) : t("無埠口衝突")}
-                    </span>
-                    <p className="text-[10px] mt-2 font-medium truncate" style={{ color: 'var(--meta)' }}>
-                      {hasConflict ? `Port: ${conflicts.join(', ')} ${t("被佔用")}` : t("本機埠口使用正常")}
-                    </p>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Hosts Domains */}
-          <div style={cardStyle}>
-            <div className="flex items-center justify-between" style={{ color: 'var(--muted)' }}>
-              <span style={sectionTitleStyle}>{t("Hosts 本地網域")}</span>
-              <Layers size={16} style={{ color: 'var(--status-ok)' }} />
-            </div>
-            <div className="mt-2.5">
-              {(() => {
-                let domainCount = 0;
-                config?.projects?.forEach((p: any) => { if (p.enabled && p.domains) domainCount += p.domains.length; });
-                const autoUpdate = config?.global?.auto_update_hosts;
-                return (
-                  <>
-                    <span className="text-xl font-black tracking-tight" style={{ color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}>{t("%s 個網域", domainCount)}</span>
-                    <p className="text-[10px] mt-2 font-medium" style={{ color: 'var(--meta)' }}>
-                      {t("Hosts 自動同步: ")}{autoUpdate ? t("開啟") : t("關閉")}
-                    </p>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Projects Overview */}
-          <div style={cardStyle}>
-            <div className="flex items-center justify-between" style={{ color: 'var(--muted)' }}>
-              <span style={sectionTitleStyle}>{t("託管專案概覽")}</span>
-              <Folder size={16} style={{ color: 'var(--accent)' }} />
-            </div>
-            <div className="mt-2.5">
-              {(() => {
-                const total = config?.projects?.length || 0;
-                const enabled = config?.projects?.filter((p: any) => p.enabled).length || 0;
-                const rate = total > 0 ? Math.round((enabled / total) * 100) : 0;
-                return (
-                  <>
-                    <span className="text-xl font-black tracking-tight" style={{ color: 'var(--fg)', fontFamily: 'var(--font-mono)' }}>{t("%s / %s 啟用", enabled, total)}</span>
-                    <p className="text-[10px] mt-2 font-medium" style={{ color: 'var(--meta)' }}>
-                      {t("專案啟用率: ")}{rate}%
-                    </p>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-        </div>
-      </div>
 
       <DependencyManager isOpen={showDepManager} onClose={() => setShowDepManager(false)} onInstalled={handleScan} />
     </div>
