@@ -520,4 +520,125 @@ func (a *App) UninstallDependency(key string) error {
 	return nil
 }
 
+// OpenDependencyFolder 用系統檔案總管開啟指定依賴元件的安裝資料夾
+func (a *App) OpenDependencyFolder(key string) error {
+	binDir := filepath.Join(a.baseDir, "bin")
+	var targetDir string
+
+	// 先確保掃描資訊存在
+	if a.scanRes == nil {
+		if res, err := scanner.ScanBinDir(a.baseDir); err == nil {
+			a.scanRes = res
+		}
+	}
+
+	if strings.HasPrefix(key, "php_redis_") {
+		verSuffix := strings.TrimPrefix(key, "php_redis_")
+		targetMajorMin := verSuffix
+		if len(verSuffix) == 2 {
+			targetMajorMin = string(verSuffix[0]) + "." + string(verSuffix[1])
+		}
+		if a.scanRes != nil {
+			for _, p := range a.scanRes.PHPList {
+				if p.MajorMin == targetMajorMin && p.ExePath != "" {
+					extDir := filepath.Join(filepath.Dir(p.ExePath), "ext")
+					if _, err := os.Stat(extDir); err == nil {
+						targetDir = extDir
+						break
+					}
+				}
+			}
+		}
+		if targetDir == "" {
+			targetDir = filepath.Join(binDir, "php")
+		}
+	} else if strings.HasPrefix(key, "php") {
+		verSuffix := strings.TrimPrefix(key, "php")
+		verSuffix = strings.TrimPrefix(verSuffix, "_")
+		targetMajorMin := verSuffix
+		if len(verSuffix) == 2 {
+			targetMajorMin = string(verSuffix[0]) + "." + string(verSuffix[1])
+		}
+		if a.scanRes != nil {
+			for _, p := range a.scanRes.PHPList {
+				if p.MajorMin == targetMajorMin && p.ExePath != "" {
+					targetDir = filepath.Dir(p.ExePath)
+					break
+				}
+			}
+		}
+		if targetDir == "" {
+			phpBaseDir := filepath.Join(binDir, "php")
+			if entries, err := os.ReadDir(phpBaseDir); err == nil {
+				for _, entry := range entries {
+					if entry.IsDir() && strings.HasPrefix(entry.Name(), "php-"+targetMajorMin) {
+						targetDir = filepath.Join(phpBaseDir, entry.Name())
+						break
+					}
+				}
+			}
+			if targetDir == "" {
+				targetDir = phpBaseDir
+			}
+		}
+	} else {
+		if a.scanRes != nil {
+			var exePath string
+			switch key {
+			case "caddy":
+				if len(a.scanRes.CaddyList) > 0 {
+					exePath = a.scanRes.CaddyList[0].ExePath
+				}
+			case "mariadb":
+				if len(a.scanRes.MariaDBList) > 0 {
+					exePath = a.scanRes.MariaDBList[0].ExePath
+					if exePath != "" {
+						targetDir = filepath.Dir(filepath.Dir(exePath))
+					}
+				}
+			case "redis":
+				if len(a.scanRes.RedisList) > 0 {
+					exePath = a.scanRes.RedisList[0].ExePath
+				}
+			case "composer":
+				if len(a.scanRes.ComposerList) > 0 {
+					exePath = a.scanRes.ComposerList[0].ExePath
+				}
+			case "node":
+				if len(a.scanRes.NodeList) > 0 {
+					exePath = a.scanRes.NodeList[0].ExePath
+				}
+			case "mailpit":
+				if len(a.scanRes.MailpitList) > 0 {
+					exePath = a.scanRes.MailpitList[0].ExePath
+				}
+			case "heidisql":
+				if len(a.scanRes.HeidiSQLList) > 0 {
+					exePath = a.scanRes.HeidiSQLList[0].ExePath
+				}
+			}
+
+			if targetDir == "" && exePath != "" {
+				targetDir = filepath.Dir(exePath)
+			}
+		}
+
+		if targetDir == "" {
+			targetDir = filepath.Join(binDir, key)
+		}
+	}
+
+	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
+		parentDir := filepath.Dir(targetDir)
+		if _, pErr := os.Stat(parentDir); pErr == nil {
+			targetDir = parentDir
+		} else {
+			return fmt.Errorf("%s: %s", i18n.T("目錄不存在或尚未安裝"), targetDir)
+		}
+	}
+
+	return a.OpenFolder(targetDir)
+}
+
+
 

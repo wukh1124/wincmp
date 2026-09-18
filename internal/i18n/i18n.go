@@ -606,4 +606,5 @@ var enTranslations = map[string]string{
 	"已成功移除 Composer 套件":                  "Successfully removed Composer package",
 	"已成功移除 HeidiSQL 工具":                  "Successfully removed HeidiSQL tool",
 	"已成功移除 %s":                            "Successfully removed %s",
+	"目錄不存在或尚未安裝":                         "Directory does not exist or not installed",
 }

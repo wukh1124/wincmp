@@ -3,11 +3,11 @@ import {
   X, RefreshCw, Download, ArrowUpCircle, CheckCircle2,
   Loader2, AlertTriangle, Cpu, Database, Settings as SettingsIcon,
   HelpCircle, Server, Terminal, HardDrive, Zap, ChevronDown,
-  Trash2, RotateCw
+  Trash2, RotateCw, FolderOpen
 } from 'lucide-react';
 import {
   GetDependencyConfig, FetchRemoteDependencies, DownloadDependency,
-  ScanServices, GetScanResult, UninstallDependency
+  ScanServices, GetScanResult, UninstallDependency, OpenDependencyFolder
 } from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { t, useLanguage } from '../i18n';
@@ -43,7 +43,21 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     const handleProgress = (data: any) => {
       if (data && data.key) {
         setProgressMap(prev => ({ ...prev, [data.key]: { status: data.status, percent: data.percent, currentMB: data.currentMB, totalMB: data.totalMB, error: data.error } }));
-        if (data.status === 'completed') { refreshLocalScan(); if (onInstalled) onInstalled(); }
+        if (data.status === 'completed') {
+          refreshLocalScan();
+          if (onInstalled) onInstalled();
+          // 4 秒後自動清除進度狀態，自然回歸至已安裝常態展示
+          setTimeout(() => {
+            setProgressMap(prev => {
+              if (prev[data.key]?.status === 'completed') {
+                const copy = { ...prev };
+                delete copy[data.key];
+                return copy;
+              }
+              return prev;
+            });
+          }, 4000);
+        }
       }
     };
     const unsubscribe = EventsOn('dependency_progress', handleProgress);
@@ -107,6 +121,16 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     await handleDownload(redisKey);
   };
 
+  const handleOpenFolder = async (key: string) => {
+    setActiveDropdown(null);
+    try {
+      await OpenDependencyFolder(key);
+    } catch (err: any) {
+      console.error("開啟安裝目錄失敗:", err);
+      (window as any).customAlert(`${t("開啟安裝目錄失敗")}: ${err}`);
+    }
+  };
+
   const compareVersions = (v1: string, v2: string) => {
     if (!v1) return -1; if (!v2) return 1;
     const clean = (v: string) => v.replace(/^v/, '').split('-')[0];
@@ -162,10 +186,10 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
   if (!isOpen) return null;
 
-  const phpKeys = depConfig 
+  const phpKeys = depConfig
     ? Object.keys(depConfig)
-        .filter(k => (k.startsWith('php_') || k.startsWith('php')) && !k.startsWith('php_redis') && k !== 'php')
-        .sort((a, b) => compareVersions(depConfig[b].version, depConfig[a].version)) 
+      .filter(k => (k.startsWith('php_') || k.startsWith('php')) && !k.startsWith('php_redis') && k !== 'php')
+      .sort((a, b) => compareVersions(depConfig[b].version, depConfig[a].version))
     : [];
 
   // ─── Styles ─────────────────────────────────────────────
@@ -260,7 +284,6 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
       if (status === 'completed') {
         statusText = `${t("安裝成功")}: v${recVer}`;
         statusColor = 'var(--status-ok)';
-        showBtn = false;
       }
       if (status === 'error') {
         return (
@@ -291,7 +314,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               <div className="mt-1 flex items-center gap-1.5 text-[11px] truncate">
                 <Zap size={11} className="shrink-0" style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--muted)' }} />
                 <span className="truncate" style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--muted)' }}>
-                  {phpRedisInfo?.installed 
+                  {phpRedisInfo?.installed
                     ? t("Redis 擴充: 已就緒 (v%s)", phpRedisInfo.version || '6.0.2')
                     : (phpRedisInfo?.supported ? t("Redis 擴充: 未配置") : t("Redis 擴充: 不支援"))}
                 </span>
@@ -302,10 +325,10 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
         {showBtn && (
           localVer === '' ? (
-            <button 
-              onClick={() => !btnDisabled && handleDownload(key)} 
+            <button
+              onClick={() => !btnDisabled && handleDownload(key)}
               disabled={btnDisabled}
-              className="shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition select-none whitespace-nowrap shadow-sm hover:opacity-90 active:scale-95" 
+              className="shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition select-none whitespace-nowrap shadow-sm hover:opacity-90 active:scale-95"
               style={btnStyle}
             >
               {btnIcon}<span>{btnText}</span>
@@ -313,21 +336,20 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           ) : (
             <div className="relative shrink-0 split-btn-dropdown flex items-center">
               {/* 一體化精巧按鈕組 */}
-              <div 
+              <div
                 className="inline-flex items-stretch rounded-md shadow-sm overflow-hidden transition"
-                style={{ 
+                style={{
                   border: isUpdate ? 'none' : '1px solid var(--border)',
                   background: isUpdate ? 'var(--status-warn)' : 'var(--card)'
                 }}
               >
                 {/* 主按鈕 */}
-                <button 
+                <button
                   onClick={() => handleDownload(key)}
-                  className={`px-2.5 py-1 text-xs font-semibold flex items-center justify-center gap-1.5 transition select-none whitespace-nowrap ${
-                    isUpdate 
-                      ? 'text-white hover:brightness-110 active:brightness-95' 
-                      : 'text-[var(--fg-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
-                  }`}
+                  className={`px-2.5 py-1 text-xs font-semibold flex items-center justify-center gap-1.5 transition select-none whitespace-nowrap ${isUpdate
+                    ? 'text-white hover:brightness-110 active:brightness-95'
+                    : 'text-[var(--fg-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
+                    }`}
                   title={isUpdate ? t("立即更新至最新版") : (isPhp ? (phpRedisInfo?.supported ? t("重裝 PHP (含 Redis)") : t("重裝 PHP")) : t("重裝此依賴"))}
                 >
                   {btnIcon}
@@ -335,22 +357,21 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                 </button>
 
                 {/* 垂直細緻分隔線 */}
-                <div 
-                  className="w-[1px] self-stretch my-0.5" 
-                  style={{ background: isUpdate ? 'rgba(255,255,255,0.3)' : 'var(--border)' }} 
+                <div
+                  className="w-[1px] self-stretch my-0.5"
+                  style={{ background: isUpdate ? 'rgba(255,255,255,0.3)' : 'var(--border)' }}
                 />
 
                 {/* 下拉箭頭按鈕：精緻緊湊點擊區 */}
-                <button 
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveDropdown(prev => prev === key ? null : key);
                   }}
-                  className={`w-6 shrink-0 flex items-center justify-center transition select-none ${
-                    isUpdate 
-                      ? 'text-white hover:brightness-110 active:brightness-95' 
-                      : 'hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
-                  }`}
+                  className={`w-6 shrink-0 flex items-center justify-center transition select-none ${isUpdate
+                    ? 'text-white hover:brightness-110 active:brightness-95'
+                    : 'hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
+                    }`}
                   style={{ color: isUpdate ? '#fff' : 'var(--fg-2)' }}
                   title={t("更多操作")}
                 >
@@ -360,7 +381,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
               {/* 下拉選單 Popover */}
               {isDropdownOpen && (
-                <div 
+                <div
                   className="absolute right-0 top-full mt-1.5 w-56 rounded-xl shadow-xl border border-[var(--border)] p-1.5 z-50 animate-fade-in"
                   style={{ background: 'var(--card)', backdropFilter: 'blur(16px)', boxShadow: '0 12px 28px rgba(0,0,0,0.25)' }}
                 >
@@ -374,7 +395,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                   >
                     <RotateCw size={13} style={{ color: 'var(--status-info)' }} />
                     <span>
-                      {isPhp 
+                      {isPhp
                         ? (phpRedisInfo?.supported ? t("重裝 PHP (含 Redis)") : t("重裝 PHP"))
                         : t("重裝此依賴")}
                     </span>
@@ -389,6 +410,14 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                       <span>{phpRedisInfo?.installed ? t("單獨重裝 Redis 擴充") : t("單獨安裝 Redis 擴充")}</span>
                     </button>
                   )}
+
+                  <button
+                    onClick={() => handleOpenFolder(key)}
+                    className="w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                  >
+                    <FolderOpen size={13} style={{ color: 'var(--status-info)' }} />
+                    <span>{t("開啟安裝目錄")}</span>
+                  </button>
 
                   <div className="my-1 border-t border-[var(--border-soft)]" />
 
@@ -415,9 +444,6 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--status-info-bg)', color: 'var(--status-info)' }}>
-              <HardDrive size={18} />
-            </div>
             <div>
               <h2 className="text-lg font-bold tracking-wide">{t("WinCMP 依賴庫管理")}</h2>
               <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{t("下載或升級本機 Web 開發依賴")}</p>

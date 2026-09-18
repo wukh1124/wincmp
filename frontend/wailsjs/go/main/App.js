@@ -205,3 +205,8 @@ export function StopTerminalSession(arg1) {
 export function UninstallDependency(arg1) {
   return window['go']['main']['App']['UninstallDependency'](arg1);
 }
+
+export function OpenDependencyFolder(arg1) {
+  return window['go']['main']['App']['OpenDependencyFolder'](arg1);
+}
+

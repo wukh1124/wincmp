@@ -540,6 +540,8 @@ export const enTranslations: Record<string, string> = {
   "更多操作": "More Actions",
   "Redis 擴充: 不支援": "Redis Ext: Unsupported",
   "重裝 PHP": "Reinstall PHP",
+  "開啟安裝目錄": "Open Install Directory",
+  "開啟安裝目錄失敗": "Failed to open install directory",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符
