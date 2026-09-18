@@ -22,7 +22,7 @@ func RestoreDefaultConf(baseDir string) error {
 		return fmt.Errorf("無法取得子檔案系統 default_conf: %w", err)
 	}
 
-	return fs.WalkDir(subFS, ".", func(path string, d fs.DirEntry, err error) error {
+	err = fs.WalkDir(subFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

@@ -188,6 +188,13 @@ func TestRestoreDefaultConf(t *testing.T) {
 		t.Fatalf("寫入自訂 Caddyfile 失敗: %v", err)
 	}
 
+	// 模擬舊版本 php.ini（無 OPcache）
+	phpIniPath := filepath.Join(tempDir, "conf", "php", "php.ini")
+	oldPHPIni := "[PHP]\nmemory_limit = 256M\n"
+	if err := os.WriteFile(phpIniPath, []byte(oldPHPIni), 0644); err != nil {
+		t.Fatalf("模擬寫入舊版 php.ini 失敗: %v", err)
+	}
+
 	if err := RestoreDefaultConf(tempDir); err != nil {
 		t.Fatalf("第二次 RestoreDefaultConf 失敗: %v", err)
 	}
@@ -199,6 +206,15 @@ func TestRestoreDefaultConf(t *testing.T) {
 
 	if string(data) != originalContent {
 		t.Errorf("防覆蓋機制失效，檔案被重新覆蓋！預期為 %q, 實際為 %q", originalContent, string(data))
+	}
+
+	// 驗證 RestoreDefaultConf 是否確實觸發了 EnsurePHPIniOptimizations
+	phpData, err := os.ReadFile(phpIniPath)
+	if err != nil {
+		t.Fatalf("讀取 php.ini 失敗: %v", err)
+	}
+	if !strings.Contains(string(phpData), "zend_extension=opcache") {
+		t.Errorf("RestoreDefaultConf 未能成功觸發 EnsurePHPIniOptimizations，缺少 opcache 設定: %s", string(phpData))
 	}
 }
 

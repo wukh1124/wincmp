@@ -44,6 +44,9 @@ func (m *Manager) StartPHPCGI(phpInfo scanner.PHPVersionInfo) error {
 		"PHP_FCGI_MAX_REQUESTS=10000",
 	)
 
+	// 確保 php.ini 已具備 OPcache 優化配置（相容舊版本升級與手動重啟場景）
+	_ = config.EnsurePHPIniOptimizations(m.baseDir)
+
 	// 使用通用的 conf/php/php.ini，並動態注入 extension_dir
 	phpIniPath := filepath.Join(m.baseDir, "conf", "php", "php.ini")
 	extDir := filepath.Join(phpDir, "ext")
