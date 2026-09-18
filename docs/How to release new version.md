@@ -84,8 +84,12 @@ Agent 會做：對照上一 tag 寫 release notes / audit、更新 `VERSION`、�
 
 ## 3. Git / GitHub 操作（由你執行）
 
-**建議順序：先合併發行分支到 `main`，再於 `main` 打 tag。**  
-Tag 應指向已進入 main 的最終發行狀態，避免 CI／官網／更新器讀到尚未合入 main 的內容。
+**建議順序：以線性歷史進入 `main`（rebase + `--ff-only`），再於 `main` 打 tag。**
+
+**GitHub 規則**：`main` **不得包含 merge commits**。  
+禁止 `git merge feature/...` 直接合併（會觸發 protected branch 規則 `This branch must not contain merge commits`）。
+
+Tag 應指向已進入 main 的最終發行 commit；**push tag 後 CI 才會 Build Release**。
 
 ```powershell
 # --- A. 在發行分支提交（若尚未 commit）---
@@ -93,20 +97,26 @@ git status -sb
 git add VERSION release_note/ screenshot/ conf/dependencies.json
 # 若功能碼尚未提交，一併 add 對應 frontend/ internal/ 等路徑
 git commit -m "chore(release): bump version to vX.Y.Z"
-# 可選：先推送發行分支備份
+# 可選：先推送發行分支備份（rebase 後需 force-push feature）
 # git push origin feature/version-X.Y.Z
 
-# --- B. 合併到 main ---
+# --- B. 更新 main，並將 feature rebase 到 main 之上 ---
 git checkout main
 git pull origin main
-git merge feature/version-X.Y.Z
-# 若直接在 main 發行，略過 merge
+git checkout feature/version-X.Y.Z
+git rebase main
+# 衝突時：解決後 git add <file> && git rebase --continue
 
-# --- C. 確認 main 已含發行檔案 ---
+# --- C. fast-forward main（不可 merge，避免 merge commit）---
+git checkout main
+git merge --ff-only feature/version-X.Y.Z
+
+# --- D. 確認 main 已含發行檔案，且無新的 merge commit ---
 git show HEAD:VERSION
 git ls-tree --name-only HEAD release_note/vX.Y.Z/
+git log --oneline --merges -3
 
-# --- D. 在 main 打 tag 並推送（先 main 後 tag）---
+# --- E. 在 main 打 tag 並推送（先 main 後 tag）---
 # Tag 必須與 VERSION 一致，例如 VERSION=2.1.1 → v2.1.1
 git tag -a vX.Y.Z -m "Release version X.Y.Z"
 git push origin main
@@ -114,10 +124,13 @@ git push origin vX.Y.Z
 ```
 
 **注意**
-- **先 merge 進 main 再 tag**；不要只在 feature 分支 tag 後就當已發行
+- **禁止** `git merge feature/...` 進 main；必須 rebase + `--ff-only`（或 cherry-pick）
+- **先進入 main 再 tag**；不要只在 feature 分支 tag 後就當已發行
+- **main 與 tag 都要 push**；只推 main 不會觸發 release workflow
+- 若 remote 出現 `Bypassed rule violations` / `must not contain merge commits`：流程用了 merge，應改線性流程
 - tag 格式：`v` + `VERSION` 內容（`v2.1.1`，不是 `version-2.1.1`）
 - 同一 tag 不可重複推送；要重發請改版號或刪除遠端 tag 後重來
-- 合併後若 main 另有未發布 commit，應重新確認 release notes 是否仍完整
+- rebase 後若 main 另有未發布 commit，應重新確認 release notes 是否仍完整
 - 不要提交：`*.exe` / `*.zip`、`wincmp-release-only/`、`screenshot/backup/`
 
 ---
@@ -284,7 +297,7 @@ GitHub 上若已建立錯誤 Release，到 Releases 頁刪除該 Release 再重�
 → wails dev + 截圖腳本
 → release.bat / validator
 → 人工 git commit（發行分支）
-→ merge 發行分支到 main
+→ rebase feature 到 main + ff-only（禁止 merge commit）
 → 在 main 打 tag vX.Y.Z
 → push main → push tag
 → CI Build Release + Deploy Website

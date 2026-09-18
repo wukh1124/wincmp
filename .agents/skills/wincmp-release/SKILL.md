@@ -36,7 +36,8 @@ description: Release management, release_note validation, and release workflow a
 5. 執行 ./bat/release.ps1（建置 + 更新 release_info.json；校驗 release_notes 已存在）
 6. Git 發行（由開發者審核執行，見 §7）：
    - 在發行分支 commit（VERSION + release_note 等）
-   - **先合併到 main**，再於 main 上 `git tag -a vX.Y.Z`
+   - **線性進入 main**（rebase 後 fast-forward；禁止 merge commit）
+   - 在 main 上 `git tag -a vX.Y.Z`
    - 先 `push origin main`，再 `push origin vX.Y.Z`
 7. GitHub Actions：
    - Build and Release：check_deps → build exe/zip → 建立 GitHub Release
@@ -45,7 +46,8 @@ description: Release management, release_note validation, and release workflow a
 
 ### 0.3 安全防護底線
 - **嚴禁自動推送**：AI 助手**絕對不得**擅自執行 `git push`、`git merge` 或 `git tag`；僅可輸出建議指令供開發者審核
-- **Tag 位置**：**建議先合併發行分支到 main，再於 main 打 tag**，避免 CI／官網／更新器讀到尚未進入 main 的內容
+- **main 歷史**：GitHub 規則 **main 不得包含 merge commits**；合併發行內容必須用 rebase + `--ff-only`（或 cherry-pick），不可 `git merge feature/...`
+- **Tag 位置**：tag 必須指向 **main 上已存在的發行 commit**（通常為 main HEAD），再 push tag 觸發 CI
 - **禁止二進位提交**：打包產出至父目錄 `wincmp-release-only/`，嚴禁提交 `*.exe` / `*.zip`
 
 ---
@@ -209,11 +211,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\capture_release_screenshots.p
 
 ## 7. Git 發行指令引導
 
-完成打包與人工確認後，輸出指令供開發者審核執行（**Agent 嚴禁擅自 merge / push / tag**）。
+完成打包與人工確認後，輸出指令供開發者審核執行（**Agent 嚴禁擅自 rebase / push / tag**）。
 
-### 7.1 建議流程：先合併 main，再 tag
+### 7.1 建議流程：線性進入 main（rebase + ff-only），再 tag
 
-Tag 應指向「**已進入 main 的最終發行狀態**」。GitHub Actions（Build Release / Deploy Website）、官網 `release.json` 與內建更新器皆以 tag / main 內容為準；若只在 feature 分支打 tag，main 可能尚未包含 `VERSION` 與 `release_note/vX.Y.Z/`。
+**GitHub 規則**：`main` **不得包含 merge commits**。  
+禁止使用 `git merge feature/...` 直接合併（會產生 merge commit，觸發 protected branch 規則；即便帳號可 bypass，仍違反專案歷史約定）。
+
+Tag 應指向「**已進入 main 的最終發行 commit**」。GitHub Actions、官網 `release.json` 與內建更新器皆以 tag / main 為準。
 
 ```bash
 # 1) 在發行分支提交發布內容（依實際變更調整路徑）
@@ -221,42 +226,62 @@ git add VERSION release_note/ screenshot/ conf/dependencies.json scripts/ .githu
 # 若功能碼尚未提交，一併 add 對應 frontend/ internal/ 等路徑
 git commit -m "chore(release): bump version to vX.Y.Z"
 
-# 2) 切到 main 並更新
+# 2) 更新 main
 git checkout main
 git pull origin main
 
-# 3) 合併發行分支到 main
-#    例如 feature/version-2.1.1 → main；若已在 main 發行則略過本步
-git merge feature/version-X.Y.Z
+# 3) 將發行分支 rebase 到 main 之上（改寫 feature 歷史為線性）
+git checkout feature/version-X.Y.Z
+git rebase main
+# 若衝突：逐檔解決後 git add <file> && git rebase --continue
 
-# 4) 確認 main 上 VERSION / release_note 已就緒
+# 4) fast-forward main（不產生 merge commit）
+git checkout main
+git merge --ff-only feature/version-X.Y.Z
+
+# 5) 確認 main 上 VERSION / release_note 已就緒，且 log 無 Merge commit
 git show HEAD:VERSION
 git ls-tree --name-only HEAD release_note/vX.Y.Z/
+git log --oneline --merges -1   # 應無本次發行的 merge
 
-# 5) 在 main 上打 annotated tag（必須與 VERSION 一致：2.1.1 → v2.1.1）
+# 6) 在 main 上打 annotated tag（必須與 VERSION 一致：2.1.1 → v2.1.1）
 git tag -a vX.Y.Z -m "Release version X.Y.Z"
 
-# 6) 先推 main，再推 tag（確保 CI checkout 的 main 已含發行檔案）
+# 7) 先推 main，再推 tag（確保 CI checkout 的 main 已含發行檔案）
 git push origin main
 git push origin vX.Y.Z
 ```
 
-### 7.2 精簡版（發行分支已在遠端、僅差合併與 tag）
+### 7.2 精簡版（feature 已 commit、內容尚未進 main）
 
 ```bash
 git checkout main && git pull origin main
-git merge feature/version-X.Y.Z
+git checkout feature/version-X.Y.Z && git rebase main
+git checkout main && git merge --ff-only feature/version-X.Y.Z
 git tag -a vX.Y.Z -m "Release version X.Y.Z"
 git push origin main
 git push origin vX.Y.Z
 ```
 
-### 7.3 注意事項
-- **先 merge 進 main 再 tag**；不要只在 feature 分支 tag 後就當已發行
+### 7.3 線性替代方案（不改寫 feature 歷史時）
+
+若不想 rebase feature，可在 main 上 cherry-pick 發行 commit（同樣保持線性）：
+
+```bash
+git checkout main && git pull origin main
+git cherry-pick <commit1> <commit2> ...   # 按時間序，通常到 chore(release) 為止
+git tag -a vX.Y.Z -m "Release version X.Y.Z"
+git push origin main && git push origin vX.Y.Z
+```
+
+### 7.4 注意事項
+- **禁止** `git merge feature/...` 直接進 main；必須 rebase + `--ff-only` 或 cherry-pick
+- tag 必須指向 **main 上的 commit**，且 **push tag** 後 CI 才會跑；只 push main 不會自動發版
 - tag 格式：`v` + `VERSION` 內容（`v2.1.1`，不是 `version-2.1.1`）
-- 同一 tag 不可重複推送；重發需改版號，或先刪除遠端 tag 後重來
+- 若 remote 出現 `Bypassed rule violations` / `must not contain merge commits`：表示 main 被寫入 merge commit（規則被繞過），流程有誤，應改走線性流程
+- 同一 tag 不可重複推送；重發需改版號，或先刪遠端 tag 後重來
 - 不要提交：`*.exe`、`*.zip`、`wincmp-release-only/`、`screenshot/backup/`
-- 合併後若 main 另有未發布 commit，應重新確認 release notes 是否仍完整
+- rebase 後若 main 另有未發布 commit，應重新確認 release notes 是否仍完整
 
 ---
 
