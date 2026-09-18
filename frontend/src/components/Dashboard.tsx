@@ -521,8 +521,8 @@ export default function Dashboard() {
                         disabled={running}
                         value={configuredCount}
                         onChange={(e) => handlePHPProcessChange(php.MajorMin, parseInt(e.target.value))}
-                        className="rounded-lg px-2 py-1 outline-none transition cursor-pointer text-xs font-semibold"
-                        style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg)' }}
+                        className={`rounded-lg pl-2.5 pr-8 py-1 outline-none transition text-xs font-semibold ${running ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                        style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg)' }}
                       >
                         {[1, 2, 3, 5, 10, 20, 50, 100].map(n => (
                           <option key={n} value={n}>{t("%s 個進程", n)}</option>
