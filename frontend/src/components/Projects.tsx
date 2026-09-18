@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle } from 'lucide-react';
+import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle, GripVertical, Lightbulb, Lock } from 'lucide-react';
 import ProjectTerminal from './ProjectTerminal';
 import {
   GetConfig, SaveConfig, GetScanResult, GetServicesStatus,
@@ -47,6 +47,68 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [isMonorepo, setIsMonorepo] = useState(false);
   const effectivelyUseCustomCmd = useCustomCmd || editingProject?.type === 'custom';
   const isAnyLoading = Object.values(loadingProjects).some(Boolean);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragEnabledIndex, setDragEnabledIndex] = useState<number | null>(null);
+
+  // 全域監聽 mouseup，確保放開滑鼠時一律重設拖曳把手啟用狀態
+  useEffect(() => {
+    const handleGlobalMouseUp = () => setDragEnabledIndex(null);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (dragEnabledIndex !== index) {
+      e.preventDefault();
+      return;
+    }
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', `${index}`);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+    setDragEnabledIndex(null);
+    if (draggedIndex === null || draggedIndex === dropIndex || !config?.projects) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const updatedProjects = [...config.projects];
+    const [movedProject] = updatedProjects.splice(draggedIndex, 1);
+    updatedProjects.splice(dropIndex, 0, movedProject);
+
+    const newCfg = { ...config, projects: updatedProjects };
+    setConfig(newCfg);
+    setDraggedIndex(null);
+
+    try {
+      await SaveConfig(newCfg);
+      await ReloadCaddy();
+    } catch (err) {
+      console.error("保存專案排序失敗:", err);
+      (window as any).customAlert(`${t("保存專案排序失敗")}: ${err}`);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    setDragEnabledIndex(null);
+  };
 
   useEffect(() => {
     if (config?.projects && config.projects.length > 0) {
@@ -441,17 +503,18 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
   // ─── Styles ─────────────────────────────────────────────
   const thStyle: React.CSSProperties = {
-    padding: '10px 16px', fontWeight: 700, fontSize: 10,
+    padding: '10px 8px', fontWeight: 700, fontSize: '0.75rem',
     letterSpacing: '0.05em', textTransform: 'uppercase',
     color: 'var(--muted)', background: 'var(--table-header-bg, var(--surface))',
     borderBottom: '1px solid var(--border)',
     position: 'sticky',
     top: 0,
     zIndex: 10,
+    whiteSpace: 'nowrap',
   };
 
   const tdStyle: React.CSSProperties = {
-    padding: '10px 16px', fontSize: 12,
+    padding: '10px 8px', fontSize: '0.8125rem',
     borderBottom: '1px solid var(--border-soft)',
   };
 
@@ -488,7 +551,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
               <div className="space-y-3">
                 <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
-                  <span>💡 {t("操作按鈕快速指南")}</span>
+                  <Lightbulb size={13} style={{ color: 'var(--status-info)' }} />
+                  <span>{t("操作按鈕快速指南")}</span>
                 </div>
                 <div className="space-y-2.5 text-[11px]" style={{ color: 'var(--fg-2)' }}>
                   <div className="flex items-start gap-2">
@@ -545,12 +609,13 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
           <table className="w-full text-left text-xs table-auto">
             <thead>
               <tr>
+                <th style={{ ...thStyle, width: 36, paddingLeft: 16, paddingRight: 4, textAlign: 'center' }} title={t("拖曳調整排序")}></th>
                 <th style={thStyle}>{t("專案名稱")}</th>
-                <th style={thStyle}>{t("類型 / 框架")}</th>
+                <th style={{ ...thStyle, whiteSpace: 'nowrap' }}>{t("類型 / 框架")}</th>
                 <th style={thStyle}>{t("本機網域")}</th>
-                <th style={thStyle}>{t("狀態")}</th>
-                <th style={thStyle}>{t("啟用")}</th>
-                <th style={{ ...thStyle, textAlign: 'center' }}>
+                <th style={{ ...thStyle, whiteSpace: 'nowrap' }}>{t("狀態")}</th>
+                <th style={{ ...thStyle, width: 68, textAlign: 'center', whiteSpace: 'nowrap' }}>{t("啟用")}</th>
+                <th style={{ ...thStyle, width: 120, textAlign: 'center', paddingRight: 16, whiteSpace: 'nowrap' }}>
                   {t("操作")}
                 </th>
               </tr>
@@ -562,18 +627,37 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                 const running = hasRuntime && !!servicesStatus[runtimeKey];
                 const loading = loadingProjects[proj.name];
                 const isHighlighted = proj.name === highlightedRow;
+                const isDragging = draggedIndex === idx;
+                const isOver = dragOverIndex === idx;
 
                 return (
                   <tr
-                    key={idx}
+                    key={proj.name || idx}
                     id={`project-row-${proj.name}`}
-                    className={isHighlighted ? 'animate-highlight' : ''}
+                    draggable={dragEnabledIndex === idx}
+                    onDragStart={(e) => handleDragStart(e, idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    className={`${isHighlighted ? 'animate-highlight' : ''}`}
                     style={{
-                      opacity: proj.enabled ? 1 : 0.5,
-                      background: isHighlighted ? 'var(--status-info-bg)' : 'var(--table-row-bg, transparent)',
-                      transition: 'all 0.3s',
+                      opacity: proj.enabled ? (isDragging ? 0.35 : 1) : 0.5,
+                      background: isHighlighted ? 'var(--status-info-bg)' : isOver ? 'var(--card-hover)' : 'var(--table-row-bg, transparent)',
+                      borderTop: isOver ? '2px solid var(--accent)' : '1px solid transparent',
+                      transition: 'background 0.15s, border-color 0.15s',
                     }}
                   >
+                    <td
+                      style={{ ...tdStyle, width: 36, paddingLeft: 16, paddingRight: 4, textAlign: 'center', cursor: 'grab' }}
+                      title={t("按住拖曳調整專案順序")}
+                      onMouseDown={() => setDragEnabledIndex(idx)}
+                      onMouseUp={() => setDragEnabledIndex(null)}
+                    >
+                      <div className="flex items-center justify-center text-[var(--meta)] hover:text-[var(--fg)] active:cursor-grabbing">
+                        <GripVertical size={13} />
+                      </div>
+                    </td>
                     <td style={tdStyle}>
                       <div className="space-y-0.5">
                         <div className="text-sm font-bold" style={{ color: 'var(--fg)' }}>{proj.name}</div>
@@ -603,14 +687,19 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       <div className="flex flex-col gap-1.5">
                         {proj.domains.map((dom, dIdx) => (
                           <div key={dIdx} className="flex items-center gap-1.5 font-medium" style={{ color: 'var(--fg-2)' }}>
-                            <Globe size={11} style={{ color: 'var(--meta)' }} />
+                            {proj.use_ssl ? (
+                              <span title={t("已啟用 HTTPS 安全憑證")} className="inline-flex items-center cursor-help">
+                                <Lock size={11} style={{ color: 'var(--status-info)' }} />
+                              </span>
+                            ) : (
+                              <Globe size={11} style={{ color: 'var(--meta)' }} />
+                            )}
                             <span className="hover:underline cursor-pointer" style={{ color: 'var(--fg-2)' }} onClick={() => handleCopyLink(dom, proj.use_ssl)}>{dom}</span>
-                            {proj.use_ssl && <Shield size={11} style={{ color: 'var(--status-info)' }} />}
                           </div>
                         ))}
                       </div>
                     </td>
-                    <td style={tdStyle}>
+                    <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                       {hasRuntime ? (
                         running ? (
                           <span className="flex items-center gap-1.5 font-semibold text-xs" style={{ color: 'var(--status-ok)' }}>
@@ -630,10 +719,10 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         <span className="text-[10px] font-medium" style={{ color: 'var(--meta)' }}>{t("Caddy/PHP 靜態託管")}</span>
                       )}
                     </td>
-                    <td style={tdStyle}>
+                    <td style={{ ...tdStyle, width: 68, textAlign: 'center' }}>
                       <input type="checkbox" checked={proj.enabled} onChange={() => handleToggleEnable(idx)} className="w-3.5 h-3.5 cursor-pointer accent-blue-500" />
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                    <td style={{ ...tdStyle, width: 120, textAlign: 'center', paddingRight: 16 }}>
                       <div className="flex gap-1.5 justify-center items-center">
                         {hasRuntime && proj.enabled && (
                           !running ? (

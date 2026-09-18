@@ -597,6 +597,7 @@ func (a *App) saveLastServiceState() {
 	a.appCfg.Global.LastServiceState.MariaDB = mariadbRunning
 
 	a.appCfg.Global.LastServiceState.Mailpit = a.procMgr.IsRunning(process.MailpitServiceKey())
+	a.appCfg.Global.LastServiceState.Redis = a.procMgr.IsRunning(process.RedisServiceKey())
 
 	if a.appCfg.Global.LastServiceState.PHP == nil {
 		a.appCfg.Global.LastServiceState.PHP = make(map[string]bool)
@@ -689,6 +690,15 @@ func (a *App) restoreLastState() {
 					a.handleErrorLog("php", fmt.Sprintf("自動啟動 PHP-CGI %s 失敗", info.Version), err)
 				}
 			}
+		}
+	}
+
+	// 5. Redis
+	if a.appCfg.Global.LastServiceState.Redis && len(a.scanRes.RedisList) > 0 {
+		redisInfo := a.scanRes.RedisList[0]
+		a.handleLog("system", i18n.T("自動啟動上次執行的服務: Redis"))
+		if err := a.procMgr.StartRedis(redisInfo.Version, redisInfo.ExePath, 6379); err != nil {
+			a.handleErrorLog("redis", "自動啟動 Redis 失敗", err)
 		}
 	}
 }

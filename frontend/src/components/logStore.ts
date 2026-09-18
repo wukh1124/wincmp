@@ -12,6 +12,7 @@ export interface LogData {
   mariadb: LogLine[];
   mailpit: LogLine[];
   php: LogLine[];
+  redis: LogLine[];
   runtime: Record<string, LogLine[]>;
 }
 
@@ -24,6 +25,7 @@ class LogStore {
     mariadb: [],
     mailpit: [],
     php: [],
+    redis: [],
     runtime: {}
   };
 
@@ -49,7 +51,7 @@ class LogStore {
 
   private async loadHistoryLogs() {
     try {
-      const categories = ['system', 'caddy', 'mariadb', 'mailpit', 'php'];
+      const categories = ['system', 'caddy', 'mariadb', 'mailpit', 'php', 'redis'];
       
       // 1. 載入系統分類歷史日誌
       for (const cat of categories) {
@@ -145,7 +147,7 @@ class LogStore {
       console.log('[logStore] Received log payload:', data);
       if (!data || !data.category) return;
       const category = data.category === 'node' ? 'runtime' : data.category;
-      const isValidCategory = ['system', 'caddy', 'mariadb', 'mailpit', 'php', 'runtime'].includes(category);
+      const isValidCategory = ['system', 'caddy', 'mariadb', 'mailpit', 'php', 'redis', 'runtime'].includes(category);
       
       if (isValidCategory) {
         const time = data.time || new Date().toLocaleTimeString();
@@ -208,6 +210,7 @@ class LogStore {
       caddy: [...this.logs.caddy],
       mariadb: [...this.logs.mariadb],
       mailpit: [...this.logs.mailpit],
+      redis: [...this.logs.redis],
       php: [...this.logs.php],
       runtime: {}
     };

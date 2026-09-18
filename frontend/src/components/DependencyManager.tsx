@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {
   X, RefreshCw, Download, ArrowUpCircle, CheckCircle2,
   Loader2, AlertTriangle, Cpu, Database, Settings as SettingsIcon,
-  HelpCircle, Server, Terminal, HardDrive
+  HelpCircle, Server, Terminal, HardDrive, Zap, ChevronDown,
+  Trash2, RotateCw, FolderOpen
 } from 'lucide-react';
 import {
   GetDependencyConfig, FetchRemoteDependencies, DownloadDependency,
-  ScanServices, GetScanResult
+  ScanServices, GetScanResult, UninstallDependency, OpenDependencyFolder
 } from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { t, useLanguage } from '../i18n';
@@ -23,14 +24,40 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
   const [isLoadingConfig, setIsLoadingConfig] = useState(false);
   const [isFetchingRemote, setIsFetchingRemote] = useState(false);
   const [progressMap, setProgressMap] = useState<Record<string, ProgressData>>({});
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   useEffect(() => { if (isOpen) loadData(); }, [isOpen]);
+
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.split-btn-dropdown')) {
+        setActiveDropdown(null);
+      }
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   useEffect(() => {
     const handleProgress = (data: any) => {
       if (data && data.key) {
         setProgressMap(prev => ({ ...prev, [data.key]: { status: data.status, percent: data.percent, currentMB: data.currentMB, totalMB: data.totalMB, error: data.error } }));
-        if (data.status === 'completed') { refreshLocalScan(); if (onInstalled) onInstalled(); }
+        if (data.status === 'completed') {
+          refreshLocalScan();
+          if (onInstalled) onInstalled();
+          // 4 秒後自動清除進度狀態，自然回歸至已安裝常態展示
+          setTimeout(() => {
+            setProgressMap(prev => {
+              if (prev[data.key]?.status === 'completed') {
+                const copy = { ...prev };
+                delete copy[data.key];
+                return copy;
+              }
+              return prev;
+            });
+          }, 4000);
+        }
       }
     };
     const unsubscribe = EventsOn('dependency_progress', handleProgress);
@@ -56,9 +83,52 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
   };
 
   const handleDownload = async (key: string) => {
+    setActiveDropdown(null);
     setProgressMap(prev => ({ ...prev, [key]: { status: 'preparing', percent: 0, currentMB: 0, totalMB: 0, error: '' } }));
     try { await DownloadDependency(key); }
     catch (err: any) { setProgressMap(prev => ({ ...prev, [key]: { status: 'error', percent: 0, currentMB: 0, totalMB: 0, error: err.toString() } })); }
+  };
+
+  const handleUninstall = async (key: string, label: string) => {
+    setActiveDropdown(null);
+    const confirmed = await (window as any).customConfirm(
+      t("確定要移除 %s 嗎？移除後將刪除其二進位檔案。", label)
+    );
+    if (!confirmed) return;
+
+    setProgressMap(prev => ({ ...prev, [key]: { status: 'preparing', percent: 0, currentMB: 0, totalMB: 0, error: '' } }));
+    try {
+      await UninstallDependency(key);
+      await refreshLocalScan();
+      if (onInstalled) onInstalled();
+      (window as any).customAlert(t("移除成功"));
+    } catch (err: any) {
+      console.error("移除依賴失敗:", err);
+      (window as any).customAlert(`${t("移除失敗")}: ${err}`);
+    } finally {
+      setProgressMap(prev => {
+        const copy = { ...prev };
+        delete copy[key];
+        return copy;
+      });
+    }
+  };
+
+  const handleInstallRedisExt = async (phpKey: string) => {
+    setActiveDropdown(null);
+    const verSuffix = phpKey.replace(/^php_?/, '');
+    const redisKey = 'php_redis_' + verSuffix;
+    await handleDownload(redisKey);
+  };
+
+  const handleOpenFolder = async (key: string) => {
+    setActiveDropdown(null);
+    try {
+      await OpenDependencyFolder(key);
+    } catch (err: any) {
+      console.error("開啟安裝目錄失敗:", err);
+      (window as any).customAlert(`${t("開啟安裝目錄失敗")}: ${err}`);
+    }
   };
 
   const compareVersions = (v1: string, v2: string) => {
@@ -76,20 +146,51 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     if (!scanResult) return '';
     if (key === 'caddy') return scanResult.CaddyList?.[0]?.Version || '';
     if (key === 'mariadb') return scanResult.MariaDBList?.[0]?.Version || '';
+    if (key === 'redis') return scanResult.RedisList?.[0]?.Version || '';
     if (key === 'composer') return scanResult.ComposerList?.[0]?.Version || '';
     if (key === 'heidisql') return scanResult.HeidiSQLList?.[0]?.Version || '';
     if (key === 'node') return scanResult.NodeList?.[0]?.Version || '';
     if (key === 'mailpit') return scanResult.MailpitList?.[0]?.Version || '';
-    if (key.startsWith('php')) {
+    if (key.startsWith('php_redis_')) {
+      const verSuffix = key.replace('php_redis_', '');
+      const majorMin = verSuffix.replace(/(\d)(\d)/, '$1.$2');
+      const phpInfo = scanResult.PHPList?.find((p: any) => p.MajorMin === majorMin);
+      if (!phpInfo) return 'PHP_NOT_INSTALLED';
+      const hasRedis = phpInfo.Extensions?.some((ext: string) => ext.toLowerCase() === 'php_redis.dll');
+      return hasRedis ? (depConfig?.[key]?.version || 'installed') : '';
+    }
+    if (key.startsWith('php_')) {
+      const verSuffix = key.replace('php_', '');
+      const majorMin = verSuffix.replace(/(\d)(\d)/, '$1.$2');
+      return scanResult.PHPList?.find((p: any) => p.MajorMin === majorMin)?.Version || '';
+    }
+    if (key.startsWith('php') && !key.startsWith('php_redis')) {
       const majorMin = key.replace('php', '').replace(/(\d)(\d)/, '$1.$2');
       return scanResult.PHPList?.find((p: any) => p.MajorMin === majorMin)?.Version || '';
     }
     return '';
   };
 
+  const getPhpRedisStatus = (phpKey: string): { supported: boolean; installed: boolean; version: string } => {
+    if (!scanResult) return { supported: false, installed: false, version: '' };
+    const verSuffix = phpKey.replace(/^php_?/, '');
+    const majorMin = verSuffix.replace(/(\d)(\d)/, '$1.$2');
+    const phpInfo = scanResult.PHPList?.find((p: any) => p.MajorMin === majorMin);
+    if (!phpInfo) return { supported: false, installed: false, version: '' };
+    const hasRedis = phpInfo.Extensions?.some((ext: string) => ext.toLowerCase() === 'php_redis.dll');
+    const redisKey = 'php_redis_' + verSuffix;
+    const isSupported = !!depConfig?.[redisKey];
+    const recVer = depConfig?.[redisKey]?.version || '';
+    return { supported: isSupported, installed: !!hasRedis, version: recVer };
+  };
+
   if (!isOpen) return null;
 
-  const phpKeys = depConfig ? Object.keys(depConfig).filter(k => k.startsWith('php') && k !== 'php').sort((a, b) => compareVersions(depConfig[b].version, depConfig[a].version)) : [];
+  const phpKeys = depConfig
+    ? Object.keys(depConfig)
+      .filter(k => (k.startsWith('php_') || k.startsWith('php')) && !k.startsWith('php_redis') && k !== 'php')
+      .sort((a, b) => compareVersions(depConfig[b].version, depConfig[a].version))
+    : [];
 
   // ─── Styles ─────────────────────────────────────────────
   const cardStyle: React.CSSProperties = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 16 };
@@ -102,31 +203,37 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     const recVer = spec.version;
     const progress = progressMap[key];
 
+    const isPhp = (key.startsWith('php_') || key.startsWith('php')) && !key.startsWith('php_redis');
+    const phpRedisInfo = isPhp ? getPhpRedisStatus(key) : null;
+    const isDropdownOpen = activeDropdown === key;
+
     let statusText = '';
     let statusColor: React.CSSProperties['color'] = 'var(--muted)';
     let showBtn = true;
+    let btnDisabled = false;
     let btnText = t('下載安裝');
     let btnStyle: React.CSSProperties = { background: 'var(--status-info)', color: '#fff' };
-    let btnIcon = <Download size={13} />;
+    let btnIcon: React.ReactNode = <Download size={13} />;
+
+    const cmp = localVer !== '' ? compareVersions(localVer, recVer) : 0;
+    const isUpdate = localVer !== '' && cmp < 0;
 
     if (localVer === '') {
       statusText = `${t("未安裝")} (${t("建議")}: v${recVer})`;
       statusColor = 'var(--status-error)';
       btnText = t('下載');
+    } else if (isUpdate) {
+      statusText = `${t("已安裝")}: v${localVer} (${t("有新版")}: v${recVer})`;
+      statusColor = 'var(--status-warn)';
+      btnText = t('更新');
+      btnStyle = { background: 'var(--status-warn)', color: '#fff' };
+      btnIcon = <ArrowUpCircle size={13} />;
     } else {
-      const cmp = compareVersions(localVer, recVer);
-      if (cmp < 0) {
-        statusText = `${t("已安裝")}: v${localVer} (${t("有新版")}: v${recVer})`;
-        statusColor = 'var(--status-warn)';
-        btnText = t('更新');
-        btnStyle = { background: 'var(--status-warn)', color: '#fff' };
-        btnIcon = <ArrowUpCircle size={13} />;
-      } else {
-        statusText = `${t("已安裝")}: v${localVer} (${t("最新")})`;
-        statusColor = 'var(--status-ok)';
-        btnText = t('重裝');
-        btnStyle = { background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' };
-      }
+      statusText = `${t("已安裝")}: v${localVer} (${t("最新")})`;
+      statusColor = 'var(--status-ok)';
+      btnText = t('重裝');
+      btnStyle = { background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)' };
+      btnIcon = <RotateCw size={12} style={{ color: 'var(--status-info)' }} />;
     }
 
     if (progress) {
@@ -177,7 +284,6 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
       if (status === 'completed') {
         statusText = `${t("安裝成功")}: v${recVer}`;
         statusColor = 'var(--status-ok)';
-        showBtn = false;
       }
       if (status === 'error') {
         return (
@@ -198,18 +304,134 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     }
 
     return (
-      <div className="flex items-center justify-between py-2.5 px-2 rounded-lg transition duration-150" style={{ color: 'var(--fg-2)' }}>
-        <div className="flex items-center gap-3">
-          <span style={{ color: 'var(--muted)' }}>{icon}</span>
-          <div>
-            <span className="text-sm font-semibold block" style={{ color: 'var(--fg)' }}>{t(label)}</span>
-            <span className="text-xs mt-0.5 block font-medium" style={{ color: statusColor }}>{statusText}</span>
+      <div className="flex items-center justify-between py-2.5 px-2 rounded-lg transition duration-150 relative" style={{ color: 'var(--fg-2)' }}>
+        <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
+          <span className="shrink-0" style={{ color: 'var(--muted)' }}>{icon}</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-sm font-semibold block truncate" style={{ color: 'var(--fg)' }}>{t(label)}</span>
+            <span className="text-xs mt-0.5 block font-medium truncate" style={{ color: statusColor }}>{statusText}</span>
+            {isPhp && localVer !== '' && (
+              <div className="mt-1 flex items-center gap-1.5 text-[11px] truncate">
+                <Zap size={11} className="shrink-0" style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--muted)' }} />
+                <span className="truncate" style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--muted)' }}>
+                  {phpRedisInfo?.installed
+                    ? t("Redis 擴充: 已就緒 (v%s)", phpRedisInfo.version || '6.0.2')
+                    : (phpRedisInfo?.supported ? t("Redis 擴充: 未配置") : t("Redis 擴充: 不支援"))}
+                </span>
+              </div>
+            )}
           </div>
         </div>
+
         {showBtn && (
-          <button onClick={() => handleDownload(key)} className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition" style={btnStyle}>
-            {btnIcon}<span>{btnText}</span>
-          </button>
+          localVer === '' ? (
+            <button
+              onClick={() => !btnDisabled && handleDownload(key)}
+              disabled={btnDisabled}
+              className="shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition select-none whitespace-nowrap shadow-sm hover:opacity-90 active:scale-95"
+              style={btnStyle}
+            >
+              {btnIcon}<span>{btnText}</span>
+            </button>
+          ) : (
+            <div className="relative shrink-0 split-btn-dropdown flex items-center">
+              {/* 一體化精巧按鈕組 */}
+              <div
+                className="inline-flex items-stretch rounded-md shadow-sm overflow-hidden transition"
+                style={{
+                  border: isUpdate ? 'none' : '1px solid var(--border)',
+                  background: isUpdate ? 'var(--status-warn)' : 'var(--card)'
+                }}
+              >
+                {/* 主按鈕 */}
+                <button
+                  onClick={() => handleDownload(key)}
+                  className={`px-2.5 py-1 text-xs font-semibold flex items-center justify-center gap-1.5 transition select-none whitespace-nowrap ${isUpdate
+                    ? 'text-white hover:brightness-110 active:brightness-95'
+                    : 'text-[var(--fg-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
+                    }`}
+                  title={isUpdate ? t("立即更新至最新版") : (isPhp ? (phpRedisInfo?.supported ? t("重裝 PHP (含 Redis)") : t("重裝 PHP")) : t("重裝此依賴"))}
+                >
+                  {btnIcon}
+                  <span>{btnText}</span>
+                </button>
+
+                {/* 垂直細緻分隔線 */}
+                <div
+                  className="w-[1px] self-stretch my-0.5"
+                  style={{ background: isUpdate ? 'rgba(255,255,255,0.3)' : 'var(--border)' }}
+                />
+
+                {/* 下拉箭頭按鈕：精緻緊湊點擊區 */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveDropdown(prev => prev === key ? null : key);
+                  }}
+                  className={`w-6 shrink-0 flex items-center justify-center transition select-none ${isUpdate
+                    ? 'text-white hover:brightness-110 active:brightness-95'
+                    : 'hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
+                    }`}
+                  style={{ color: isUpdate ? '#fff' : 'var(--fg-2)' }}
+                  title={t("更多操作")}
+                >
+                  <ChevronDown size={13} className={`shrink-0 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+
+              {/* 下拉選單 Popover */}
+              {isDropdownOpen && (
+                <div
+                  className="absolute right-0 top-full mt-1.5 w-56 rounded-xl shadow-xl border border-[var(--border)] p-1.5 z-50 animate-fade-in"
+                  style={{ background: 'var(--card)', backdropFilter: 'blur(16px)', boxShadow: '0 12px 28px rgba(0,0,0,0.25)' }}
+                >
+                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] select-none">
+                    {t("服務維護與配置")}
+                  </div>
+
+                  <button
+                    onClick={() => { setActiveDropdown(null); handleDownload(key); }}
+                    className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                  >
+                    <RotateCw size={13} style={{ color: 'var(--status-info)' }} />
+                    <span>
+                      {isPhp
+                        ? (phpRedisInfo?.supported ? t("重裝 PHP (含 Redis)") : t("重裝 PHP"))
+                        : t("重裝此依賴")}
+                    </span>
+                  </button>
+
+                  {isPhp && phpRedisInfo?.supported && (
+                    <button
+                      onClick={() => handleInstallRedisExt(key)}
+                      className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                    >
+                      <Zap size={13} style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--status-warn)' }} />
+                      <span>{phpRedisInfo?.installed ? t("單獨重裝 Redis 擴充") : t("單獨安裝 Redis 擴充")}</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleOpenFolder(key)}
+                    className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                  >
+                    <FolderOpen size={13} style={{ color: 'var(--status-info)' }} />
+                    <span>{t("開啟安裝目錄")}</span>
+                  </button>
+
+                  <div className="my-1 border-t border-[var(--border-soft)]" />
+
+                  <button
+                    onClick={() => handleUninstall(key, label)}
+                    className="dropdown-menu-item dropdown-menu-item-danger w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--status-error-bg)] text-[var(--status-error)] transition"
+                  >
+                    <Trash2 size={13} />
+                    <span>{isPhp ? t("移除此版本") : t("移除依賴")}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )
         )}
       </div>
     );
@@ -222,18 +444,15 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
         {/* Header */}
         <div className="px-6 py-4 flex items-center justify-between shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-deep)' }}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--status-info-bg)', color: 'var(--status-info)' }}>
-              <HardDrive size={18} />
-            </div>
             <div>
               <h2 className="text-lg font-bold tracking-wide">{t("WinCMP 依賴庫管理")}</h2>
               <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{t("下載或升級本機 Web 開發依賴")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={handleFetchRemote} disabled={isFetchingRemote} className="p-2 rounded-lg transition flex items-center gap-1 text-xs font-semibold" style={{ color: 'var(--fg-2)' }} title={t("從遠端獲取最新版本")}>
+            <button onClick={handleFetchRemote} disabled={isFetchingRemote} className="p-2 rounded-lg transition flex items-center gap-1 text-xs font-semibold" style={{ color: 'var(--fg-2)' }} title={t("從遠端檢查依賴版本")}>
               <RefreshCw size={14} className={isFetchingRemote ? 'animate-spin' : ''} />
-              <span>{isFetchingRemote ? t('獲取中...') : t('獲取最新')}</span>
+              <span>{isFetchingRemote ? t('檢查中...') : t('檢查更新')}</span>
             </button>
             <button id="btn-close-dep-manager" onClick={onClose} className="p-1.5 rounded-lg transition" style={{ color: 'var(--muted)' }}><X size={18} /></button>
           </div>
@@ -249,27 +468,25 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           ) : (
             <>
               <div style={cardStyle}>
-                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
+                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2 mb-1" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
                   <Cpu size={13} /> {t("核心執行環境")}
                 </h3>
                 <div className="divide-y divide-[var(--border-soft)]">
                   {renderDependencyRow('caddy', 'Caddy Web 伺服器', <Server size={16} />)}
                   {renderDependencyRow('mariadb', 'MariaDB 資料庫', <Database size={16} />)}
+                  {renderDependencyRow('redis', 'Redis 快取服務', <Zap size={16} />)}
                 </div>
               </div>
 
               <div style={cardStyle}>
-                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2" style={{ color: 'var(--status-ok)', borderBottom: '1px solid var(--border-soft)' }}>
+                <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2 mb-1" style={{ color: 'var(--status-ok)', borderBottom: '1px solid var(--border-soft)' }}>
                   <Server size={13} /> {t("PHP FastCGI 環境")}
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="divide-y divide-[var(--border-soft)]">
                   {phpKeys.map(key => {
-                    const majorMin = key.replace('php', '').replace(/(\d)(\d)/, '$1.$2');
-                    return (
-                      <div key={key} className="rounded-lg p-2.5" style={{ border: '1px solid var(--border-soft)', background: 'var(--surface)' }}>
-                        {renderDependencyRow(key, `PHP ${majorMin} NTS`, <Terminal size={14} />)}
-                      </div>
-                    );
+                    const cleanKey = key.replace(/^php_?/, '');
+                    const majorMin = cleanKey.replace(/(\d)(\d)/, '$1.$2');
+                    return renderDependencyRow(key, `PHP ${majorMin} NTS`, <Terminal size={16} />);
                   })}
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Save, FolderOpen, Shield, Database, Mail, Languages, Info, FileText, Package, Palette, Check } from 'lucide-react';
-import { GetConfig, SaveConfig, SelectFolder, OpenFolder } from '../../wailsjs/go/main/App';
+import { Settings as SettingsIcon, Save, FolderOpen, Shield, Database, Mail, Languages, Info, FileText, Package, Palette, Check, Lock } from 'lucide-react';
+import { GetConfig, SaveConfig, SelectFolder, OpenFolder, OpenSystemConfigFile } from '../../wailsjs/go/main/App';
 import DependencyManager from './DependencyManager';
 import { logStore } from './logStore';
 import { t, useLanguage, setLanguage, getLanguage } from '../i18n';
@@ -125,16 +125,9 @@ export default function Settings() {
     };
   });
 
-  const handleOpenLocalPath = async (type: 'hosts' | 'phpini' | 'wincmpjson') => {
+  const handleOpenLocalPath = async (type: 'hosts' | 'phpini' | 'wincmpjson' | 'ssl' | 'caddyfile' | 'caddycommon') => {
     try {
-      if (type === 'hosts') {
-        // 在 Windows 下打開 hosts
-        await OpenFolder('C:\\Windows\\System32\\drivers\\etc\\hosts');
-      } else if (type === 'phpini') {
-        await OpenFolder('./conf/php/php.ini');
-      } else if (type === 'wincmpjson') {
-        await OpenFolder('./conf/wincmp.json');
-      }
+      await OpenSystemConfigFile(type);
     } catch (err) {
       (window as any).customAlert(`${t("無法開啟設定檔")}: ${err}`);
     }
@@ -186,50 +179,8 @@ export default function Settings() {
           {/* 1. 基本路徑與行為 */}
           <div className="rounded-xl p-5 space-y-4" style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}>
             <h3 className="font-bold text-sm flex items-center gap-2 pb-3 select-none" style={{ color: 'var(--fg)', borderBottom: '1px solid var(--border)' }}>
-              <SettingsIcon size={14} style={{ color: 'var(--accent)' }} /> {t("基本路徑與行為")}
+              <SettingsIcon size={14} style={{ color: 'var(--accent)' }} /> {t("系統運作與自動化行為")}
             </h3>
-
-            {/* WWW 根目錄 */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase" style={{ color: 'var(--meta)' }}>{t("預設 Web 專案目錄 (WWW Dir)")}</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={config.global.default_www}
-                  onChange={(e) => handleGlobalFieldChange('default_www', e.target.value)}
-                  className="flex-1 rounded-lg px-3 py-1.5 outline-none transition font-mono focus:border-blue-500"
-                  style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg)' }}
-                />
-                <button
-                  onClick={() => handleSelectFolder('default_www')}
-                  className="btn-custom-hover px-3 py-1.5 rounded-lg transition font-semibold"
-                  style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
-                >
-                  {t("選擇")}
-                </button>
-              </div>
-            </div>
-
-            {/* SSL 根目錄 */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase" style={{ color: 'var(--meta)' }}>{t("預設 SSL 憑證存放目錄 (SSL Dir)")}</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={config.global.default_ssl}
-                  onChange={(e) => handleGlobalFieldChange('default_ssl', e.target.value)}
-                  className="flex-1 rounded-lg px-3 py-1.5 outline-none transition font-mono focus:border-blue-500"
-                  style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg)' }}
-                />
-                <button
-                  onClick={() => handleSelectFolder('default_ssl')}
-                  className="btn-custom-hover px-3 py-1.5 rounded-lg transition font-semibold"
-                  style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)' }}
-                >
-                  {t("選擇")}
-                </button>
-              </div>
-            </div>
 
             {/* 系統開關組 */}
             <div className="space-y-3 pt-2 select-none">
@@ -518,6 +469,33 @@ export default function Settings() {
                 <Info size={16} style={{ color: 'var(--accent)' }} />
                 <span className="font-bold text-xs" style={{ color: 'var(--fg-2)' }}>{t("WinCMP Json")}</span>
                 <span className="text-[10px] font-mono" style={{ color: 'var(--meta)' }}>{t("(核心配置)")}</span>
+              </button>
+              <button
+                onClick={() => handleOpenLocalPath('ssl')}
+                className="btn-custom-hover py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition"
+                style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+              >
+                <Lock size={16} style={{ color: 'var(--accent)' }} />
+                <span className="font-bold text-xs" style={{ color: 'var(--fg-2)' }}>{t("打開 SSL 目錄")}</span>
+                <span className="text-[10px] font-mono" style={{ color: 'var(--meta)' }}>{t("(conf/ssl)")}</span>
+              </button>
+              <button
+                onClick={() => handleOpenLocalPath('caddyfile')}
+                className="btn-custom-hover py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition"
+                style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+              >
+                <FileText size={16} style={{ color: 'var(--status-info)' }} />
+                <span className="font-bold text-xs" style={{ color: 'var(--fg-2)' }}>{t("Caddyfile")}</span>
+                <span className="text-[10px] font-mono" style={{ color: 'var(--meta)' }}>{t("(主設定檔)")}</span>
+              </button>
+              <button
+                onClick={() => handleOpenLocalPath('caddycommon')}
+                className="btn-custom-hover py-3 px-2 rounded-xl flex flex-col items-center justify-center gap-2 transition"
+                style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}
+              >
+                <FolderOpen size={16} style={{ color: 'var(--status-ok)' }} />
+                <span className="font-bold text-xs" style={{ color: 'var(--fg-2)' }}>{t("common.caddy")}</span>
+                <span className="text-[10px] font-mono" style={{ color: 'var(--meta)' }}>{t("(白名單/日誌)")}</span>
               </button>
             </div>
           </div>

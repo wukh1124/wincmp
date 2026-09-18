@@ -29,11 +29,12 @@ type ServiceInfo struct {
 
 // PHPVersionInfo 描述一個 PHP 版本及其 Port 配置
 type PHPVersionInfo struct {
-	Version   string // 版本號 (如 "8.2.30")
-	ExePath   string // php-cgi.exe 路徑
-	MajorMin  string // 主版本.次版本 (如 "8.2")
-	PortBase  int    // Port 基數 (如 38200)
-	PortCount int    // 行程數量 (預設 3)
+	Version    string   // 版本號 (如 "8.2.30")
+	ExePath    string   // php-cgi.exe 路徑
+	MajorMin   string   // 主版本.次版本 (如 "8.2")
+	PortBase   int      // Port 基數 (如 38200)
+	PortCount  int      // 行程數量 (預設 3)
+	Extensions []string // 已安裝的擴充模組檔案 (如 ["php_redis.dll"])
 }
 
 // ScanResult 掃描結果
@@ -43,6 +44,7 @@ type ScanResult struct {
 	HeidiSQLList  []ServiceInfo
 	MariaDBList   []ServiceInfo
 	MailpitList   []ServiceInfo
+	RedisList     []ServiceInfo
 	NodeList      []ServiceInfo
 	BunList       []ServiceInfo
 	PHPList       []PHPVersionInfo
@@ -173,6 +175,17 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 				version := strings.TrimPrefix(entry.Name(), "php-")
 				majorMin := extractMajorMinor(version)
 
+				// 掃描 ext 目錄下的 dll 擴充清單
+				var extensions []string
+				extDir := filepath.Join(phpDir, entry.Name(), "ext")
+				if extEntries, err := os.ReadDir(extDir); err == nil {
+					for _, extEntry := range extEntries {
+						if !extEntry.IsDir() && strings.HasSuffix(strings.ToLower(extEntry.Name()), ".dll") {
+							extensions = append(extensions, extEntry.Name())
+						}
+					}
+				}
+
 				// 檢查是否已有同次版本的 PHP，若有則保留較新版本
 				if existing, ok := phpMap[majorMin]; ok {
 					if version > existing.Version {
@@ -181,11 +194,12 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 						// 更新為較新版本
 						portBase := calcPHPPortBase(majorMin)
 						phpMap[majorMin] = PHPVersionInfo{
-							Version:   version,
-							ExePath:   phpCgiExe,
-							MajorMin:  majorMin,
-							PortBase:  portBase,
-							PortCount: 3,
+							Version:    version,
+							ExePath:    phpCgiExe,
+							MajorMin:   majorMin,
+							PortBase:   portBase,
+							PortCount:  3,
+							Extensions: extensions,
 						}
 					} else if version < existing.Version {
 						// 目前掃描到的比 Map 中的舊
@@ -194,11 +208,12 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 				} else {
 					portBase := calcPHPPortBase(majorMin)
 					phpMap[majorMin] = PHPVersionInfo{
-						Version:   version,
-						ExePath:   phpCgiExe,
-						MajorMin:  majorMin,
-						PortBase:  portBase,
-						PortCount: 3,
+						Version:    version,
+						ExePath:    phpCgiExe,
+						MajorMin:   majorMin,
+						PortBase:   portBase,
+						PortCount:  3,
+						Extensions: extensions,
 					}
 				}
 			}
@@ -310,6 +325,35 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 		}
 	}
 
+	// 9. 掃描 Redis 版本
+	redisDir := filepath.Join(binDir, "redis")
+	if entries, err := os.ReadDir(redisDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				if entry.Name() == "redis-server.exe" {
+					redisExe := filepath.Join(redisDir, "redis-server.exe")
+					result.RedisList = append(result.RedisList, ServiceInfo{
+						Name:    "redis",
+						Version: "latest",
+						ExePath: redisExe,
+					})
+				}
+				continue
+			}
+			if strings.HasPrefix(entry.Name(), "redis-") {
+				redisExe := filepath.Join(redisDir, entry.Name(), "redis-server.exe")
+				if _, err := os.Stat(redisExe); err == nil {
+					version := strings.TrimPrefix(entry.Name(), "redis-")
+					result.RedisList = append(result.RedisList, ServiceInfo{
+						Name:    "redis",
+						Version: version,
+						ExePath: redisExe,
+					})
+				}
+			}
+		}
+	}
+
 	// 進行版本排序，確保最新版本排在 Slice 的最前面 (index 0)
 	sortServiceList := func(list []ServiceInfo) {
 		sort.Slice(list, func(i, j int) bool {
@@ -332,9 +376,12 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 	sortServiceList(result.NodeList)
 	sortServiceList(result.BunList)
 	sortServiceList(result.MailpitList)
-	// 只保留最新的 Mailpit 版本，避免多個 Mailpit 版本同時顯示與啟動造成衝突
 	if len(result.MailpitList) > 1 {
 		result.MailpitList = result.MailpitList[:1]
+	}
+	sortServiceList(result.RedisList)
+	if len(result.RedisList) > 1 {
+		result.RedisList = result.RedisList[:1]
 	}
 
 	return result, nil

@@ -39,6 +39,9 @@ export const enTranslations: Record<string, string> = {
   "專案管理": "Projects",
   "資料庫瀏覽": "Database",
   "資料庫": "Database",
+  "反向代理": "Reverse Proxy",
+  "測試郵件": "Test Mail",
+  "快取服務": "Cache Service",
   "資源監控": "Resources",
   "系統設定": "Settings",
   "終端日誌": "Terminal Logs",
@@ -53,6 +56,8 @@ export const enTranslations: Record<string, string> = {
   "找不到匹配的專案 😭": "No matching projects found 😭",
   "管理員模式": "Administrator Mode",
   "限制模式": "Restricted Mode",
+  "管理員權限": "Admin Rights",
+  "一般權限": "Standard Rights",
   "已取得系統管理員權限，可自動配置 Hosts 網域別名": "Administrator privileges granted. System Hosts will auto-update.",
   "無管理員權限：可能無法自動修改 Hosts 檔，需手動管理網域別名": "No administrator privileges: Hosts file auto-update may fail, manual setup required.",
   "Go 核心已連線": "Go Core Connected",
@@ -298,6 +303,11 @@ export const enTranslations: Record<string, string> = {
   "正在讀取依賴設定...": "Loading dependency configuration...",
   "核心執行環境": "Core Runtimes",
   "PHP FastCGI 環境": "PHP Runtimes",
+  "PHP 擴充套件": "PHP Extensions",
+  "(安裝 PHP 時會自動同步配置)": "(Auto-configured when installing PHP)",
+  "需先安裝 PHP %s": "Requires PHP %s first",
+  "未安裝 PHP": "PHP Not Installed",
+  "Redis 擴充 (PHP %s)": "Redis Extension (PHP %s)",
   "開發輔助工具與實用工具": "Development Tools & Utilities",
   "Composer (PHP 包管理器)": "Composer (PHP Package Manager)",
   "Node.js LTS 運行環境": "Node.js LTS Runtime",
@@ -317,6 +327,17 @@ export const enTranslations: Record<string, string> = {
   "安裝成功": "Installed successfully",
   "安裝失敗": "Installation failed",
   "重試安裝": "Retry Installation",
+  "重裝 PHP (含 Redis)": "Reinstall PHP (with Redis)",
+  "單獨安裝 Redis 擴充": "Install Redis Extension",
+  "單獨重裝 Redis 擴充": "Reinstall Redis Extension",
+  "移除此版本": "Remove this version",
+  "移除依賴": "Remove Dependency",
+  "確定要移除 %s 嗎？移除後將刪除其二進位檔案。": "Are you sure you want to remove %s? This will delete its binary files.",
+  "移除中...": "Removing...",
+  "移除成功": "Removed successfully",
+  "移除失敗": "Removal failed",
+  "Redis 擴充: 已就緒 (v%s)": "Redis Extension: Ready (v%s)",
+  "Redis 擴充: 未配置": "Redis Extension: Not configured",
 
   // ProjectTerminal.tsx
   "專案終端控制台": "Project Terminal Console",
@@ -499,6 +520,48 @@ export const enTranslations: Record<string, string> = {
   // Sidebar Quick Settings Guide
   "快速設定指南": "Quick Settings Guide",
   "您可以在此快速切換介面語系、調整外觀主題，以及變更面板的字型大小。": "You can quickly switch the interface language, adjust appearance themes, and change editor & panel font sizes here.",
+
+  // v2.1.0 Updates
+  "Redis 快取服務": "Redis Cache Service",
+  "Redis": "Redis",
+  "自動切換分頁": "Auto-switch Tab",
+  "有新日誌時自動切換到該分頁": "Automatically switch to the log tab when new logs arrive",
+  "拖曳調整排序": "Drag to reorder",
+  "按住拖曳調整專案順序": "Hold and drag to reorder projects",
+  "保存專案排序失敗": "Failed to save project order",
+  "打開 SSL 目錄": "Open SSL Directory",
+  "Caddyfile": "Caddyfile",
+  "common.caddy": "common.caddy",
+  "系統運作與自動化行為": "System & Automation Behaviors",
+  "啟動 Redis 失敗: %w": "Failed to start Redis: %w",
+
+  // Dependency Manager Menu & Buttons
+  "服務維護與配置": "Maintenance & Configuration",
+  "重裝此依賴": "Reinstall Dependency",
+  "立即更新至最新版": "Update to Latest Version",
+  "更多操作": "More Actions",
+  "Redis 擴充: 不支援": "Redis Ext: Unsupported",
+  "重裝 PHP": "Reinstall PHP",
+  "開啟安裝目錄": "Open Install Directory",
+  "開啟安裝目錄失敗": "Failed to open install directory",
+  "從遠端檢查依賴版本": "Check dependency versions from remote",
+  "檢查更新": "Check Updates",
+
+  // Project SSL
+  "已啟用 HTTPS 安全憑證": "HTTPS SSL Certificate Enabled",
+
+  // Terminal Logs Console Refinement
+  "Node / Bun": "Node / Bun",
+  "自動切換": "Auto-switch",
+  "自動跟隨": "Auto-follow",
+  "暫無運行專案": "No running projects",
+  "選擇專案日誌": "Select project logs",
+  "滾動至最新日誌": "Scroll to latest log",
+  "清空當前日誌": "Clear current logs",
+  "置底": "To Bottom",
+  "清空": "Clear",
+  "收起日誌": "Collapse Logs",
+  "展開日誌": "Expand Logs",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

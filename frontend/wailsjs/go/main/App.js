@@ -78,6 +78,10 @@ export function KillProcessByPort(arg1) {
   return window['go']['main']['App']['KillProcessByPort'](arg1);
 }
 
+export function OpenDependencyFolder(arg1) {
+  return window['go']['main']['App']['OpenDependencyFolder'](arg1);
+}
+
 export function OpenFolder(arg1) {
   return window['go']['main']['App']['OpenFolder'](arg1);
 }
@@ -88,6 +92,10 @@ export function OpenInHeidiSQL() {
 
 export function OpenProjectCaddyfile(arg1) {
   return window['go']['main']['App']['OpenProjectCaddyfile'](arg1);
+}
+
+export function OpenSystemConfigFile(arg1) {
+  return window['go']['main']['App']['OpenSystemConfigFile'](arg1);
 }
 
 export function QueryDatabases() {
@@ -108,6 +116,10 @@ export function ResizeTerminal(arg1, arg2, arg3) {
 
 export function RestartApp() {
   return window['go']['main']['App']['RestartApp']();
+}
+
+export function RestartRedis(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RestartRedis'](arg1, arg2, arg3);
 }
 
 export function SaveConfig(arg1) {
@@ -158,6 +170,10 @@ export function StartProjectRuntime(arg1) {
   return window['go']['main']['App']['StartProjectRuntime'](arg1);
 }
 
+export function StartRedis(arg1, arg2, arg3) {
+  return window['go']['main']['App']['StartRedis'](arg1, arg2, arg3);
+}
+
 export function StartTerminalSession(arg1, arg2, arg3) {
   return window['go']['main']['App']['StartTerminalSession'](arg1, arg2, arg3);
 }
@@ -182,6 +198,14 @@ export function StopProjectRuntime(arg1) {
   return window['go']['main']['App']['StopProjectRuntime'](arg1);
 }
 
+export function StopRedis() {
+  return window['go']['main']['App']['StopRedis']();
+}
+
 export function StopTerminalSession(arg1) {
   return window['go']['main']['App']['StopTerminalSession'](arg1);
+}
+
+export function UninstallDependency(arg1) {
+  return window['go']['main']['App']['UninstallDependency'](arg1);
 }

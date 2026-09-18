@@ -94,8 +94,94 @@ button {
   line-height: 1 !important;
 }
 
-button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-btn) {
+button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-btn):not(.log-control-btn):not(.log-tab-btn):not(.log-action-btn):not(.dropdown-menu-item) {
   padding: 10px 16px !important;
+}
+
+/* 下拉選單/彈窗內部選項按鈕 */
+.dropdown-menu-item {
+  padding: 8px 10px !important;
+  cursor: pointer;
+}
+
+.dropdown-menu-item:hover {
+  background-color: var(--surface-hover) !important;
+}
+
+.dropdown-menu-item-danger:hover {
+  background-color: var(--status-error-bg) !important;
+  color: var(--status-error) !important;
+}
+
+/* 日誌控制台 VSCode 風格幽靈動作按鈕 */
+.log-action-btn {
+  height: 26px !important;
+  padding: 0 8px !important;
+  font-size: 0.6875rem !important; /* 11px 相對大小 */
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  border-radius: var(--radius-sm, 6px) !important;
+  border: none !important;
+  background: transparent;
+}
+
+.log-action-btn:active {
+  transform: scale(0.96);
+}
+
+/* 日誌控制台按鈕與控制項高度與字體統一規範 */
+.log-control-btn {
+  height: 28px !important;
+  padding: 0 10px !important;
+  font-size: 0.6875rem !important; /* 11px 相對大小 */
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  border-radius: var(--radius-sm, 6px) !important;
+}
+
+.log-tab-btn {
+  padding: 8px 12px !important;
+  font-size: 0.6875rem !important; /* 11px 相對大小 */
+  line-height: 1 !important;
+  background-color: transparent !important;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  transition: all var(--motion-fast, 150ms) var(--ease-standard);
+  user-select: none;
+}
+
+.log-tab-btn:hover:not(.active) {
+  color: var(--fg) !important;
+  background-color: var(--surface-warm) !important;
+}
+
+.log-tab-btn.active {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+  background-color: transparent !important;
+}
+
+.log-tab-btn.active:hover {
+  background-color: transparent !important;
+  opacity: 0.85;
+}
+
+.log-control-select {
+  height: 28px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 10px !important;
+  padding-right: 28px !important;
+  font-size: 0.6875rem !important;
+  border-radius: var(--radius-sm, 6px) !important;
+  background-position: right 8px center !important;
+  background-size: 11px !important;
 }
 
 button:disabled {
@@ -224,7 +310,7 @@ html[data-theme="sketch"] .btn-custom-hover:hover:not(:disabled) {
 }
 
 /* 3. 主按鈕 (Accent / Primary Buttons) */
-button[style*="var(--accent)"]:not(:disabled):hover,
+button[style*="var(--accent)"]:not(:disabled):not(.log-tab-btn):not(.log-action-btn):hover,
 .version-update-btn:not(:disabled):hover {
   background-color: var(--accent-hover) !important;
   border-color: var(--accent-hover) !important;
@@ -293,11 +379,12 @@ html[data-theme="sketch"] button.btn-autoscroll-hover:hover:not(:disabled) {
   bottom: -8px !important;
 }
 
-/* Sketch theme layout adjustments: tilt the sticky-note guides */
+/* Sketch theme layout adjustments: avoid blur-inducing rotation, keep crisp hand-drawn feel with offset shadow */
 html[data-theme="sketch"] .guide-bubble {
-  transform: rotate(-0.5deg);
+  transform: none !important;
   border-width: 2px !important;
   border-style: solid !important;
+  box-shadow: 3px 3px 0px var(--border-strong) !important;
 }
 
 /* Sketch 主題下加粗邊框，同時必須將無須顯示的下半部/上半部邊框設為 0px，

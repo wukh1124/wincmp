@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages, Type, Lock, Unlock } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, ShieldAlert, Download, Palette, Languages, Type, Lock, Unlock, Lightbulb } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -489,7 +489,8 @@ export default function App() {
 
                 <div className="space-y-3">
                   <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
-                    <span>💡 {t("快速設定指南")}</span>
+                    <Lightbulb size={13} style={{ color: 'var(--status-info)' }} />
+                    <span>{t("快速設定指南")}</span>
                   </div>
                   <div className="text-[11px] leading-relaxed" style={{ color: 'var(--fg-2)' }}>
                     {t("您可以在此快速切換介面語系、調整外觀主題，以及變更面板的字型大小。")}
@@ -698,8 +699,8 @@ export default function App() {
               style={{ color: isAdmin ? 'var(--status-info)' : 'var(--status-warn)' }}
               title={isAdmin ? t('已取得系統管理員權限，可自動配置 Hosts 網域別名') : t('無管理員權限：可能無法自動修改 Hosts 檔，需手動管理網域別名')}
             >
-              <Shield size={12} />
-              <span>{isAdmin ? t('管理員模式') : t('限制模式')}</span>
+              {isAdmin ? <Shield size={12} /> : <ShieldAlert size={12} />}
+              <span>{isAdmin ? t('管理員權限') : t('一般權限')}</span>
             </div>
             <div className="h-3 w-[1px]" style={{ background: 'var(--border)' }} />
 
@@ -721,35 +722,31 @@ export default function App() {
           {renderActiveComponent()}
         </div>
 
-        {/* Log Toggle Bar */}
-        {activeTab !== 'logs' && (
-          <div
-            className="h-9 border-t px-6 flex justify-between items-center select-none text-[11px] theme-transition"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-deep)' }}
-          >
-            <button
-              onClick={handleToggleLogs}
-              className="flex items-center gap-1.5 font-semibold transition"
-              style={{ color: 'var(--fg-2)' }}
-            >
-              <Terminal size={11} style={{ color: 'var(--status-info)' }} />
-              <span>{showLogs ? t('收起 Logs 控制台') : t('打開 Logs 控制台')}</span>
-            </button>
-            <button
-              onClick={handleToggleLogs}
-              className="p-1 rounded-md transition flex items-center justify-center"
-              style={{ color: 'var(--fg-2)' }}
-              title={showLogs ? t('收起 Logs 控制台') : t('打開 Logs 控制台')}
-            >
-              {showLogs ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-            </button>
+        {/* Inline Logs Panel (當展開時，由 TerminalLogs 自帶單行標題列整合控制) */}
+        {activeTab !== 'logs' && showLogs && (
+          <div className="h-[35%] min-h-[150px] border-t overflow-hidden theme-transition" style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}>
+            <TerminalLogs onCollapse={handleToggleLogs} />
           </div>
         )}
 
-        {/* Inline Logs Panel */}
-        {activeTab !== 'logs' && showLogs && (
-          <div className="h-[35%] min-h-[150px] border-t overflow-hidden theme-transition" style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}>
-            <TerminalLogs />
+        {/* Compact Log Toggle Bar (僅在收起時顯示為底部極簡條) */}
+        {activeTab !== 'logs' && !showLogs && (
+          <div
+            onClick={handleToggleLogs}
+            className="h-7 border-t px-4 flex justify-between items-center select-none text-[11px] cursor-pointer hover:bg-[var(--card-hover)] transition group"
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-deep)' }}
+          >
+            <div className="flex items-center gap-1.5 font-medium text-[var(--muted)] group-hover:text-[var(--fg-2)] transition">
+              <Terminal size={11} style={{ color: 'var(--status-info)' }} />
+              <span>{t('展開日誌')}</span>
+            </div>
+            <button
+              type="button"
+              className="p-0.5 rounded text-[var(--muted)] group-hover:text-[var(--fg-2)] transition flex items-center justify-center"
+              title={t('展開日誌')}
+            >
+              <ChevronUp size={13} />
+            </button>
           </div>
         )}
       </main>

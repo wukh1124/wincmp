@@ -18,6 +18,7 @@ export namespace config {
 	    caddy: boolean;
 	    mariadb: boolean;
 	    mailpit: boolean;
+	    redis: boolean;
 	    php: Record<string, boolean>;
 	
 	    static createFrom(source: any = {}) {
@@ -29,6 +30,7 @@ export namespace config {
 	        this.caddy = source["caddy"];
 	        this.mariadb = source["mariadb"];
 	        this.mailpit = source["mailpit"];
+	        this.redis = source["redis"];
 	        this.php = source["php"];
 	    }
 	}
@@ -359,6 +361,7 @@ export namespace scanner {
 	    MajorMin: string;
 	    PortBase: number;
 	    PortCount: number;
+	    Extensions: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new PHPVersionInfo(source);
@@ -371,6 +374,7 @@ export namespace scanner {
 	        this.MajorMin = source["MajorMin"];
 	        this.PortBase = source["PortBase"];
 	        this.PortCount = source["PortCount"];
+	        this.Extensions = source["Extensions"];
 	    }
 	}
 	export class ServiceInfo {
@@ -395,6 +399,7 @@ export namespace scanner {
 	    HeidiSQLList: ServiceInfo[];
 	    MariaDBList: ServiceInfo[];
 	    MailpitList: ServiceInfo[];
+	    RedisList: ServiceInfo[];
 	    NodeList: ServiceInfo[];
 	    BunList: ServiceInfo[];
 	    PHPList: PHPVersionInfo[];
@@ -413,6 +418,7 @@ export namespace scanner {
 	        this.HeidiSQLList = this.convertValues(source["HeidiSQLList"], ServiceInfo);
 	        this.MariaDBList = this.convertValues(source["MariaDBList"], ServiceInfo);
 	        this.MailpitList = this.convertValues(source["MailpitList"], ServiceInfo);
+	        this.RedisList = this.convertValues(source["RedisList"], ServiceInfo);
 	        this.NodeList = this.convertValues(source["NodeList"], ServiceInfo);
 	        this.BunList = this.convertValues(source["BunList"], ServiceInfo);
 	        this.PHPList = this.convertValues(source["PHPList"], PHPVersionInfo);

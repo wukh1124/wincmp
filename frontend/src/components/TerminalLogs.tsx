@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, ArrowDown } from 'lucide-react';
+import { Trash2, ArrowDown, ChevronDown, Repeat } from 'lucide-react';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { logStore, LogData, LogLine } from './logStore';
 import { t, useLanguage } from '../i18n';
@@ -9,26 +9,35 @@ const CATEGORIES = [
   { id: 'caddy', label: 'Caddy' },
   { id: 'mariadb', label: 'MariaDB' },
   { id: 'mailpit', label: 'Mailpit' },
+  { id: 'redis', label: 'Redis' },
   { id: 'php', label: 'PHP' },
-  { id: 'runtime', label: '運行環境 (Node/Bun)' }
+  { id: 'runtime', label: 'Node / Bun' }
 ];
 
-export default function TerminalLogs() {
+interface TerminalLogsProps {
+  onCollapse?: () => void;
+}
+
+export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
   useLanguage(); // 訂閱語系變更
   const [activeTab, setActiveTab] = useState('system');
   const [activeRuntimeProject, setActiveRuntimeProject] = useState('');
   const [logs, setLogs] = useState<LogData>(logStore.getLogs());
   const [autoScroll, setAutoScroll] = useState(true);
+  const [autoSwitchTab, setAutoSwitchTab] = useState<boolean>(() => {
+    return localStorage.getItem('wincmp_auto_switch_tab') === 'true'; // 預設為 false，避免搶焦點
+  });
+  const [unreadTabs, setUnreadTabs] = useState<Record<string, boolean>>({});
 
   const logEndRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // 用於追蹤當前啟動的分頁與 Runtime 專案，以避免在 handleAutoSwitch 中閉包抓到舊值
+  // 用於追蹤當前啟動的分頁與狀態，避免閉包陳舊
   const activeTabRef = useRef(activeTab);
   const activeRuntimeProjectRef = useRef(activeRuntimeProject);
+  const autoSwitchTabRef = useRef(autoSwitchTab);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 當 activeTab 或 activeRuntimeProject 改變時，更新 Ref
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
@@ -37,6 +46,10 @@ export default function TerminalLogs() {
     activeRuntimeProjectRef.current = activeRuntimeProject;
   }, [activeRuntimeProject]);
 
+  useEffect(() => {
+    autoSwitchTabRef.current = autoSwitchTab;
+  }, [autoSwitchTab]);
+
   // 訂閱全域 logStore 的日誌更新
   useEffect(() => {
     return logStore.subscribe((newLogs) => {
@@ -44,15 +57,23 @@ export default function TerminalLogs() {
     });
   }, []);
 
-  // 訂閱 Go 端的日誌 Event 以進行防抖自動切換
+  // 訂閱 Go 端的日誌 Event
   useEffect(() => {
     const handleAutoSwitch = (data: any) => {
       if (!data || !data.category) return;
       const category = data.category === 'node' ? 'runtime' : data.category;
       const projName = category === 'runtime' ? data.projectName : undefined;
 
-      const isValidCategory = ['system', 'caddy', 'mariadb', 'mailpit', 'php', 'runtime'].includes(category);
+      const isValidCategory = ['system', 'caddy', 'mariadb', 'mailpit', 'php', 'redis', 'runtime'].includes(category);
       if (!isValidCategory) return;
+
+      // 若未開啟自動跳轉，只在非當前 tab 標註有未讀日誌，絕不強行奪取焦點
+      if (!autoSwitchTabRef.current) {
+        if (category !== activeTabRef.current) {
+          setUnreadTabs(prev => ({ ...prev, [category]: true }));
+        }
+        return;
+      }
 
       // 檢查是否需要切換 tab 或切換專案
       const needsTabSwitch = category !== activeTabRef.current;
@@ -65,6 +86,7 @@ export default function TerminalLogs() {
         debounceTimerRef.current = setTimeout(() => {
           if (needsTabSwitch) {
             setActiveTab(category);
+            setUnreadTabs(prev => ({ ...prev, [category]: false }));
           }
           if (category === 'runtime' && projName) {
             setActiveRuntimeProject(projName);
@@ -175,40 +197,62 @@ export default function TerminalLogs() {
         style={{ backgroundColor: 'var(--surface)', borderBottomColor: 'var(--border)' }}
       >
         <div className="flex overflow-x-auto scrollbar-none">
-          {CATEGORIES.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2.5 text-[11px] font-bold border-b-2 transition duration-200 shrink-0 ${
-                activeTab === tab.id
-                  ? ''
-                  : 'hover:text-[var(--fg)]'
-              }`}
-              style={activeTab === tab.id
-                ? { borderBottomColor: 'var(--accent)', color: 'var(--accent)', backgroundColor: 'var(--card-hover)' }
-                : { borderBottomColor: 'transparent', color: 'var(--muted)' }
-              }
-            >
-              {t(tab.label)}
-            </button>
-          ))}
+          {CATEGORIES.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setUnreadTabs(prev => ({ ...prev, [tab.id]: false }));
+                }}
+                className={`log-tab-btn font-bold shrink-0 flex items-center gap-1.5 ${
+                  isActive ? 'active' : ''
+                }`}
+              >
+                <span>{t(tab.label)}</span>
+                {unreadTabs[tab.id] && !isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: 'var(--status-warn)' }} />
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="flex items-center gap-2 py-1.5 shrink-0">
+        <div className="flex items-center gap-1 py-1 shrink-0">
+          {/* 自動切換分頁開關 (幽靈按鈕風格) */}
+          <button
+            type="button"
+            onClick={() => {
+              const val = !autoSwitchTab;
+              setAutoSwitchTab(val);
+              localStorage.setItem('wincmp_auto_switch_tab', val ? 'true' : 'false');
+            }}
+            className={`log-action-btn cursor-pointer select-none transition ${
+              autoSwitchTab
+                ? 'text-[var(--accent)] bg-[var(--card-hover)]'
+                : 'text-[var(--muted)] hover:text-[var(--fg-2)] hover:bg-[var(--card-hover)]'
+            }`}
+            title={t("有新日誌時自動切換到該分頁")}
+          >
+            <Repeat size={12} className={autoSwitchTab ? 'text-[var(--accent)]' : 'text-[var(--muted)]'} />
+            <span>{t("自動切換")}</span>
+          </button>
+
           {/* Runtime 專案下拉選單 */}
           {activeTab === 'runtime' && (
-            <div className="flex items-center gap-1.5 mr-2">
-              <span
-                className="text-[10px] font-semibold uppercase tracking-wider"
-                style={{ color: 'var(--meta)' }}
-              >
-                {t("專案:")}
-              </span>
+            <div className="flex items-center">
               <select
                 value={activeRuntimeProject}
                 onChange={(e) => setActiveRuntimeProject(e.target.value)}
-                className="border rounded-lg px-2.5 py-1 text-[10px] focus:outline-none focus:border-[color:var(--accent)] font-bold cursor-pointer"
-                style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border)', color: 'var(--accent)' }}
+                className="log-action-btn font-medium cursor-pointer transition focus:outline-none"
+                style={{
+                  backgroundColor: 'var(--surface-warm)',
+                  color: 'var(--accent)',
+                  border: '1px solid transparent',
+                  paddingRight: '16px'
+                }}
+                title={t("選擇專案日誌")}
               >
                 {runtimeProjects.length > 0 ? (
                   runtimeProjects.map((proj) => (
@@ -217,7 +261,7 @@ export default function TerminalLogs() {
                     </option>
                   ))
                 ) : (
-                  <option value="" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg-2)' }}>{t("無運行中的專案")}</option>
+                  <option value="" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg-2)' }}>{t("暫無運行專案")}</option>
                 )}
               </select>
             </div>
@@ -229,19 +273,35 @@ export default function TerminalLogs() {
                 setAutoScroll(true);
                 logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="btn-autoscroll-hover px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold"
-              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--accent)' }}
+              className="log-action-btn font-medium text-[var(--accent)] hover:bg-[var(--card-hover)] transition"
+              title={t("滾動至最新日誌")}
             >
-              <ArrowDown size={11} /> {t("自動滾動")}
+              <ArrowDown size={12} />
+              <span>{t("置底")}</span>
             </button>
           )}
           <button
             onClick={handleClearLogs}
-            className="btn-danger-hover px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold"
-            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--status-error)' }}
+            className="log-action-btn font-medium text-[var(--muted)] hover:text-[var(--status-error)] hover:bg-[var(--card-hover)] transition"
+            title={t("清空當前日誌")}
           >
-            <Trash2 size={11} /> {t("清空日誌")}
+            <Trash2 size={12} />
+            <span>{t("清空")}</span>
           </button>
+
+          {/* 收起日誌按鈕 (單行整合) */}
+          {onCollapse && (
+            <>
+              <div className="h-3 w-[1px] mx-0.5" style={{ backgroundColor: 'var(--border)' }} />
+              <button
+                onClick={onCollapse}
+                className="log-action-btn text-[var(--muted)] hover:text-[var(--fg-2)] hover:bg-[var(--card-hover)] transition !px-1.5"
+                title={t("收起日誌")}
+              >
+                <ChevronDown size={14} />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
