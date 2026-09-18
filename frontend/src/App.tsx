@@ -722,35 +722,31 @@ export default function App() {
           {renderActiveComponent()}
         </div>
 
-        {/* Log Toggle Bar */}
-        {activeTab !== 'logs' && (
-          <div
-            className="h-9 border-t px-6 flex justify-between items-center select-none text-[11px] theme-transition"
-            style={{ borderColor: 'var(--border)', background: 'var(--bg-deep)' }}
-          >
-            <button
-              onClick={handleToggleLogs}
-              className="flex items-center gap-1.5 font-semibold transition"
-              style={{ color: 'var(--fg-2)' }}
-            >
-              <Terminal size={11} style={{ color: 'var(--status-info)' }} />
-              <span>{showLogs ? t('收起日誌') : t('展開日誌')}</span>
-            </button>
-            <button
-              onClick={handleToggleLogs}
-              className="p-1 rounded-md transition flex items-center justify-center"
-              style={{ color: 'var(--fg-2)' }}
-              title={showLogs ? t('收起日誌') : t('展開日誌')}
-            >
-              {showLogs ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-            </button>
+        {/* Inline Logs Panel (當展開時，由 TerminalLogs 自帶單行標題列整合控制) */}
+        {activeTab !== 'logs' && showLogs && (
+          <div className="h-[35%] min-h-[150px] border-t overflow-hidden theme-transition" style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}>
+            <TerminalLogs onCollapse={handleToggleLogs} />
           </div>
         )}
 
-        {/* Inline Logs Panel */}
-        {activeTab !== 'logs' && showLogs && (
-          <div className="h-[35%] min-h-[150px] border-t overflow-hidden theme-transition" style={{ borderColor: 'var(--border)', background: 'var(--bg)' }}>
-            <TerminalLogs />
+        {/* Compact Log Toggle Bar (僅在收起時顯示為底部極簡條) */}
+        {activeTab !== 'logs' && !showLogs && (
+          <div
+            onClick={handleToggleLogs}
+            className="h-7 border-t px-4 flex justify-between items-center select-none text-[11px] cursor-pointer hover:bg-[var(--card-hover)] transition group"
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-deep)' }}
+          >
+            <div className="flex items-center gap-1.5 font-medium text-[var(--muted)] group-hover:text-[var(--fg-2)] transition">
+              <Terminal size={11} style={{ color: 'var(--status-info)' }} />
+              <span>{t('展開日誌')}</span>
+            </div>
+            <button
+              type="button"
+              className="p-0.5 rounded text-[var(--muted)] group-hover:text-[var(--fg-2)] transition flex items-center justify-center"
+              title={t('展開日誌')}
+            >
+              <ChevronUp size={13} />
+            </button>
           </div>
         )}
       </main>

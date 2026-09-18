@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, ArrowDown } from 'lucide-react';
+import { Trash2, ArrowDown, ChevronDown, Repeat } from 'lucide-react';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { logStore, LogData, LogLine } from './logStore';
 import { t, useLanguage } from '../i18n';
@@ -14,7 +14,11 @@ const CATEGORIES = [
   { id: 'runtime', label: 'Node / Bun' }
 ];
 
-export default function TerminalLogs() {
+interface TerminalLogsProps {
+  onCollapse?: () => void;
+}
+
+export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
   useLanguage(); // 訂閱語系變更
   const [activeTab, setActiveTab] = useState('system');
   const [activeRuntimeProject, setActiveRuntimeProject] = useState('');
@@ -218,25 +222,25 @@ export default function TerminalLogs() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 py-1.5 shrink-0">
-          {/* 自動切換分頁開關 */}
-          <label
-            className="log-control-btn cursor-pointer select-none border transition hover:border-[color:var(--accent)]"
-            style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border)', color: autoSwitchTab ? 'var(--accent)' : 'var(--muted)' }}
+        <div className="flex items-center gap-1 py-1 shrink-0">
+          {/* 自動切換分頁開關 (幽靈按鈕風格) */}
+          <button
+            type="button"
+            onClick={() => {
+              const val = !autoSwitchTab;
+              setAutoSwitchTab(val);
+              localStorage.setItem('wincmp_auto_switch_tab', val ? 'true' : 'false');
+            }}
+            className={`log-action-btn cursor-pointer select-none transition ${
+              autoSwitchTab
+                ? 'text-[var(--accent)] bg-[var(--card-hover)]'
+                : 'text-[var(--muted)] hover:text-[var(--fg-2)] hover:bg-[var(--card-hover)]'
+            }`}
             title={t("有新日誌時自動切換到該分頁")}
           >
-            <input
-              type="checkbox"
-              checked={autoSwitchTab}
-              onChange={(e) => {
-                const val = e.target.checked;
-                setAutoSwitchTab(val);
-                localStorage.setItem('wincmp_auto_switch_tab', val ? 'true' : 'false');
-              }}
-              className="w-3.5 h-3.5 rounded cursor-pointer accent-blue-500"
-            />
+            <Repeat size={12} className={autoSwitchTab ? 'text-[var(--accent)]' : 'text-[var(--muted)]'} />
             <span>{t("自動切換")}</span>
-          </label>
+          </button>
 
           {/* Runtime 專案下拉選單 */}
           {activeTab === 'runtime' && (
@@ -244,8 +248,13 @@ export default function TerminalLogs() {
               <select
                 value={activeRuntimeProject}
                 onChange={(e) => setActiveRuntimeProject(e.target.value)}
-                className="log-control-select border font-medium focus:outline-none focus:border-[color:var(--accent)] cursor-pointer"
-                style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border)', color: 'var(--accent)' }}
+                className="log-action-btn font-medium cursor-pointer transition focus:outline-none"
+                style={{
+                  backgroundColor: 'var(--surface-warm)',
+                  color: 'var(--accent)',
+                  border: '1px solid transparent',
+                  paddingRight: '16px'
+                }}
                 title={t("選擇專案日誌")}
               >
                 {runtimeProjects.length > 0 ? (
@@ -267,8 +276,7 @@ export default function TerminalLogs() {
                 setAutoScroll(true);
                 logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="log-control-btn btn-custom-hover border font-bold"
-              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--accent)' }}
+              className="log-action-btn font-medium text-[var(--accent)] hover:bg-[var(--card-hover)] transition"
               title={t("滾動至最新日誌")}
             >
               <ArrowDown size={12} />
@@ -277,13 +285,26 @@ export default function TerminalLogs() {
           )}
           <button
             onClick={handleClearLogs}
-            className="log-control-btn btn-danger-hover border font-bold"
-            style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--status-error)' }}
+            className="log-action-btn font-medium text-[var(--muted)] hover:text-[var(--status-error)] hover:bg-[var(--card-hover)] transition"
             title={t("清空當前日誌")}
           >
             <Trash2 size={12} />
             <span>{t("清空")}</span>
           </button>
+
+          {/* 收起日誌按鈕 (單行整合) */}
+          {onCollapse && (
+            <>
+              <div className="h-3 w-[1px] mx-0.5" style={{ backgroundColor: 'var(--border)' }} />
+              <button
+                onClick={onCollapse}
+                className="log-action-btn text-[var(--muted)] hover:text-[var(--fg-2)] hover:bg-[var(--card-hover)] transition !px-1.5"
+                title={t("收起日誌")}
+              >
+                <ChevronDown size={14} />
+              </button>
+            </>
+          )}
         </div>
       </div>
 

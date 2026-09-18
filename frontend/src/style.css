@@ -94,8 +94,27 @@ button {
   line-height: 1 !important;
 }
 
-button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-btn):not(.log-control-btn):not(.log-tab-btn) {
+button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-btn):not(.log-control-btn):not(.log-tab-btn):not(.log-action-btn) {
   padding: 10px 16px !important;
+}
+
+/* 日誌控制台 VSCode 風格幽靈動作按鈕 */
+.log-action-btn {
+  height: 26px !important;
+  padding: 0 8px !important;
+  font-size: 0.6875rem !important; /* 11px 相對大小 */
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  border-radius: var(--radius-sm, 6px) !important;
+  border: none !important;
+  background: transparent;
+}
+
+.log-action-btn:active {
+  transform: scale(0.96);
 }
 
 /* 日誌控制台按鈕與控制項高度與字體統一規範 */
