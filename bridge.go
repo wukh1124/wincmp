@@ -27,6 +27,7 @@ import (
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
 	"wincmp/internal/singleinstance"
+	"wincmp/internal/terminal"
 	"wincmp/internal/updater"
 )
 
@@ -1249,16 +1250,23 @@ func (a *App) StartTerminalSession(projName string, cols int, rows int) (string,
 		}
 	}
 
-	var cwd string
+	var preferredCwd string
 	if proj != nil {
-		cwd = a.appCfg.GetProjectPhysicalRoot(*proj, a.baseDir)
+		preferredCwd = a.appCfg.GetProjectPhysicalRoot(*proj, a.baseDir)
 	} else {
-		cwd = filepath.Join(a.baseDir, "www")
+		preferredCwd = filepath.Join(a.baseDir, "www")
 	}
 
-	shellPath := a.appCfg.Global.TerminalShell
-	if shellPath == "" {
-		shellPath = "powershell.exe"
+	// 專案 root_path 可能指向不存在的目錄（例如自訂路徑被移動/刪除），
+	// ConPTY 會因無效工作目錄啟動失敗，這裡先解析並回退到可用路徑。
+	cwd, err := terminal.ResolveWorkDir(preferredCwd, a.baseDir)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", i18n.T("找不到可用的終端工作目錄"), err)
+	}
+
+	shellPath, err := terminal.ResolveShell(a.appCfg.Global.TerminalShell)
+	if err != nil {
+		return "", err
 	}
 
 	var sessionID string

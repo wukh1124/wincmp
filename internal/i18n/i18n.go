@@ -548,6 +548,7 @@ var enTranslations = map[string]string{
 	"路徑無效或不存在: %w":       "Path is invalid or does not exist: %w",
 	"選擇的路徑不是一個有效的資料夾":    "The selected path is not a valid folder",
 	"終端管理器未初始化":          "Terminal manager is not initialized",
+	"找不到可用的終端工作目錄":       "No valid terminal working directory found",
 	"無法取得執行檔路徑: %w":      "Failed to get executable path: %w",
 	"自動重啟失敗: %w":         "Failed to auto restart: %w",
 
