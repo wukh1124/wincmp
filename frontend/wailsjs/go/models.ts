@@ -361,6 +361,7 @@ export namespace scanner {
 	    MajorMin: string;
 	    PortBase: number;
 	    PortCount: number;
+	    Extensions: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new PHPVersionInfo(source);
@@ -373,6 +374,7 @@ export namespace scanner {
 	        this.MajorMin = source["MajorMin"];
 	        this.PortBase = source["PortBase"];
 	        this.PortCount = source["PortCount"];
+	        this.Extensions = source["Extensions"];
 	    }
 	}
 	export class ServiceInfo {

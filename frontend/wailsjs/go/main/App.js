@@ -201,3 +201,7 @@ export function StopRedis() {
 export function StopTerminalSession(arg1) {
   return window['go']['main']['App']['StopTerminalSession'](arg1);
 }
+
+export function UninstallDependency(arg1) {
+  return window['go']['main']['App']['UninstallDependency'](arg1);
+}

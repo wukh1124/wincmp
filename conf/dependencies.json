@@ -54,24 +54,20 @@
     "url": "https://downloads.php.net/~windows/releases/archives/php-8.4.21-nts-Win32-vs17-x64.zip",
     "sha256": "2cb57d0d3a17b1248c6a53b600719d4b051e1c374373404d5031409c0725031d"
   },
-  "redis": {
-    "version": "5.0.14.1",
-    "url": "https://github.com/tporadowski/redis/releases/download/v5.0.14.1/Redis-x64-5.0.14.1.zip",
-    "sha256": ""
-  },
   "php_redis_82": {
     "version": "6.0.2",
-    "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.0.2/php_redis-6.0.2-8.2-nts-vs16-x64.zip",
-    "sha256": ""
+    "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.0.2/php_redis-6.0.2-8.2-nts-vs16-x64.zip"
   },
   "php_redis_83": {
     "version": "6.0.2",
-    "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.0.2/php_redis-6.0.2-8.3-nts-vs16-x64.zip",
-    "sha256": ""
+    "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.0.2/php_redis-6.0.2-8.3-nts-vs16-x64.zip"
   },
   "php_redis_84": {
     "version": "6.1.0",
-    "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.1.0/php_redis-6.1.0-8.4-nts-vs17-x64.zip",
-    "sha256": ""
+    "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.1.0/php_redis-6.1.0-8.4-nts-vs17-x64.zip"
+  },
+  "redis": {
+    "version": "5.0.14.1",
+    "url": "https://github.com/tporadowski/redis/releases/download/v5.0.14.1/Redis-x64-5.0.14.1.zip"
   }
 }

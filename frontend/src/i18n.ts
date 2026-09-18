@@ -302,6 +302,7 @@ export const enTranslations: Record<string, string> = {
   "核心執行環境": "Core Runtimes",
   "PHP FastCGI 環境": "PHP Runtimes",
   "PHP 擴充套件": "PHP Extensions",
+  "(安裝 PHP 時會自動同步配置)": "(Auto-configured when installing PHP)",
   "需先安裝 PHP %s": "Requires PHP %s first",
   "未安裝 PHP": "PHP Not Installed",
   "Redis 擴充 (PHP %s)": "Redis Extension (PHP %s)",
@@ -324,6 +325,17 @@ export const enTranslations: Record<string, string> = {
   "安裝成功": "Installed successfully",
   "安裝失敗": "Installation failed",
   "重試安裝": "Retry Installation",
+  "重裝 PHP (含 Redis)": "Reinstall PHP (with Redis)",
+  "單獨安裝 Redis 擴充": "Install Redis Extension",
+  "單獨重裝 Redis 擴充": "Reinstall Redis Extension",
+  "移除此版本": "Remove this version",
+  "移除依賴": "Remove Dependency",
+  "確定要移除 %s 嗎？移除後將刪除其二進位檔案。": "Are you sure you want to remove %s? This will delete its binary files.",
+  "移除中...": "Removing...",
+  "移除成功": "Removed successfully",
+  "移除失敗": "Removal failed",
+  "Redis 擴充: 已就緒 (v%s)": "Redis Extension: Ready (v%s)",
+  "Redis 擴充: 未配置": "Redis Extension: Not configured",
 
   // ProjectTerminal.tsx
   "專案終端控制台": "Project Terminal Console",
@@ -520,6 +532,12 @@ export const enTranslations: Record<string, string> = {
   "common.caddy": "common.caddy",
   "系統運作與自動化行為": "System & Automation Behaviors",
   "啟動 Redis 失敗: %w": "Failed to start Redis: %w",
+
+  // Dependency Manager Menu & Buttons
+  "服務維護與配置": "Maintenance & Configuration",
+  "重裝此依賴": "Reinstall Dependency",
+  "立即更新至最新版": "Update to Latest Version",
+  "更多操作": "More Actions",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

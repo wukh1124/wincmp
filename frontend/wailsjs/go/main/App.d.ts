@@ -106,3 +106,5 @@ export function StopProjectRuntime(arg1:string):Promise<void>;
 export function StopRedis():Promise<void>;
 
 export function StopTerminalSession(arg1:string):Promise<void>;
+
+export function UninstallDependency(arg1:string):Promise<void>;

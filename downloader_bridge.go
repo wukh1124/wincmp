@@ -296,6 +296,19 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 				a.handleErrorLog("system", i18n.Tfmt("解壓縮目錄未找到 php_redis.dll: %s", destDir), nil)
 			}
 		}
+
+		// 處理 PHP 核心安裝/更新時，自動安裝對應的 php_redis 擴充套件
+		if strings.HasPrefix(key, "php") && !strings.HasPrefix(key, "php_redis") {
+			verSuffix := strings.TrimPrefix(key, "php")
+			verSuffix = strings.TrimPrefix(verSuffix, "_")
+			redisKey := "php_redis_" + verSuffix
+			if depConfig, loadErr := a.loadDepConfig(); loadErr == nil {
+				if redisItem, ok := depConfig[redisKey]; ok {
+					a.handleLog("system", i18n.Tfmt("正在為 %s 自動配置 Redis 擴充套件 (%s)...", name, redisKey))
+					a.installPHPRedisExtension(redisKey, redisItem, destDir)
+				}
+			}
+		}
 	} else {
 		// 非 zip 檔案處理 (例如 Composer.phar 獨立檔)
 		if key == "composer" {
@@ -357,3 +370,154 @@ func copyFile(src, dst string) error {
 	_, err = io.Copy(out, in)
 	return err
 }
+
+// installPHPRedisExtension 下載並安裝指定版本的 php_redis 擴充套件到指定的 PHP 目錄
+func (a *App) installPHPRedisExtension(key string, item config.DependencyItem, phpInstallDir string) {
+	binDir := filepath.Join(a.baseDir, "bin")
+	tempZip := filepath.Join(binDir, "temp_"+key+".zip")
+	tempExtractDir := filepath.Join(binDir, "temp_"+key)
+	defer func() {
+		_ = os.Remove(tempZip)
+		_ = os.RemoveAll(tempExtractDir)
+	}()
+
+	// 1. 下載 redis 擴充 zip
+	err := downloader.DownloadFile(item.URL, tempZip, nil)
+	if err != nil {
+		a.handleErrorLog("system", i18n.Tfmt("自動下載 Redis 擴充失敗: %s", key), err)
+		return
+	}
+
+	// 2. 解壓縮
+	err = downloader.Unzip(tempZip, tempExtractDir)
+	if err != nil {
+		a.handleErrorLog("system", i18n.Tfmt("自動解壓 Redis 擴充失敗: %s", key), err)
+		return
+	}
+
+	// 3. 複製 php_redis.dll 到 phpInstallDir/ext/
+	dllSource := filepath.Join(tempExtractDir, "php_redis.dll")
+	if _, err := os.Stat(dllSource); err != nil {
+		a.handleErrorLog("system", i18n.Tfmt("解壓縮目錄未找到 php_redis.dll: %s", tempExtractDir), err)
+		return
+	}
+
+	extDir := filepath.Join(phpInstallDir, "ext")
+	_ = os.MkdirAll(extDir, 0755)
+	targetDll := filepath.Join(extDir, "php_redis.dll")
+	if copyErr := copyFile(dllSource, targetDll); copyErr != nil {
+		a.handleErrorLog("system", i18n.Tfmt("複製 php_redis.dll 至 %s 失敗", targetDll), copyErr)
+		return
+	}
+
+	a.handleLog("system", i18n.Tfmt("已成功自動配置 php_redis.dll 至: %s", targetDll))
+}
+
+// UninstallDependency 移除指定本機已安裝的依賴
+func (a *App) UninstallDependency(key string) error {
+	binDir := filepath.Join(a.baseDir, "bin")
+
+	if strings.HasPrefix(key, "php_redis_") {
+		verSuffix := strings.TrimPrefix(key, "php_redis_")
+		targetMajorMin := verSuffix
+		if len(verSuffix) == 2 {
+			targetMajorMin = string(verSuffix[0]) + "." + string(verSuffix[1])
+		}
+		phpBaseDir := filepath.Join(binDir, "php")
+		removed := false
+		if entries, err := os.ReadDir(phpBaseDir); err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() && strings.HasPrefix(entry.Name(), "php-"+targetMajorMin) {
+					targetDll := filepath.Join(phpBaseDir, entry.Name(), "ext", "php_redis.dll")
+					if _, statErr := os.Stat(targetDll); statErr == nil {
+						_ = os.Remove(targetDll)
+						removed = true
+					}
+				}
+			}
+		}
+		if !removed {
+			return fmt.Errorf("未找到可移除的 Redis 擴充檔案")
+		}
+		a.handleLog("system", i18n.Tfmt("已成功移除 %s 擴充套件", key))
+	} else if strings.HasPrefix(key, "php") {
+		verSuffix := strings.TrimPrefix(key, "php")
+		verSuffix = strings.TrimPrefix(verSuffix, "_")
+		targetMajorMin := verSuffix
+		if len(verSuffix) == 2 {
+			targetMajorMin = string(verSuffix[0]) + "." + string(verSuffix[1])
+		}
+
+		if a.procMgr != nil {
+			_ = a.procMgr.StopPHPCGI(targetMajorMin)
+		}
+
+		phpBaseDir := filepath.Join(binDir, "php")
+		removed := false
+		if entries, err := os.ReadDir(phpBaseDir); err == nil {
+			for _, entry := range entries {
+				if entry.IsDir() && strings.HasPrefix(entry.Name(), "php-"+targetMajorMin) {
+					targetPath := filepath.Join(phpBaseDir, entry.Name())
+					if err := os.RemoveAll(targetPath); err != nil {
+						return fmt.Errorf("移除 PHP %s 目錄失敗: %w", entry.Name(), err)
+					}
+					removed = true
+				}
+			}
+		}
+		if !removed {
+			return fmt.Errorf("未找到可移除的 PHP %s 目錄", targetMajorMin)
+		}
+		a.handleLog("system", i18n.Tfmt("已成功移除 PHP %s 執行環境", targetMajorMin))
+	} else if key == "redis" {
+		if a.procMgr != nil {
+			_ = a.procMgr.StopRedis()
+		}
+		redisDir := filepath.Join(binDir, "redis")
+		if err := os.RemoveAll(redisDir); err != nil {
+			return fmt.Errorf("移除 Redis 目錄失敗: %w", err)
+		}
+		a.handleLog("system", i18n.T("已成功移除 Redis 快取服務"))
+	} else if key == "mailpit" {
+		if a.procMgr != nil {
+			_ = a.procMgr.StopMailpit()
+		}
+		mailpitDir := filepath.Join(binDir, "mailpit")
+		if err := os.RemoveAll(mailpitDir); err != nil {
+			return fmt.Errorf("移除 Mailpit 目錄失敗: %w", err)
+		}
+		a.handleLog("system", i18n.T("已成功移除 Mailpit 服務"))
+	} else if key == "node" {
+		nodeDir := filepath.Join(binDir, "node")
+		if err := os.RemoveAll(nodeDir); err != nil {
+			return fmt.Errorf("移除 Node.js 目錄失敗: %w", err)
+		}
+		a.handleLog("system", i18n.T("已成功移除 Node.js 環境"))
+	} else if key == "composer" {
+		composerDir := filepath.Join(binDir, "composer")
+		if err := os.RemoveAll(composerDir); err != nil {
+			return fmt.Errorf("移除 Composer 目錄失敗: %w", err)
+		}
+		a.handleLog("system", i18n.T("已成功移除 Composer 套件"))
+	} else if key == "heidisql" {
+		heidisqlDir := filepath.Join(binDir, "heidisql")
+		if err := os.RemoveAll(heidisqlDir); err != nil {
+			return fmt.Errorf("移除 HeidiSQL 目錄失敗: %w", err)
+		}
+		a.handleLog("system", i18n.T("已成功移除 HeidiSQL 工具"))
+	} else {
+		targetDir := filepath.Join(binDir, key)
+		if err := os.RemoveAll(targetDir); err != nil {
+			return fmt.Errorf("移除 %s 目錄失敗: %w", key, err)
+		}
+		a.handleLog("system", i18n.Tfmt("已成功移除 %s", key))
+	}
+
+	// 重新掃描二進位服務目錄
+	if scanRes, scanErr := scanner.ScanBinDir(a.baseDir); scanErr == nil {
+		a.scanRes = scanRes
+	}
+	return nil
+}
+
+
