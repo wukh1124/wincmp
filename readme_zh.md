@@ -1,173 +1,132 @@
-# WinCMP 🚀
+# WinCMP
 
 ![Go Version](https://img.shields.io/badge/Go-1.26.2+-00ADD8?style=for-the-badge&logo=go)
 ![Wails Version](https://img.shields.io/badge/Wails-v2.12.0-red?style=for-the-badge&logo=wails)
 ![React Version](https://img.shields.io/badge/React-v18-blue?style=for-the-badge&logo=react)
-![Platform](https://img.shields.io/badge/Platform-Windows_11-0078D6?style=for-the-badge&logo=windows)
+![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?style=for-the-badge&logo=windows)
 ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
 
-**WinCMP** 是一個專為 Windows 設計的現代化、可攜式本機開發環境控制面板。
-名稱取自 **Win**dows + **C**addy + **M**ariaDB + **P**HP。
+**WinCMP** 是專為 Windows 設計的可攜式本地開發控制面板。
+名稱來自 **Win**dows + **C**addy + **M**ariaDB + **P**HP。
 
-受到 XAMPP 和 Laragon 的啟發，WinCMP 旨在提供一個更輕量、**免安裝 (Portable)**，且**基本不需要管理員權限**（僅在寫入 Hosts 檔案時需要提權）的開發解決方案。透過 Go 語言核心與 Wails v2 框架打造，前端使用 React 18 技術棧，具備極佳的視覺美感、極低的資源佔用與極快的啟動速度。
+受 XAMPP、Laragon 啟發，但更輕：免安裝、不污染系統 PATH，核心服務可在一般用戶權限下執行（Hosts 同步為選用，需 UAC）。以 Go + Wails v2 與 React 18 打造。
 
----
-
-## ✨ 核心特色
-
-- 🪶 **輕量與單檔運作**：採用 Go + Wails 靜態編譯，只需單個 `wincmp.exe` 即可獨立運作，啟動時會自動在同級目錄下生成相關的設定檔。
-- 📦 **綠色便攜與自由遷移**：在手動遷移時，只需把核心的 `conf/wincmp.json` 設定檔和整個 `/bin` 二進位資料夾帶走，即可在其他 Windows 電腦上完全一致地運作，實現開箱即用。
-- 🛡️ **核心服務免管理員權限**：完全支援在受限環境下運作，不修改系統環境變數，不寫入登錄檔。*（註：自動修改 Windows `hosts` 檔以設定自訂本地網域為選用功能，啟用時需要 UAC 管理員提權）*。
-- 🎨 **現代化 UI/UX**：全新設計的 Dark Professional (深色專業級) 介面，支援流暢的側邊導覽、即時狀態監控與微互動。
-- 🔄 **PHP 多進程負載均衡**：利用 Caddy 的 Upstream 機制，每個 PHP 版本啟動多個 FastCGI 進程進行分流。
-- 📂 **自動化專案管理**：可視化管理 Laravel、Next.js、Nuxt、Astro、Vite、Python、Go 等專案，自動偵測框架並生成配置。
-- 🚀 **Runtime 多環境運行**：支援 Node.js、Bun、Python、Go (Air/Run)、Custom 等多種開發環境，可選 Background 或 Terminal 模式啟動。
-- 💻 **內建專案互動終端**：結合 Windows ConPTY 與 `xterm.js` 實作 Drawer 側邊抽屜終端，預設路徑為專案根目錄，支援 PowerShell、CMD、Git Bash、WSL 切換與互動指令。
-- 📜 **隔離環境 (Isolation)**：啟動子進程時動態注入 `PATH`，確保 PHP 及其擴展運行在正確的 binaries 環境中。
+**下載：** [GitHub Releases](https://github.com/wukh1124/wincmp/releases/latest)
 
 ---
 
-## 📁 項目架構與目錄規限
+## 預覽
 
-為了達成「隨插即用」的特性，WinCMP 嚴格遵守以下目錄結構：
+![WinCMP Dashboard](screenshot/sketch/dashboard.png)
+
+---
+
+## 特色
+
+- **輕量單檔** — Go + Wails，使用系統 WebView2（非 Electron）。面板閒置記憶體約 150–250MB。
+- **綠色可攜** — 遷移只需 `conf/wincmp.json` + `/bin`。
+- **核心服務免 Admin** — Caddy、PHP-CGI、MariaDB、Mailpit、Redis 在用戶空間執行。*（Hosts 同步與部分依賴下載可能需 UAC。）*
+- **現代化 UI** — 深色／淺色主題、即時服務狀態、專案互動終端。
+- **PHP 多進程** — Caddy upstream 負載均衡；每版預設 3 個 FastCGI 進程（Dashboard 可調）。Port 規則 `3<主><次><序號>`。
+- **框架 Preset** — 自動偵測 Laravel、Next.js、Nuxt、Astro、Vite、Django/FastAPI/Flask、PocketBase、Go API 等。
+- **多 Runtime** — Node.js、Bun、Python、Go、Custom；Background / Terminal 雙模式。
+- **內建終端** — ConPTY + xterm.js Drawer（PowerShell / CMD / Git Bash / WSL），支援 TAB 補齊。
+- **依賴下載器** — 可下載 Caddy、PHP、MariaDB、Mailpit、Redis、Node.js、Bun、Composer、HeidiSQL 至 `/bin`。
+- **資料庫工具** — 內建 DB Explorer，可一鍵以 HeidiSQL 開啟。
+- **環境隔離** — 只對子進程注入 `PATH`，不改系統全域設定。
+- **熱重載** — 專案設定寫入 `conf/sites/` 後 reload Caddy，面板本身不必重啟。
+
+---
+
+## 目錄結構
 
 ```text
 wincmp/
-├── main.go                  # 應用程式進入點：初始化與啟動 Wails
-├── app.go                   # Wails 生命週期管理器 (startup, shutdown) 及核心日誌/監控推送
-├── bridge.go                # Wails 與 Go 端的主 Binding API (前後端 RPC 接口)
-├── downloader_bridge.go     # Wails 下載管理器 Binding 接口
-├── wincmp.json              # 專案與全域設定檔
-├── conf/                    # 配置文件中心
-│   ├── ssl/                 # SSL 憑證 (crt/key)
-│   ├── snippets/            # Caddy 共用配置片段
-│   ├── sites/               # 動態生成的專案 Caddyfile
-│   ├── Caddyfile            # Caddy 進入點 (Import snippets & sites)
-│   └── my.ini               # MariaDB 啟動設定
-├── bin/                     # 二進制執行檔目錄 (自備或自動下載)
-│   ├── caddy/               # caddy-x.xx.x/caddy.exe
-│   ├── mariadb/             # mariadb-x.x.x/bin/mariadbd.exe
-│   ├── php/                 # php-x.x.x/php-cgi.exe
-│   ├── node/                # node-x.x.x/npm.cmd
-│   ├── bun/                 # bun-x.x.x/bun.exe
-│   ├── composer/            # composer-x.x.x/composer.bat
-│   ├── heidisql/            # heidisql-x.xx/heidisql.exe
-│   └── mailpit/             # mailpit-x.xx.x/mailpit.exe
-├── data/                    # 資料存儲區
-│   └── mariadb/             # MariaDB 預設 Data 目錄
-├── logs/                    # 服務執行日誌 (依日期分類)
-├── www/                     # 預設網頁專案根目錄
-├── internal/                # 核心代碼邏輯 (不包含 GUI 邏輯)
-│   ├── config/              # JSON 設定讀寫
-│   ├── scanner/             # Bin 目錄動態版本掃描
-│   ├── process/             # 子進程生命週期管理 (Manager)
-│   ├── detect/              # Laravel 專案偵測 (信心分數制)
-│   ├── preset/              # 專案類型 Preset 系統 (框架偵測/指令模板)
-│   ├── hosts/               # Windows Hosts 檔管理
-│   ├── port/                # Port 佔用檢測
-│   ├── resource/            # 資源監控 (CPU/RAM/Stack)
-│   ├── crypto/              # MariaDB 密碼加密
-│   └── singleinstance/      # 單實例鎖 + 視窗帶到前景
-└── frontend/                # 前端 React + TSX 專案
-    ├── src/                 # 前端源碼 (Dashboard, Projects, DBExplorer 等)
-    └── tailwind.config.js   # Tailwind 樣式變數設定
+├── main.go / app.go / bridge.go
+├── downloader_bridge.go
+├── conf/
+│   ├── wincmp.json          # 主設定（專案 + 全域）
+│   ├── Caddyfile
+│   ├── my.ini
+│   ├── dependencies.json    # 下載器版本目錄
+│   ├── snippets/  sites/  ssl/
+├── bin/                     # 服務執行檔（自備或下載）
+│   ├── caddy/  mariadb/  php/
+│   ├── mailpit/  redis/
+│   ├── node/  bun/  composer/  heidisql/
+├── data/mariadb/
+├── logs/
+├── www/
+├── internal/                # config、scanner、process、detect、preset、hosts …
+└── frontend/                # React + TypeScript
 ```
 
----
-
-## 🛠️ 技術深度與運作邏輯
-
-### 1. PHP 進程管理與 Port 映射
-WinCMP 採用 **3-版本-序號** 的規則來分配服務端口，確保不同版本的 PHP 可以同時並行且互不干擾：
-- **命名規則**：`3<主版本><次版本><序號00-99>`
-  - PHP 7.3 → `37300`, `37301`, `37302`
-  - PHP 8.2 → `38200`, `38201`, `38202`
-- **負載均衡**：每開啟一個版本，預設啟動 3 個 `php-cgi` 進程，並在 Caddyfile 中定義 `php_fastcgi 127.0.0.1:38200 127.0.0.1:38201 ...` 實現自動分流。
-
-### 2. Caddy 動態配置生成
-當用戶在 UI 調整專案設定時：
-1. 更新 `conf/wincmp.json`。
-2. Go 程式重寫 `conf/sites/{project}.caddy`。
-3. 執行 `caddy reload` 實現零停機更新。
-
-### 3. 環境變數動態注入
-為避免修改系統全域 PATH，WinCMP 在透過 `os/exec` 啟動子程序（如 PHP）時，會將對應的二進制目錄動態加入 `cmd.Env`，確保子程序能找到正確的 DLL 或相依組件。
+應用實際讀寫的設定路徑：**`conf/wincmp.json`**。
 
 ---
 
-## 🚀 開發與編譯環境
+## 架構重點
 
-### 1. 前置需求
-- [Go 1.26.2+](https://go.dev/dl/)
-- [Wails CLI](https://wails.io/zh-Hans/docs/gettingstarted/installation/)：請確認系統已安裝 Wails v2。若未安裝，可使用 `go install github.com/wailsapp/wails/v2/cmd/wails@latest` 安裝。
-- C 編譯器：MinGW-w64 (WinLibs) ── 用於 Wails 內部/底層對 Windows API 依賴的編譯，請確保 `gcc -v` 可正常執行。
-- [Node.js](https://nodejs.org/)：Node.js 18+ (用於前端開發與打包)。
+**PHP Port** — `3<主版本><次版本><序號>`：
+PHP 7.3 → `37300+`；PHP 8.2 → `38200+`。每版預設 3 個進程，可調整。
 
-### 2. 開發熱重載指令 (Hot Reload)
+**設定生效** — UI 更新 `conf/wincmp.json` → 重寫 `conf/sites/{project}.caddy` → `caddy reload`。
+
+**PATH 隔離** — 僅在子進程環境前置二進位目錄，不改寫系統 PATH。
+
+---
+
+## 開發
+
+### 環境需求
+
+- Go 1.26.2+
+- [Wails v2](https://wails.io/docs/gettingstarted/installation/)
+- MinGW-w64（WinLibs），可執行 `gcc -v`
+- Node.js 18+
+
+### 指令
+
 ```cmd
-# 啟動 Wails 開發模式 (Go 後端與 React 前端同步熱重載)
 wails dev
-```
 
-### 3. 建置編譯指令
-```cmd
-# 後端/前端依賴整理
 go mod tidy
 cd frontend && npm install && cd ..
-
-# 開發/偵錯建置 (含除錯控制台與調試工具)
-wails build -debug
-
-# 正式發布編譯 (無視窗主控台，編譯後產出 wincmp.exe)
 wails build -clean
-
-# 壓縮並移除 symbols 的正式發布 (適用於體積優化)
 wails build -clean -ldflags "-s -w"
+wails build -ldflags "-X main.AppVersion=v2.1.0"
 
-# 自動化打包建置：透過 Go 的 -ldflags 動態注入版本號 (例如 v2.0.0)
-wails build -ldflags "-X main.AppVersion=v2.0.0"
-
-# 發布新版本資訊 (手動測試)
 node scripts/generate-release-json.js
 ```
 
+終端用戶安裝說明見 [`packaging/wincmp/readme_zh.md`](packaging/wincmp/readme_zh.md)。
+
 ---
 
-## 🗺️ 開發路線圖 (Roadmap)
+## Roadmap
 
-### ✅ 已完成 (Completed)
-- [x] **現代化 UI 原型** 與專案管理界面 (重構為 Wails + React 18)。
-- [x] **多分頁系統日誌** 與旋轉日誌機制 (lumberjack)。
-- [x] **MariaDB 掃描** 與資料庫檢視器 (簡單預覽 + 一鍵下載 HeidiSQL)。
-- [x] **Caddy 多進程 PHP** 負載均衡邏輯 (在不同端口同時執行多個 PHP 實例，由 Caddy 負責分發)。
-- [x] **Windows 系統匣 (System Tray)** 最小化支援。
-- [x] **自動啟動上次關閉時的服務** (狀態記錄於 `wincmp.json`)。
-- [x] **Laravel 專案自動偵測** (信心分數制，自動導向 `public/`)。
-- [x] **Port 佔用檢查** (啟動前自動檢測，減少競爭狀態)。
-- [x] **Hosts 本地網域自動管理** (UAC 權限提升後自動同步)。
-- [x] **深色/淺色模式切換** (結合 Tailwind CSS)。
-- [x] **Runtime 多環境運行** (Node.js, Bun, Python, Go Air/Run, Custom)。
-- [x] **Preset 自動偵測** (Next.js, Nuxt, Astro, Vite, Django, FastAPI, Flask, PocketBase, Go API)。
-- [x] **Runtime 雙模式啟動** (Background / Terminal)。
-- [x] **Mailpit 郵件測試服務整合** (Dashboard 啟停管理與設定對話框)。
-- [x] **專案內建互動式終端** (結合 Windows ConPTY 與 `xterm.js`，實作點擊滑出 Drawer 互動終端，支援多種 Shell 設定)。
-- [x] **版本自動下載器**：服務執行檔 (Caddy/PHP/MariaDB等) 多版本自動下載器。
+### 已完成
 
-### ⏳ 計畫中 (Planned)
-- **開發工具鏈**：內建 Composer 支援 (免安裝 `composer.phar`)、PHP 進程 Watchdog 自動重啟。
+- Wails + React UI、多分頁日誌、系統匣、還原上次服務
+- MariaDB 掃描、DB Explorer + HeidiSQL、Hosts 同步與備份
+- PHP 多進程、Runtime 多環境、框架 Preset
+- 專案終端（ConPTY + xterm.js）、Mailpit、Redis + PHP Redis 擴充
+- 依賴下載器（Caddy/PHP/MariaDB/Node/Bun/Composer/HeidiSQL/Mailpit/Redis）
+- PHP OPcache 自動優化、專案拖曳排序
 
-## 🤝 致謝與引用 (Credits)
+### 計畫中
 
-WinCMP 的誕生離不開以下優秀開源技術與設計的啟發和支持，特此致敬：
-- **核心技術**：
-  - [Go 1.26+](https://go.dev/) — 強大高效的後端核心
-  - [Wails v2](https://wails.io/) — 輕量級的桌面應用程式開發框架
-  - [React 18](https://react.dev/) — 靈活流暢的前端渲染核心
-  - [Windows ConPTY](https://learn.microsoft.com/windows/console/creating-a-pseudoconsole-session) & [xterm.js](https://xtermjs.org/) — 完美的內建互動式終端體驗
-- **設計與主題**：
-  - 特別感謝並致敬優秀的 [Open Design](https://github.com/nexu-io/open-design) 社群設計，為 WinCMP 的主題風格 (Theme) 提供靈感與美學指引。
+- PHP 進程 Watchdog／自動恢復
 
-## 📄 授權條款
+---
 
-本項目基於 [MIT License](https://opensource.org/license/mit/) 授權。
-歡迎提交 PR 或 Issue 與我交流！
+## Credits
+
+- [Go](https://go.dev/)、[Wails v2](https://wails.io/)、[React 18](https://react.dev/)
+- [Windows ConPTY](https://learn.microsoft.com/windows/console/pseudoconsole)、[xterm.js](https://xtermjs.org/)
+- 管理的服務：Caddy、MariaDB、PHP、Mailpit、Redis
+- 主題靈感：[Open Design](https://github.com/nexu-io/open-design)
+
+## 授權
+
+[MIT](LICENSE)

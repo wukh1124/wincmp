@@ -57,14 +57,31 @@ func (m *Manager) StartTerminal(
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// 專案路徑不存在時 CreateProcess 會回 "The directory name is invalid"，
+	// 啟動前先解析出真實存在的 cwd 與 shell 絕對路徑。
+	resolvedCwd, err := ResolveWorkDir(cwd, "")
+	if err != nil {
+		return "", err
+	}
+	resolvedShell, err := ResolveShell(shellPath)
+	if err != nil {
+		return "", err
+	}
+	if cols <= 0 {
+		cols = 80
+	}
+	if rows <= 0 {
+		rows = 24
+	}
+
 	// 1. 建立 ConPTY 實例
 	cpty, err := conpty.Start(
-		shellPath,
+		resolvedShell,
 		conpty.ConPtyDimensions(cols, rows),
-		conpty.ConPtyWorkDir(cwd),
+		conpty.ConPtyWorkDir(resolvedCwd),
 	)
 	if err != nil {
-		return "", fmt.Errorf("啟動 Pseudo Console 失敗: %w", err)
+		return "", fmt.Errorf("啟動 Pseudo Console 失敗: %w (cwd=%s, shell=%s)", err, resolvedCwd, resolvedShell)
 	}
 
 	sessionID := generateSessionID()
@@ -72,7 +89,7 @@ func (m *Manager) StartTerminal(
 		ID:       sessionID,
 		Cpty:     cpty,
 		ProjName: projName,
-		Cwd:      cwd,
+		Cwd:      resolvedCwd,
 		Active:   true,
 	}
 

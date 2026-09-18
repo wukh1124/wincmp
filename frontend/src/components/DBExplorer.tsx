@@ -109,14 +109,10 @@ export default function DBExplorer() {
                   key={db}
                   onClick={() => handleSelectSchema(db)}
                   className={`w-full text-left px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2.5 transition duration-150 db-list-item-btn ${selectedSchema === db
-                    ? 'border'
+                    ? 'db-list-item-btn--active'
                     : ''
                     }`}
-                  style={
-                    selectedSchema === db
-                      ? { backgroundColor: 'var(--accent-muted)', color: 'var(--accent)', borderColor: 'var(--border-soft)' }
-                      : { color: 'var(--muted)' }
-                  }
+                  style={{ color: selectedSchema === db ? undefined : 'var(--muted)' }}
                 >
                   <Database size={13} style={{ color: selectedSchema === db ? 'var(--accent)' : 'var(--meta)' }} />
                   <span className="truncate">{db}</span>

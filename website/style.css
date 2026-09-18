@@ -150,6 +150,11 @@ html {
     transition: background-color var(--transition-normal), color var(--transition-normal);
 }
 
+/* 錨點捲動時避開 sticky 導覽列 */
+section[id] {
+    scroll-margin-top: 88px;
+}
+
 /* SKETCH 模式：圖紙方格背景 */
 [data-theme="sketch"] html,
 [data-theme="sketch"] {
@@ -735,7 +740,8 @@ body.menu-open {
 .gallery-img-wrapper {
     position: relative;
     width: 100%;
-    aspect-ratio: 16/10;
+    /* 對齊目前截圖原生比例 2528x1458，避免 object-fit 拉伸變形 */
+    aspect-ratio: 2528 / 1458;
     background-color: var(--gallery-img-bg);
     overflow: hidden;
 }
@@ -743,7 +749,7 @@ body.menu-open {
 .gallery-img {
     width: 100%;
     height: 100%;
-    object-fit: fill;
+    object-fit: contain;
     transition: opacity 0.3s ease-in-out;
 }
 
@@ -768,7 +774,7 @@ body.menu-open {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
-    min-width: 700px;
+    min-width: 480px;
 }
 
 .comparison-table th,

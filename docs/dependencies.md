@@ -1,90 +1,93 @@
-# 核心元件下載清單 (Core Components Download)
+# 依賴元件說明
 
-本文件提供 WinCMP 運行所需的核心二進位檔案下載連結與建議。
-
-## 📥 元件清單
-
-### 1. PHP (Windows 版)
-- **連結**: [PHP Releases Archives](https://windows.php.net/downloads/releases/archives/)
-- **建議**: 
-    - 建議下載 **Non-Thread Safe (NTS)** 版本（若配合 FastCGI 使用）。
-    - 確保下載 **x64** 版本以符合現代環境。
-
-### 2. Caddy Server
-- **連結**: [Caddy Download](https://caddyserver.com/download)
-- **建議**: 
-    - 選擇平台為 `Windows` 且架構為 `amd64`。
-    - 若需額外插件（如 Cloudflare DNS），請在官網自定義編譯。
-
-### 3. MariaDB
-- **連結**: [MariaDB Download](https://mariadb.org/download/)
-- **建議**: 
-    - 建議使用 **MSI 安裝包** 以便於初始化，或使用 **ZIP** 免安裝版進行攜帶式配置。
-
-### 4. Composer
-- **連結**: [Composer Download](https://getcomposer.org/download/)
-- **建議**: 
-    - Windows 環境建議直接執行 `Composer-Setup.exe` 進行全域安裝。
-
-### 5. HeidiSQL (資料庫管理)
-- **連結**: [HeidiSQL Download](https://www.heidisql.com/download.php)
-- **建議**: 
-    - 輕量級的資料庫管理工具，建議下載安裝版或免安裝版備用。
-
-### 6. Node.js
-- **連結**: [Node.js Downloads](https://nodejs.org/dist/)
-- **建議**: 
-    - 建議下載 **LTS (Long Term Support)** 版本，確保穩定性。
-    - 選擇 **x64** 版本以符合現代環境。
-    - 建議使用 **ZIP** 免安裝版以便攜式配置，或使用 **MSI** 安裝包進行標準安裝。
-    - Node.js 主要用於前端構建工具（如 Vite、esbuild）和開發腳本。
-
-### 7. Bun
-- **連結**: [Bun Downloads](https://bun.sh/downloads)
-- **建議**: 
-    - Bun 是高效能的 JavaScript Runtime，與 Node.js / npm 完全相容。
-    - WinCMP 支援 Bun 作為 Runtime 執行器，適用於 Next.js、Nuxt、Astro、Vite 等前端框架。
-    - 放置於 `bin/bun/bun-x.x.x/bun.exe` 即可自動掃描。
+WinCMP 依賴的二進位檔案目錄定義於 [`conf/dependencies.json`](../conf/dependencies.json)（版本、下載 URL、SHA-256）。  
+程式內建**依賴下載器**會依該檔下載並解壓到 `bin/`；本文件說明預設目錄、手動擺放方式與注意事項。
 
 ---
 
-## 📂 建議目錄結構 (Directory Structure)
+## 預設目錄（與 dependencies.json 對應）
 
-下載後的二進位檔案應放置於專案根目錄的 `bin/` 資料夾下，並依照以下結構組織：
+下列版本以目前 `conf/dependencies.json` 為準；更新目錄後請同步調整該 JSON。
+
+| Key | 元件 | 目前版本 | 安裝位置（相對於 `bin/`） |
+|-----|------|----------|---------------------------|
+| `caddy` | Caddy | 2.11.4 | `caddy/caddy-2.11.4/caddy.exe` |
+| `mariadb` | MariaDB | 11.4.10 | `mariadb/mariadb-11.4.10/bin/mariadbd.exe` |
+| `php73` | PHP 7.3 | 7.3.33 | `php/php-<zip 資料夾名>/php-cgi.exe` |
+| `php82` | PHP 8.2 | 8.2.33 | 同上（例如 `php/php-8.2.33-nts-Win32-vs16-x64/`） |
+| `php83` | PHP 8.3 | 8.3.33 | 同上 |
+| `php84` | PHP 8.4 | 8.4.25 | 同上（vs17） |
+| `php_redis_82` 等 | PHP Redis 擴充 | 6.3.0 | 解壓後的 `php_redis.dll` → `php/php-*/ext/` |
+| `redis` | Redis | 5.0.14.1 | `redis/redis-5.0.14.1/redis-server.exe` |
+| `mailpit` | Mailpit | 1.31.1 | `mailpit/mailpit-1.31.1/mailpit.exe` |
+| `node` | Node.js | 24.21.0 | `node/node-24.21.0/npm.cmd` |
+| `composer` | Composer | 2.10.3 | `composer/composer-2.10.3/composer.phar`（並產生 `composer.bat`） |
+| `heidisql` | HeidiSQL | 12.21 | `heidisql/heidisql-12.21/heidisql.exe` |
+| `cacert` | CA 憑證包 | 2026.08.13 | 由下載流程使用（非 `bin/` 服務） |
+
+### 目錄範例
 
 ```text
-wincmp/
-└── bin/
-    ├── bun/
-    │   └── bun-1.3.11/
-    │       └── bun.exe
-    ├── caddy/
-    │   └── caddy-2.11.1/
-    │       └── caddy.exe
-    ├── composer/
-    │   ├── composer-2.9.3/
-    │   │   └── composer.bat
-    │   └── composer-1.10.10/
-    │       └── composer.bat
-    ├── heidisql/
-    │   └── heidisql-12.16/
-    │       └── heidisql.exe
-    ├── mariadb/
-    │   └── mariadb-11.4.10-winx64/
-    │       └── bin/
-    │           └── mariadbd.exe
-    ├── node/
-    │   └── node-24.14.1/
-    │       └── npm.cmd
-    └── php/
-        ├── php-8.3.28-nts-Win32-vs16-x64/
-        │   └── php-cgi.exe
-        └── php-8.2.30-nts-Win32-vs16-x64/
-            └── php-cgi.exe
+wincmp/bin/
+├── caddy/caddy-2.11.4/caddy.exe
+├── mariadb/mariadb-11.4.10/bin/mariadbd.exe
+├── php/
+│   ├── php-8.3.33-nts-Win32-vs16-x64/
+│   │   ├── php-cgi.exe
+│   │   └── ext/php_redis.dll
+│   └── php-8.2.33-nts-Win32-vs16-x64/
+├── redis/redis-5.0.14.1/redis-server.exe
+├── mailpit/mailpit-1.31.1/mailpit.exe
+├── node/node-24.21.0/npm.cmd
+├── composer/composer-2.10.3/composer.phar
+└── heidisql/heidisql-12.21/heidisql.exe
 ```
 
-> [!IMPORTANT]
-> WinCMP 會自動掃描 `bin/` 目錄下的執行檔。請確保路徑深度與上述結構一致，以便掃描器正確認識版本號。
->
-> **Python 和 Go (Air)** 不需要放置於 `bin/` 目錄中，WinCMP 會使用系統 PATH 中的安裝。若未安裝或未加入環境變數，啟動時會跳出提示。
-
+### 相容掃描
+
+掃描器（`internal/scanner`）也接受部分較寬的擺法：
+
+- Caddy：`bin/caddy/caddy.exe`（無版本資料夾）
+- Redis：`bin/redis/redis-server.exe`（無版本資料夾）
+
+建議仍使用「版本資料夾」格式，便於多版本並存與下載器管理。
+
+### 非 bin 元件
+
+| 元件 | 說明 |
+|------|------|
+| **Bun** | 不在 `dependencies.json`。若要當 Runtime，自行放到 `bin/bun/bun-x.x.x/bun.exe`。 |
+| **Python / Go** | 使用系統 PATH，不需放 `bin/`。 |
+
+---
+
+## 手動下載建議
+
+若不用內建下載器，可至官方來源取得 **Windows x64** 版本，再放到上表路徑。
+
+| 元件 | 來源 | 建議 |
+|------|------|------|
+| PHP | [windows.php.net](https://windows.php.net/downloads/releases/) | **NTS + x64**；FastCGI 使用 `php-cgi.exe`。舊版見 [Archives](https://windows.php.net/downloads/releases/archives/) |
+| Caddy | [caddyserver.com](https://caddyserver.com/download) / [GitHub](https://github.com/caddyserver/caddy/releases) | Windows amd64 |
+| MariaDB | [MariaDB](https://mariadb.org/download/) | **ZIP 免安裝版**（攜帶式）；勿用系統 MSI 裝到全局路徑 |
+| Redis | [tporadowski/redis](https://github.com/tporadowski/redis/releases)（Win 移植版） | 目錄內需有 `redis-server.exe` |
+| PHP Redis | [PECL redis Windows](https://pecl.php.net/package/redis) | DLL 版本須對應 PHP 主次版本與 TS/NTS |
+| Mailpit | [axllent/mailpit](https://github.com/axllent/mailpit/releases) | Windows amd64 |
+| Node.js | [nodejs.org](https://nodejs.org/dist/) | ZIP x64；目錄內需有 `npm.cmd` |
+| Composer | [getcomposer.org](https://getcomposer.org/download/) | 下載 **`composer.phar`** 放進版本資料夾；**不要**用 Composer-Setup.exe 做系統全域安裝 |
+| HeidiSQL | [heidisql.com](https://www.heidisql.com/download.php) | Portable 64-bit |
+| Bun | [bun.sh](https://bun.sh/downloads) | Windows x64 zip |
+
+### 手動放置注意
+
+1. 路徑深度需與掃描規則一致（見上表）。
+2. PHP 資料夾名稱需以 `php-` 開頭，並含可辨識的版本資訊。
+3. Composer 需在 `composer-<版本>/` 內，且掃描會找 `composer.bat`（下載器會自動產生；手動放置時請一併提供 bat 或包一層）。
+4. 更新 `conf/dependencies.json` 時，請同時更新 `version`、`url`、`sha256`，避免下載器校驗失敗。
+
+---
+
+## 相關文件
+
+- 使用者安裝說明：[`packaging/wincmp/readme_zh.md`](../packaging/wincmp/readme_zh.md)
+- Composer 指令細節：[`docs/composer_command.md`](composer_command.md)

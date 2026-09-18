@@ -467,6 +467,7 @@ export const enTranslations: Record<string, string> = {
   "啟動失敗": "Failed to start",
   "專案開發終端 (Terminal)": "Project Development Terminal (Terminal)",
   "無法啟動終端": "Failed to start terminal",
+  "找不到可用的終端工作目錄": "No valid terminal working directory found",
   "💡 支援完整互動指令、Ctrl+C 中斷與 TAB 自動補齊。": "💡 Supports interactive command inputs, Ctrl+C to terminate, and TAB auto-completion.",
   "重啟": "Restart",
 
