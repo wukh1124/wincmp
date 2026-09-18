@@ -80,7 +80,20 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     if (key === 'heidisql') return scanResult.HeidiSQLList?.[0]?.Version || '';
     if (key === 'node') return scanResult.NodeList?.[0]?.Version || '';
     if (key === 'mailpit') return scanResult.MailpitList?.[0]?.Version || '';
-    if (key.startsWith('php')) {
+    if (key.startsWith('php_redis_')) {
+      const verSuffix = key.replace('php_redis_', '');
+      const majorMin = verSuffix.replace(/(\d)(\d)/, '$1.$2');
+      const phpInfo = scanResult.PHPList?.find((p: any) => p.MajorMin === majorMin);
+      if (!phpInfo) return 'PHP_NOT_INSTALLED';
+      const hasRedis = phpInfo.Extensions?.some((ext: string) => ext.toLowerCase() === 'php_redis.dll');
+      return hasRedis ? (depConfig?.[key]?.version || 'installed') : '';
+    }
+    if (key.startsWith('php_')) {
+      const verSuffix = key.replace('php_', '');
+      const majorMin = verSuffix.replace(/(\d)(\d)/, '$1.$2');
+      return scanResult.PHPList?.find((p: any) => p.MajorMin === majorMin)?.Version || '';
+    }
+    if (key.startsWith('php') && !key.startsWith('php_redis')) {
       const majorMin = key.replace('php', '').replace(/(\d)(\d)/, '$1.$2');
       return scanResult.PHPList?.find((p: any) => p.MajorMin === majorMin)?.Version || '';
     }
@@ -89,7 +102,17 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
   if (!isOpen) return null;
 
-  const phpKeys = depConfig ? Object.keys(depConfig).filter(k => k.startsWith('php') && k !== 'php').sort((a, b) => compareVersions(depConfig[b].version, depConfig[a].version)) : [];
+  const phpKeys = depConfig 
+    ? Object.keys(depConfig)
+        .filter(k => (k.startsWith('php_') || k.startsWith('php')) && !k.startsWith('php_redis') && k !== 'php')
+        .sort((a, b) => compareVersions(depConfig[b].version, depConfig[a].version)) 
+    : [];
+
+  const phpExtKeys = depConfig
+    ? Object.keys(depConfig)
+        .filter(k => k.startsWith('php_redis'))
+        .sort((a, b) => a.localeCompare(b))
+    : [];
 
   // ─── Styles ─────────────────────────────────────────────
   const cardStyle: React.CSSProperties = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 16 };
@@ -105,11 +128,21 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     let statusText = '';
     let statusColor: React.CSSProperties['color'] = 'var(--muted)';
     let showBtn = true;
+    let btnDisabled = false;
     let btnText = t('下載安裝');
     let btnStyle: React.CSSProperties = { background: 'var(--status-info)', color: '#fff' };
-    let btnIcon = <Download size={13} />;
+    let btnIcon: React.ReactNode = <Download size={13} />;
 
-    if (localVer === '') {
+    if (localVer === 'PHP_NOT_INSTALLED') {
+      const verSuffix = key.replace('php_redis_', '');
+      const majorMin = verSuffix.replace(/(\d)(\d)/, '$1.$2');
+      statusText = t("需先安裝 PHP %s", majorMin);
+      statusColor = 'var(--muted)';
+      btnText = t('未安裝 PHP');
+      btnDisabled = true;
+      btnStyle = { background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--muted)', cursor: 'not-allowed', opacity: 0.6 };
+      btnIcon = null;
+    } else if (localVer === '') {
       statusText = `${t("未安裝")} (${t("建議")}: v${recVer})`;
       statusColor = 'var(--status-error)';
       btnText = t('下載');
@@ -207,7 +240,12 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           </div>
         </div>
         {showBtn && (
-          <button onClick={() => handleDownload(key)} className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition" style={btnStyle}>
+          <button 
+            onClick={() => !btnDisabled && handleDownload(key)} 
+            disabled={btnDisabled}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition" 
+            style={btnStyle}
+          >
             {btnIcon}<span>{btnText}</span>
           </button>
         )}
@@ -264,7 +302,8 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {phpKeys.map(key => {
-                    const majorMin = key.replace('php', '').replace(/(\d)(\d)/, '$1.$2');
+                    const cleanKey = key.replace(/^php_?/, '');
+                    const majorMin = cleanKey.replace(/(\d)(\d)/, '$1.$2');
                     return (
                       <div key={key} className="rounded-lg p-2.5" style={{ border: '1px solid var(--border-soft)', background: 'var(--surface)' }}>
                         {renderDependencyRow(key, `PHP ${majorMin} NTS`, <Terminal size={14} />)}
@@ -273,6 +312,25 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                   })}
                 </div>
               </div>
+
+              {phpExtKeys.length > 0 && (
+                <div style={cardStyle}>
+                  <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2" style={{ color: 'var(--status-warn)', borderBottom: '1px solid var(--border-soft)' }}>
+                    <Server size={13} /> {t("PHP 擴充套件")}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {phpExtKeys.map(key => {
+                      const verSuffix = key.replace('php_redis_', '');
+                      const majorMin = verSuffix.replace(/(\d)(\d)/, '$1.$2');
+                      return (
+                        <div key={key} className="rounded-lg p-2.5" style={{ border: '1px solid var(--border-soft)', background: 'var(--surface)' }}>
+                          {renderDependencyRow(key, t("Redis 擴充 (PHP %s)", majorMin), <Terminal size={14} />)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div style={cardStyle}>
                 <h3 className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 select-none pb-2" style={{ color: 'var(--accent)', borderBottom: '1px solid var(--border-soft)' }}>
