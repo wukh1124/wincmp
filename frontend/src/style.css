@@ -94,8 +94,39 @@ button {
   line-height: 1 !important;
 }
 
-button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-btn) {
+button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-btn):not(.log-control-btn):not(.log-tab-btn) {
   padding: 10px 16px !important;
+}
+
+/* 日誌控制台按鈕與控制項高度與字體統一規範 */
+.log-control-btn {
+  height: 28px !important;
+  padding: 0 10px !important;
+  font-size: 0.6875rem !important; /* 11px 相對大小 */
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  border-radius: var(--radius-sm, 6px) !important;
+}
+
+.log-tab-btn {
+  padding: 8px 12px !important;
+  font-size: 0.6875rem !important; /* 11px 相對大小 */
+  line-height: 1 !important;
+}
+
+.log-control-select {
+  height: 28px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 10px !important;
+  padding-right: 28px !important;
+  font-size: 0.6875rem !important;
+  border-radius: var(--radius-sm, 6px) !important;
+  background-position: right 8px center !important;
+  background-size: 11px !important;
 }
 
 button:disabled {

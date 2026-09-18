@@ -49,8 +49,20 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const isAnyLoading = Object.values(loadingProjects).some(Boolean);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dragEnabledIndex, setDragEnabledIndex] = useState<number | null>(null);
+
+  // 全域監聽 mouseup，確保放開滑鼠時一律重設拖曳把手啟用狀態
+  useEffect(() => {
+    const handleGlobalMouseUp = () => setDragEnabledIndex(null);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (dragEnabledIndex !== index) {
+      e.preventDefault();
+      return;
+    }
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', `${index}`);
@@ -69,6 +81,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
     setDragOverIndex(null);
+    setDragEnabledIndex(null);
     if (draggedIndex === null || draggedIndex === dropIndex || !config?.projects) {
       setDraggedIndex(null);
       return;
@@ -94,6 +107,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const handleDragEnd = () => {
     setDraggedIndex(null);
     setDragOverIndex(null);
+    setDragEnabledIndex(null);
   };
 
   useEffect(() => {
@@ -619,7 +633,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                   <tr
                     key={proj.name || idx}
                     id={`project-row-${proj.name}`}
-                    draggable
+                    draggable={dragEnabledIndex === idx}
                     onDragStart={(e) => handleDragStart(e, idx)}
                     onDragOver={(e) => handleDragOver(e, idx)}
                     onDragLeave={handleDragLeave}
@@ -633,7 +647,12 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       transition: 'background 0.15s, border-color 0.15s',
                     }}
                   >
-                    <td style={{ ...tdStyle, width: 36, paddingLeft: 16, paddingRight: 4, textAlign: 'center', cursor: 'grab' }} title={t("按住拖曳調整專案順序")}>
+                    <td
+                      style={{ ...tdStyle, width: 36, paddingLeft: 16, paddingRight: 4, textAlign: 'center', cursor: 'grab' }}
+                      title={t("按住拖曳調整專案順序")}
+                      onMouseDown={() => setDragEnabledIndex(idx)}
+                      onMouseUp={() => setDragEnabledIndex(null)}
+                    >
                       <div className="flex items-center justify-center text-[var(--meta)] hover:text-[var(--fg)] active:cursor-grabbing">
                         <GripVertical size={13} />
                       </div>

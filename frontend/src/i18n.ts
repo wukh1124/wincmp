@@ -549,6 +549,19 @@ export const enTranslations: Record<string, string> = {
 
   // Project SSL
   "已啟用 HTTPS 安全憑證": "HTTPS SSL Certificate Enabled",
+
+  // Terminal Logs Console Refinement
+  "Node / Bun": "Node / Bun",
+  "自動切換": "Auto-switch",
+  "自動跟隨": "Auto-follow",
+  "暫無運行專案": "No running projects",
+  "選擇專案日誌": "Select project logs",
+  "滾動至最新日誌": "Scroll to latest log",
+  "清空當前日誌": "Clear current logs",
+  "置底": "To Bottom",
+  "清空": "Clear",
+  "收起日誌": "Collapse Logs",
+  "展開日誌": "Expand Logs",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

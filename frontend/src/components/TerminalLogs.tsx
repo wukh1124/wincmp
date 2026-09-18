@@ -11,7 +11,7 @@ const CATEGORIES = [
   { id: 'mailpit', label: 'Mailpit' },
   { id: 'redis', label: 'Redis' },
   { id: 'php', label: 'PHP' },
-  { id: 'runtime', label: '運行環境 (Node/Bun)' }
+  { id: 'runtime', label: 'Node / Bun' }
 ];
 
 export default function TerminalLogs() {
@@ -200,7 +200,7 @@ export default function TerminalLogs() {
                 setActiveTab(tab.id);
                 setUnreadTabs(prev => ({ ...prev, [tab.id]: false }));
               }}
-              className={`px-4 py-2.5 text-[11px] font-bold border-b-2 transition duration-200 shrink-0 flex items-center gap-1.5 ${
+              className={`log-tab-btn font-bold border-b-2 transition duration-200 shrink-0 flex items-center gap-1.5 ${
                 activeTab === tab.id
                   ? ''
                   : 'hover:text-[var(--fg)]'
@@ -220,7 +220,11 @@ export default function TerminalLogs() {
 
         <div className="flex items-center gap-2 py-1.5 shrink-0">
           {/* 自動切換分頁開關 */}
-          <label className="flex items-center gap-1.5 text-[10px] font-semibold cursor-pointer select-none px-2 py-1 rounded-lg border transition" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border)', color: autoSwitchTab ? 'var(--accent)' : 'var(--muted)' }} title={t("有新日誌時自動切換到該分頁")}>
+          <label
+            className="log-control-btn cursor-pointer select-none border transition hover:border-[color:var(--accent)]"
+            style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border)', color: autoSwitchTab ? 'var(--accent)' : 'var(--muted)' }}
+            title={t("有新日誌時自動切換到該分頁")}
+          >
             <input
               type="checkbox"
               checked={autoSwitchTab}
@@ -229,25 +233,20 @@ export default function TerminalLogs() {
                 setAutoSwitchTab(val);
                 localStorage.setItem('wincmp_auto_switch_tab', val ? 'true' : 'false');
               }}
-              className="w-3 h-3 rounded cursor-pointer accent-blue-500"
+              className="w-3.5 h-3.5 rounded cursor-pointer accent-blue-500"
             />
-            <span>{t("自動切換分頁")}</span>
+            <span>{t("自動切換")}</span>
           </label>
 
           {/* Runtime 專案下拉選單 */}
           {activeTab === 'runtime' && (
-            <div className="flex items-center gap-1.5 mr-2">
-              <span
-                className="text-[10px] font-semibold uppercase tracking-wider"
-                style={{ color: 'var(--meta)' }}
-              >
-                {t("專案:")}
-              </span>
+            <div className="flex items-center">
               <select
                 value={activeRuntimeProject}
                 onChange={(e) => setActiveRuntimeProject(e.target.value)}
-                className="border rounded-lg px-2.5 py-1 text-[10px] focus:outline-none focus:border-[color:var(--accent)] font-bold cursor-pointer"
+                className="log-control-select border font-medium focus:outline-none focus:border-[color:var(--accent)] cursor-pointer"
                 style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border)', color: 'var(--accent)' }}
+                title={t("選擇專案日誌")}
               >
                 {runtimeProjects.length > 0 ? (
                   runtimeProjects.map((proj) => (
@@ -256,7 +255,7 @@ export default function TerminalLogs() {
                     </option>
                   ))
                 ) : (
-                  <option value="" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg-2)' }}>{t("無運行中的專案")}</option>
+                  <option value="" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg-2)' }}>{t("暫無運行專案")}</option>
                 )}
               </select>
             </div>
@@ -268,18 +267,22 @@ export default function TerminalLogs() {
                 setAutoScroll(true);
                 logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="btn-autoscroll-hover px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold"
+              className="log-control-btn btn-custom-hover border font-bold"
               style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--accent)' }}
+              title={t("滾動至最新日誌")}
             >
-              <ArrowDown size={11} /> {t("自動滾動")}
+              <ArrowDown size={12} />
+              <span>{t("置底")}</span>
             </button>
           )}
           <button
             onClick={handleClearLogs}
-            className="btn-danger-hover px-2.5 py-1 text-[10px] border rounded-lg flex items-center gap-1 transition font-bold"
+            className="log-control-btn btn-danger-hover border font-bold"
             style={{ borderColor: 'var(--border)', backgroundColor: 'var(--input-bg)', color: 'var(--status-error)' }}
+            title={t("清空當前日誌")}
           >
-            <Trash2 size={11} /> {t("清空日誌")}
+            <Trash2 size={12} />
+            <span>{t("清空")}</span>
           </button>
         </div>
       </div>

@@ -734,13 +734,13 @@ export default function App() {
               style={{ color: 'var(--fg-2)' }}
             >
               <Terminal size={11} style={{ color: 'var(--status-info)' }} />
-              <span>{showLogs ? t('收起 Logs 控制台') : t('打開 Logs 控制台')}</span>
+              <span>{showLogs ? t('收起日誌') : t('展開日誌')}</span>
             </button>
             <button
               onClick={handleToggleLogs}
               className="p-1 rounded-md transition flex items-center justify-center"
               style={{ color: 'var(--fg-2)' }}
-              title={showLogs ? t('收起 Logs 控制台') : t('打開 Logs 控制台')}
+              title={showLogs ? t('收起日誌') : t('展開日誌')}
             >
               {showLogs ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
             </button>
