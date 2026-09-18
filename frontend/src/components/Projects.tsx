@@ -503,17 +503,18 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
   // ─── Styles ─────────────────────────────────────────────
   const thStyle: React.CSSProperties = {
-    padding: '10px 8px', fontWeight: 700, fontSize: 10,
+    padding: '10px 8px', fontWeight: 700, fontSize: '0.75rem',
     letterSpacing: '0.05em', textTransform: 'uppercase',
     color: 'var(--muted)', background: 'var(--table-header-bg, var(--surface))',
     borderBottom: '1px solid var(--border)',
     position: 'sticky',
     top: 0,
     zIndex: 10,
+    whiteSpace: 'nowrap',
   };
 
   const tdStyle: React.CSSProperties = {
-    padding: '10px 8px', fontSize: 12,
+    padding: '10px 8px', fontSize: '0.8125rem',
     borderBottom: '1px solid var(--border-soft)',
   };
 
@@ -610,11 +611,11 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
               <tr>
                 <th style={{ ...thStyle, width: 36, paddingLeft: 16, paddingRight: 4, textAlign: 'center' }} title={t("拖曳調整排序")}></th>
                 <th style={thStyle}>{t("專案名稱")}</th>
-                <th style={thStyle}>{t("類型 / 框架")}</th>
+                <th style={{ ...thStyle, whiteSpace: 'nowrap' }}>{t("類型 / 框架")}</th>
                 <th style={thStyle}>{t("本機網域")}</th>
-                <th style={thStyle}>{t("狀態")}</th>
-                <th style={thStyle}>{t("啟用")}</th>
-                <th style={{ ...thStyle, textAlign: 'center', paddingRight: 16 }}>
+                <th style={{ ...thStyle, whiteSpace: 'nowrap' }}>{t("狀態")}</th>
+                <th style={{ ...thStyle, width: 68, textAlign: 'center', whiteSpace: 'nowrap' }}>{t("啟用")}</th>
+                <th style={{ ...thStyle, width: 120, textAlign: 'center', paddingRight: 16, whiteSpace: 'nowrap' }}>
                   {t("操作")}
                 </th>
               </tr>
@@ -698,7 +699,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         ))}
                       </div>
                     </td>
-                    <td style={tdStyle}>
+                    <td style={{ ...tdStyle, whiteSpace: 'nowrap' }}>
                       {hasRuntime ? (
                         running ? (
                           <span className="flex items-center gap-1.5 font-semibold text-xs" style={{ color: 'var(--status-ok)' }}>
@@ -718,10 +719,10 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                         <span className="text-[10px] font-medium" style={{ color: 'var(--meta)' }}>{t("Caddy/PHP 靜態託管")}</span>
                       )}
                     </td>
-                    <td style={tdStyle}>
+                    <td style={{ ...tdStyle, width: 68, textAlign: 'center' }}>
                       <input type="checkbox" checked={proj.enabled} onChange={() => handleToggleEnable(idx)} className="w-3.5 h-3.5 cursor-pointer accent-blue-500" />
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'center', paddingRight: 16 }}>
+                    <td style={{ ...tdStyle, width: 120, textAlign: 'center', paddingRight: 16 }}>
                       <div className="flex gap-1.5 justify-center items-center">
                         {hasRuntime && proj.enabled && (
                           !running ? (
