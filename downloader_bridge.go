@@ -35,7 +35,7 @@ func (a *App) GetDependencyConfig() (config.DependencyConfig, error) {
 
 // FetchRemoteDependencies 從遠端下載最新的依賴建議版本配置並與本地合併
 func (a *App) FetchRemoteDependencies() (config.DependencyConfig, error) {
-	url := "https://raw.githubusercontent.com/wktabdev/wincmp/main/conf/dependencies.json"
+	url := config.DefaultDependencyURL
 	if a.appCfg != nil && a.appCfg.Global.DependencyURL != "" {
 		url = a.appCfg.Global.DependencyURL
 	}

@@ -39,40 +39,36 @@ if (!match) {
 const version = match ? match[1] : rawVersion;
 console.log(`  -> 目標版本號: v${version}`);
 
-// 2. 7 大分類標籤白名單
+// 2. 分類標籤白名單（release_notes 內 What's Changed 區塊）
 const allowedCategories = ['Added', 'Changed', 'Deprecated', 'Removed', 'Fixed', 'Security', 'Dependencies'];
 
-function checkChangelog(filePath, fileLabel, ver) {
+function checkReleaseNotes(filePath, fileLabel) {
   if (!fs.existsSync(filePath)) {
     console.error(`  [錯誤] 找不到 ${fileLabel} (${filePath})`);
     return false;
   }
 
   const content = fs.readFileSync(filePath, 'utf8');
-  const lines = content.split(/\r?\n/);
+  if (content.trim().length < 20) {
+    console.error(`  [錯誤] ${fileLabel} 內容過短或為空。`);
+    return false;
+  }
 
-  let foundVersion = false;
-  let inTargetSection = false;
+  const lines = content.split(/\r?\n/);
   const sectionCategories = [];
   const invalidCategories = [];
+  let inChanged = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-
-    // 匹配版本標題，如 "## [2.0.6]" 或 "## 2.0.6"
-    const verHeaderRegex = new RegExp(`^##\\s+\\[?${ver.replace(/\./g, '\\.')}\\]?`);
-    if (verHeaderRegex.test(line)) {
-      foundVersion = true;
-      inTargetSection = true;
+    if (/^##\s+What's Changed/i.test(line) || /^##\s+What’s Changed/i.test(line)) {
+      inChanged = true;
       continue;
     }
-
-    // 遇到下一個版本區塊則結束當前檢查
-    if (inTargetSection && /^##\s+/.test(line)) {
+    if (inChanged && /^##\s+/.test(line)) {
       break;
     }
-
-    if (inTargetSection) {
+    if (inChanged) {
       const catMatch = line.match(/^###\s+(.+)$/);
       if (catMatch) {
         const cat = catMatch[1].trim();
@@ -84,11 +80,6 @@ function checkChangelog(filePath, fileLabel, ver) {
     }
   }
 
-  if (!foundVersion) {
-    console.error(`  [錯誤] ${fileLabel} 中未找到版本 [v${ver}] 之更新記錄區塊！`);
-    return false;
-  }
-
   if (invalidCategories.length > 0) {
     console.error(`  [錯誤] ${fileLabel} 含有非白名單分類標籤:`);
     invalidCategories.forEach((inv) => console.error(`         - ${inv}`));
@@ -97,7 +88,7 @@ function checkChangelog(filePath, fileLabel, ver) {
   }
 
   if (sectionCategories.length === 0) {
-    console.warn(`  [警告] ${fileLabel} 的 [v${ver}] 區塊中未包含任何分類標籤 (### Added, Fixed 等)。`);
+    console.warn(`  [警告] ${fileLabel} 的 What's Changed 區塊中未包含任何分類標籤 (### Added, Fixed 等)。`);
   } else {
     console.log(`  -> ${fileLabel} 驗證通過 (包含分類: ${sectionCategories.join(', ')})`);
   }
@@ -105,10 +96,11 @@ function checkChangelog(filePath, fileLabel, ver) {
   return true;
 }
 
-// 3. 檢查雙語 Changelog
-console.log('[2/5] 檢查雙語 Changelog 格式...');
-const zhPassed = checkChangelog(path.join(projectRoot, 'CHANGELOG_zh.md'), '繁體中文更新日誌 (CHANGELOG_zh.md)', version);
-const enPassed = checkChangelog(path.join(projectRoot, 'CHANGELOG.md'), '英文更新日誌 (CHANGELOG.md)', version);
+// 3. 檢查雙語 Release Notes（唯一對外內容來源）
+console.log('[2/5] 檢查雙語 Release Notes...');
+const notesDir = path.join(projectRoot, 'release_note', `v${version}`);
+const zhPassed = checkReleaseNotes(path.join(notesDir, 'release_notes_zh.md'), '繁體中文發布說明 (release_notes_zh.md)');
+const enPassed = checkReleaseNotes(path.join(notesDir, 'release_notes.md'), '英文發布說明 (release_notes.md)');
 
 if (!zhPassed || !enPassed) {
   hasError = true;
@@ -116,7 +108,7 @@ if (!zhPassed || !enPassed) {
 
 // 4. 檢查內部稽核檔 audit_commits.md
 console.log('[3/5] 檢查內部稽核檔案 (audit_commits.md)...');
-const auditFile = path.join(projectRoot, 'release_note', `v${version}`, 'audit_commits.md');
+const auditFile = path.join(notesDir, 'audit_commits.md');
 if (fs.existsSync(auditFile)) {
   console.log(`  -> 找到審核底稿: release_note\\v${version}\\audit_commits.md`);
 } else {

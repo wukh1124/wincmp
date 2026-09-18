@@ -80,8 +80,8 @@ func main() {
 				return
 			}
 			
-			// 1. 檢查連結可用性 (HEAD 請求)
-			client := &http.Client{Timeout: 30 * time.Second}
+			// 大檔 (MariaDB ~90MB / PHP / Node 等) 預設 Timeout 容易在 CI 逾時
+			client := &http.Client{Timeout: 600 * time.Second}
 			resp, err := client.Head(depItem.URL)
 			urlWorking := false
 			if err == nil && (resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusFound) {
@@ -109,38 +109,61 @@ func main() {
 				return
 			}
 			
-			// 2. 下載檔案計算 SHA-256
-			tempFile := filepath.Join(tempDir, depName)
-			out, err := os.Create(tempFile)
-			if err != nil {
+			// 2. 下載檔案計算 SHA-256（大檔可能被中斷，最多重試 3 次）
+			var shaSum string
+			downloadOK := false
+			for attempt := 1; attempt <= 3; attempt++ {
+				tempFile := filepath.Join(tempDir, fmt.Sprintf("%s-%d", depName, attempt))
+				out, err := os.Create(tempFile)
+				if err != nil {
+					mu.Lock()
+					fmt.Printf("❌ [%s] 無法建立臨時檔案: %v\n", depName, err)
+					hasError = true
+					mu.Unlock()
+					return
+				}
+
+				dlResp, err := client.Get(depItem.URL)
+				if err != nil || dlResp == nil || dlResp.StatusCode != http.StatusOK {
+					if dlResp != nil {
+						dlResp.Body.Close()
+					}
+					out.Close()
+					mu.Lock()
+					if err != nil {
+						fmt.Printf("⚠️ [%s] 下載失敗 (第 %d/3 次): %v\n", depName, attempt, err)
+					} else {
+						fmt.Printf("⚠️ [%s] 下載失敗 (第 %d/3 次), status=%d\n", depName, attempt, dlResp.StatusCode)
+					}
+					mu.Unlock()
+					time.Sleep(time.Duration(attempt) * 2 * time.Second)
+					continue
+				}
+
+				h := sha256.New()
+				_, copyErr := io.Copy(io.MultiWriter(out, h), dlResp.Body)
+				dlResp.Body.Close()
+				out.Close()
+				if copyErr != nil {
+					mu.Lock()
+					fmt.Printf("⚠️ [%s] 寫入或計算 Hash 失敗 (第 %d/3 次): %v\n", depName, attempt, copyErr)
+					mu.Unlock()
+					time.Sleep(time.Duration(attempt) * 2 * time.Second)
+					continue
+				}
+
+				shaSum = fmt.Sprintf("%x", h.Sum(nil))
+				downloadOK = true
+				break
+			}
+
+			if !downloadOK {
 				mu.Lock()
-				fmt.Printf("❌ [%s] 無法建立臨時檔案: %v\n", depName, err)
+				fmt.Printf("❌ [%s] 下載失敗，已重試 3 次。URL: %s\n", depName, depItem.URL)
 				hasError = true
 				mu.Unlock()
 				return
 			}
-			defer out.Close()
-			
-			dlResp, err := client.Get(depItem.URL)
-			if err != nil || dlResp.StatusCode != http.StatusOK {
-				mu.Lock()
-				fmt.Printf("❌ [%s] 下載失敗 (GET 請求返回異常)\n", depName)
-				hasError = true
-				mu.Unlock()
-				return
-			}
-			defer dlResp.Body.Close()
-			
-			h := sha256.New()
-			if _, err := io.Copy(out, io.TeeReader(dlResp.Body, h)); err != nil {
-				mu.Lock()
-				fmt.Printf("❌ [%s] 寫入或計算 Hash 失敗: %v\n", depName, err)
-				hasError = true
-				mu.Unlock()
-				return
-			}
-			
-			shaSum := fmt.Sprintf("%x", h.Sum(nil))
 			
 			mu.Lock()
 			if *checkMode {
