@@ -147,16 +147,17 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     return '';
   };
 
-  const getPhpRedisStatus = (phpKey: string): { installed: boolean; version: string } => {
-    if (!scanResult) return { installed: false, version: '' };
+  const getPhpRedisStatus = (phpKey: string): { supported: boolean; installed: boolean; version: string } => {
+    if (!scanResult) return { supported: false, installed: false, version: '' };
     const verSuffix = phpKey.replace(/^php_?/, '');
     const majorMin = verSuffix.replace(/(\d)(\d)/, '$1.$2');
     const phpInfo = scanResult.PHPList?.find((p: any) => p.MajorMin === majorMin);
-    if (!phpInfo) return { installed: false, version: '' };
+    if (!phpInfo) return { supported: false, installed: false, version: '' };
     const hasRedis = phpInfo.Extensions?.some((ext: string) => ext.toLowerCase() === 'php_redis.dll');
     const redisKey = 'php_redis_' + verSuffix;
+    const isSupported = !!depConfig?.[redisKey];
     const recVer = depConfig?.[redisKey]?.version || '';
-    return { installed: !!hasRedis, version: recVer };
+    return { supported: isSupported, installed: !!hasRedis, version: recVer };
   };
 
   if (!isOpen) return null;
@@ -292,7 +293,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                 <span className="truncate" style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--muted)' }}>
                   {phpRedisInfo?.installed 
                     ? t("Redis 擴充: 已就緒 (v%s)", phpRedisInfo.version || '6.0.2')
-                    : t("Redis 擴充: 未配置")}
+                    : (phpRedisInfo?.supported ? t("Redis 擴充: 未配置") : t("Redis 擴充: 不支援"))}
                 </span>
               </div>
             )}
@@ -327,7 +328,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                       ? 'text-white hover:brightness-110 active:brightness-95' 
                       : 'text-[var(--fg-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
                   }`}
-                  title={isUpdate ? t("立即更新至最新版") : (isPhp ? t("重裝 PHP (含 Redis)") : t("重裝此依賴"))}
+                  title={isUpdate ? t("立即更新至最新版") : (isPhp ? (phpRedisInfo?.supported ? t("重裝 PHP (含 Redis)") : t("重裝 PHP")) : t("重裝此依賴"))}
                 >
                   {btnIcon}
                   <span>{btnText}</span>
@@ -372,10 +373,14 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                     className="w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
                   >
                     <RotateCw size={13} style={{ color: 'var(--status-info)' }} />
-                    <span>{isPhp ? t("重裝 PHP (含 Redis)") : t("重裝此依賴")}</span>
+                    <span>
+                      {isPhp 
+                        ? (phpRedisInfo?.supported ? t("重裝 PHP (含 Redis)") : t("重裝 PHP"))
+                        : t("重裝此依賴")}
+                    </span>
                   </button>
 
-                  {isPhp && (
+                  {isPhp && phpRedisInfo?.supported && (
                     <button
                       onClick={() => handleInstallRedisExt(key)}
                       className="w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"

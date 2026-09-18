@@ -538,6 +538,8 @@ export const enTranslations: Record<string, string> = {
   "重裝此依賴": "Reinstall Dependency",
   "立即更新至最新版": "Update to Latest Version",
   "更多操作": "More Actions",
+  "Redis 擴充: 不支援": "Redis Ext: Unsupported",
+  "重裝 PHP": "Reinstall PHP",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符
