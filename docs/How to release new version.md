@@ -84,26 +84,41 @@ Agent 會做：對照上一 tag 寫 release notes / audit、更新 `VERSION`、�
 
 ## 3. Git / GitHub 操作（由你執行）
 
+**建議順序：先合併發行分支到 `main`，再於 `main` 打 tag。**  
+Tag 應指向已進入 main 的最終發行狀態，避免 CI／官網／更新器讀到尚未合入 main 的內容。
+
 ```powershell
-# 確認目前分支
+# --- A. 在發行分支提交（若尚未 commit）---
 git status -sb
-
-# 提交發布內容（依實際變更調整路徑）
 git add VERSION release_note/ screenshot/ conf/dependencies.json
-# 若功能碼尚未提交，一併 add 對應 src / internal / frontend 路徑
-git commit -m "chore(release): prepare for vX.Y.Z"
+# 若功能碼尚未提交，一併 add 對應 frontend/ internal/ 等路徑
+git commit -m "chore(release): bump version to vX.Y.Z"
+# 可選：先推送發行分支備份
+# git push origin feature/version-X.Y.Z
 
-git push origin <branch>          # 通常為 main
+# --- B. 合併到 main ---
+git checkout main
+git pull origin main
+git merge feature/version-X.Y.Z
+# 若直接在 main 發行，略過 merge
 
+# --- C. 確認 main 已含發行檔案 ---
+git show HEAD:VERSION
+git ls-tree --name-only HEAD release_note/vX.Y.Z/
+
+# --- D. 在 main 打 tag 並推送（先 main 後 tag）---
 # Tag 必須與 VERSION 一致，例如 VERSION=2.1.1 → v2.1.1
-git tag vX.Y.Z
+git tag -a vX.Y.Z -m "Release version X.Y.Z"
+git push origin main
 git push origin vX.Y.Z
 ```
 
 **注意**
+- **先 merge 進 main 再 tag**；不要只在 feature 分支 tag 後就當已發行
 - tag 格式：`v` + `VERSION` 內容（`v2.1.1`，不是 `version-2.1.1`）
 - 同一 tag 不可重複推送；要重發請改版號或刪除遠端 tag 後重來
-- `develop` → `main` 的 PR 合併後，tag 打在 **main**
+- 合併後若 main 另有未發布 commit，應重新確認 release notes 是否仍完整
+- 不要提交：`*.exe` / `*.zip`、`wincmp-release-only/`、`screenshot/backup/`
 
 ---
 
@@ -268,7 +283,10 @@ GitHub 上若已建立錯誤 Release，到 Releases 頁刪除該 Release 再重�
 → 審核 release notes + git diff
 → wails dev + 截圖腳本
 → release.bat / validator
-→ 人工 git commit + push + tag
+→ 人工 git commit（發行分支）
+→ merge 發行分支到 main
+→ 在 main 打 tag vX.Y.Z
+→ push main → push tag
 → CI Build Release + Deploy Website
 → 驗證 GitHub Release 與官網
 ```

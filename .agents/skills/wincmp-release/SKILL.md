@@ -34,14 +34,18 @@ description: Release management, release_note validation, and release workflow a
    - 以「發布前舊版」備份 screenshot/{dark,sketch} → screenshot/backup/v{prev}/
    - 重新擷取 16 張官網截圖
 5. 執行 ./bat/release.ps1（建置 + 更新 release_info.json；校驗 release_notes 已存在）
-6. git commit + push + tag vX.Y.Z
+6. Git 發行（由開發者審核執行，見 §7）：
+   - 在發行分支 commit（VERSION + release_note 等）
+   - **先合併到 main**，再於 main 上 `git tag -a vX.Y.Z`
+   - 先 `push origin main`，再 `push origin vX.Y.Z`
 7. GitHub Actions：
    - Build and Release：check_deps → build exe/zip → 建立 GitHub Release
    - Deploy Website：generate-release-json + 複製 screenshot 至 gh-pages
 ```
 
 ### 0.3 安全防護底線
-- **嚴禁自動推送**：AI 助手**絕對不得**擅自執行 `git push` 或 `git tag`
+- **嚴禁自動推送**：AI 助手**絕對不得**擅自執行 `git push`、`git merge` 或 `git tag`；僅可輸出建議指令供開發者審核
+- **Tag 位置**：**建議先合併發行分支到 main，再於 main 打 tag**，避免 CI／官網／更新器讀到尚未進入 main 的內容
 - **禁止二進位提交**：打包產出至父目錄 `wincmp-release-only/`，嚴禁提交 `*.exe` / `*.zip`
 
 ---
@@ -205,15 +209,54 @@ powershell -ExecutionPolicy Bypass -File .\scripts\capture_release_screenshots.p
 
 ## 7. Git 發行指令引導
 
-完成打包與人工確認後，輸出指令供開發者審核執行（**Agent 嚴禁擅自 push/tag**）：
+完成打包與人工確認後，輸出指令供開發者審核執行（**Agent 嚴禁擅自 merge / push / tag**）。
+
+### 7.1 建議流程：先合併 main，再 tag
+
+Tag 應指向「**已進入 main 的最終發行狀態**」。GitHub Actions（Build Release / Deploy Website）、官網 `release.json` 與內建更新器皆以 tag / main 內容為準；若只在 feature 分支打 tag，main 可能尚未包含 `VERSION` 與 `release_note/vX.Y.Z/`。
 
 ```bash
+# 1) 在發行分支提交發布內容（依實際變更調整路徑）
 git add VERSION release_note/ screenshot/ conf/dependencies.json scripts/ .github/ .agents/
+# 若功能碼尚未提交，一併 add 對應 frontend/ internal/ 等路徑
 git commit -m "chore(release): bump version to vX.Y.Z"
+
+# 2) 切到 main 並更新
+git checkout main
+git pull origin main
+
+# 3) 合併發行分支到 main
+#    例如 feature/version-2.1.1 → main；若已在 main 發行則略過本步
+git merge feature/version-X.Y.Z
+
+# 4) 確認 main 上 VERSION / release_note 已就緒
+git show HEAD:VERSION
+git ls-tree --name-only HEAD release_note/vX.Y.Z/
+
+# 5) 在 main 上打 annotated tag（必須與 VERSION 一致：2.1.1 → v2.1.1）
 git tag -a vX.Y.Z -m "Release version X.Y.Z"
-git push origin <current_branch>
+
+# 6) 先推 main，再推 tag（確保 CI checkout 的 main 已含發行檔案）
+git push origin main
 git push origin vX.Y.Z
 ```
+
+### 7.2 精簡版（發行分支已在遠端、僅差合併與 tag）
+
+```bash
+git checkout main && git pull origin main
+git merge feature/version-X.Y.Z
+git tag -a vX.Y.Z -m "Release version X.Y.Z"
+git push origin main
+git push origin vX.Y.Z
+```
+
+### 7.3 注意事項
+- **先 merge 進 main 再 tag**；不要只在 feature 分支 tag 後就當已發行
+- tag 格式：`v` + `VERSION` 內容（`v2.1.1`，不是 `version-2.1.1`）
+- 同一 tag 不可重複推送；重發需改版號，或先刪除遠端 tag 後重來
+- 不要提交：`*.exe`、`*.zip`、`wincmp-release-only/`、`screenshot/backup/`
+- 合併後若 main 另有未發布 commit，應重新確認 release notes 是否仍完整
 
 ---
 
