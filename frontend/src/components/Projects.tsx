@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle, GripVertical } from 'lucide-react';
+import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle, GripVertical, Lightbulb } from 'lucide-react';
 import ProjectTerminal from './ProjectTerminal';
 import {
   GetConfig, SaveConfig, GetScanResult, GetServicesStatus,
@@ -536,7 +536,8 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
               <div className="space-y-3">
                 <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
-                  <span>💡 {t("操作按鈕快速指南")}</span>
+                  <Lightbulb size={13} style={{ color: 'var(--status-info)' }} />
+                  <span>{t("操作按鈕快速指南")}</span>
                 </div>
                 <div className="space-y-2.5 text-[11px]" style={{ color: 'var(--fg-2)' }}>
                   <div className="flex items-start gap-2">

@@ -293,11 +293,12 @@ html[data-theme="sketch"] button.btn-autoscroll-hover:hover:not(:disabled) {
   bottom: -8px !important;
 }
 
-/* Sketch theme layout adjustments: tilt the sticky-note guides */
+/* Sketch theme layout adjustments: avoid blur-inducing rotation, keep crisp hand-drawn feel with offset shadow */
 html[data-theme="sketch"] .guide-bubble {
-  transform: rotate(-0.5deg);
+  transform: none !important;
   border-width: 2px !important;
   border-style: solid !important;
+  box-shadow: 3px 3px 0px var(--border-strong) !important;
 }
 
 /* Sketch 主題下加粗邊框，同時必須將無須顯示的下半部/上半部邊框設為 0px，

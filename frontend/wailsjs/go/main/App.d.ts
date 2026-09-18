@@ -51,6 +51,8 @@ export function OpenInHeidiSQL():Promise<void>;
 
 export function OpenProjectCaddyfile(arg1:string):Promise<void>;
 
+export function OpenSystemConfigFile(arg1:string):Promise<void>;
+
 export function QueryDatabases():Promise<Array<string>>;
 
 export function QueryTables(arg1:string):Promise<Array<string>>;
@@ -60,6 +62,8 @@ export function ReloadCaddy():Promise<void>;
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function RestartApp():Promise<void>;
+
+export function RestartRedis(arg1:string,arg2:string,arg3:number):Promise<void>;
 
 export function SaveConfig(arg1:config.WincmpConfig):Promise<void>;
 
@@ -85,6 +89,8 @@ export function StartPHP(arg1:string):Promise<void>;
 
 export function StartProjectRuntime(arg1:string):Promise<void>;
 
+export function StartRedis(arg1:string,arg2:string,arg3:number):Promise<void>;
+
 export function StartTerminalSession(arg1:string,arg2:number,arg3:number):Promise<string>;
 
 export function StopCaddy():Promise<void>;
@@ -97,12 +103,6 @@ export function StopPHP(arg1:string):Promise<void>;
 
 export function StopProjectRuntime(arg1:string):Promise<void>;
 
-export function StopTerminalSession(arg1:string):Promise<void>;
-
-export function StartRedis(arg1:string,arg2:string,arg3:number):Promise<void>;
-
 export function StopRedis():Promise<void>;
 
-export function RestartRedis(arg1:string,arg2:string,arg3:number):Promise<void>;
-
-export function OpenSystemConfigFile(arg1:string):Promise<void>;
+export function StopTerminalSession(arg1:string):Promise<void>;

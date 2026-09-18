@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, RefreshCw, Layers, Cpu, Database, Server, CheckCircle, XCircle, AlertTriangle, Package, Folder, LayoutGrid, Terminal, X, Zap } from 'lucide-react';
+import { Play, Square, RefreshCw, Layers, Cpu, Database, Server, CheckCircle, XCircle, AlertTriangle, Package, Folder, LayoutGrid, Terminal, X, Zap, Lightbulb } from 'lucide-react';
 import {
   GetConfig, SaveConfig, ScanServices, GetScanResult, GetServicesStatus,
   StartCaddy, StopCaddy, ReloadCaddy, StartMariaDB, StopMariaDB,
@@ -230,7 +230,8 @@ export default function Dashboard() {
 
                 <div className="space-y-3">
                   <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
-                    <span>💡 {t("依賴管理指南")}</span>
+                    <Lightbulb size={13} style={{ color: 'var(--status-info)' }} />
+                    <span>{t("依賴管理指南")}</span>
                   </div>
                   <div className="space-y-2 text-[11px]" style={{ color: 'var(--fg-2)', lineHeight: '1.4' }}>
                     <p>{t("在此您可以一鍵下載並安裝 Web 開發所需的依賴元件，包含：")}</p>
@@ -278,22 +279,27 @@ export default function Dashboard() {
 
             return (
               <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
-                <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
-                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                  </span>
-                  <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                    {running ? t("運行中") : t("已停止")}
-                  </span>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-lg" style={{ background: running ? 'var(--status-info-bg)' : 'var(--surface)', color: running ? 'var(--status-info)' : 'var(--muted)' }}>
-                    <Server size={22} />
+                <div>
+                  <div className="flex justify-between items-center select-none mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg flex items-center justify-center shrink-0" style={{ background: running ? 'var(--status-info-bg)' : 'var(--surface)', color: running ? 'var(--status-info)' : 'var(--muted)' }}>
+                        <Server size={16} />
+                      </div>
+                      <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>Caddy</h4>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] shrink-0">
+                      <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+                        {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                        <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                      </span>
+                      <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                        {running ? t("運行中") : t("已停止")}
+                      </span>
+                    </div>
                   </div>
+
                   <div className="space-y-1">
-                    <h4 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("Caddy 反向代理")}</h4>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--fg-2)' }}>{t("反向代理")}</p>
                     <p className="text-[11px] font-medium" style={{ color: 'var(--meta)' }}>{t("版本: ")}{caddy ? caddy.Version : t("未安裝")}</p>
                     <p className="text-[11px]" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{t("埠口: ")}80, 443, 2019</p>
                   </div>
@@ -330,22 +336,27 @@ export default function Dashboard() {
 
             return (
               <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
-                <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
-                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                  </span>
-                  <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                    {running ? t("運行中") : t("已停止")}
-                  </span>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-lg" style={{ background: running ? 'var(--status-ok-bg)' : 'var(--surface)', color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                    <Database size={22} />
+                <div>
+                  <div className="flex justify-between items-center select-none mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg flex items-center justify-center shrink-0" style={{ background: running ? 'var(--status-ok-bg)' : 'var(--surface)', color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                        <Database size={16} />
+                      </div>
+                      <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>MariaDB</h4>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] shrink-0">
+                      <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+                        {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                        <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                      </span>
+                      <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                        {running ? t("運行中") : t("已停止")}
+                      </span>
+                    </div>
                   </div>
+
                   <div className="space-y-1">
-                    <h4 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("MariaDB 資料庫")}</h4>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--fg-2)' }}>{t("資料庫")}</p>
                     <p className="text-[11px] font-medium" style={{ color: 'var(--meta)' }}>{t("版本: ")}{mariadb ? mariadb.Version : t("未安裝")}</p>
                     <p className="text-[11px]" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{t("埠口: ")}{dbPort}</p>
                   </div>
@@ -377,22 +388,27 @@ export default function Dashboard() {
 
             return (
               <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
-                <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
-                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                  </span>
-                  <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                    {running ? t("運行中") : t("已停止")}
-                  </span>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-lg" style={{ background: running ? 'var(--accent-muted)' : 'var(--surface)', color: running ? 'var(--accent)' : 'var(--muted)' }}>
-                    <Cpu size={22} />
+                <div>
+                  <div className="flex justify-between items-center select-none mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg flex items-center justify-center shrink-0" style={{ background: running ? 'var(--accent-muted)' : 'var(--surface)', color: running ? 'var(--accent)' : 'var(--muted)' }}>
+                        <Cpu size={16} />
+                      </div>
+                      <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>Mailpit</h4>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] shrink-0">
+                      <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+                        {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                        <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                      </span>
+                      <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                        {running ? t("運行中") : t("已停止")}
+                      </span>
+                    </div>
                   </div>
+
                   <div className="space-y-1">
-                    <h4 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("Mailpit 測試郵件")}</h4>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--fg-2)' }}>{t("測試郵件")}</p>
                     <p className="text-[11px] font-medium" style={{ color: 'var(--meta)' }}>{t("版本: ")}{mailpit ? mailpit.Version : t("未安裝")}</p>
                     <p className="text-[11px]" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>SMTP: {smtpPort} | HTTP: {httpPort}</p>
                   </div>
@@ -423,22 +439,27 @@ export default function Dashboard() {
 
             return (
               <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
-                <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
-                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                  </span>
-                  <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                    {running ? t("運行中") : t("已停止")}
-                  </span>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="p-2.5 rounded-lg" style={{ background: running ? 'var(--status-warn-bg)' : 'var(--surface)', color: running ? 'var(--status-warn)' : 'var(--muted)' }}>
-                    <Zap size={22} />
+                <div>
+                  <div className="flex justify-between items-center select-none mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg flex items-center justify-center shrink-0" style={{ background: running ? 'var(--status-warn-bg)' : 'var(--surface)', color: running ? 'var(--status-warn)' : 'var(--muted)' }}>
+                        <Zap size={16} />
+                      </div>
+                      <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>Redis</h4>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] shrink-0">
+                      <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+                        {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                        <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                      </span>
+                      <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                        {running ? t("運行中") : t("已停止")}
+                      </span>
+                    </div>
                   </div>
+
                   <div className="space-y-1">
-                    <h4 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("Redis 快取服務")}</h4>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--fg-2)' }}>{t("快取服務")}</p>
                     <p className="text-[11px] font-medium" style={{ color: 'var(--meta)' }}>{t("版本: ")}{redis ? redis.Version : t("未安裝")}</p>
                     <p className="text-[11px]" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{t("埠口: ")}6379</p>
                   </div>

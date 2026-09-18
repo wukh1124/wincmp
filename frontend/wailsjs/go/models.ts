@@ -18,6 +18,7 @@ export namespace config {
 	    caddy: boolean;
 	    mariadb: boolean;
 	    mailpit: boolean;
+	    redis: boolean;
 	    php: Record<string, boolean>;
 	
 	    static createFrom(source: any = {}) {
@@ -29,6 +30,7 @@ export namespace config {
 	        this.caddy = source["caddy"];
 	        this.mariadb = source["mariadb"];
 	        this.mailpit = source["mailpit"];
+	        this.redis = source["redis"];
 	        this.php = source["php"];
 	    }
 	}

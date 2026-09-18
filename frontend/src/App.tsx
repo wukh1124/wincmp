@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages, Type, Lock, Unlock } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages, Type, Lock, Unlock, Lightbulb } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -489,7 +489,8 @@ export default function App() {
 
                 <div className="space-y-3">
                   <div className="font-bold text-xs flex items-center gap-1.5 pb-1.5" style={{ color: 'var(--status-info)', borderBottom: '1px solid var(--border-soft)' }}>
-                    <span>💡 {t("快速設定指南")}</span>
+                    <Lightbulb size={13} style={{ color: 'var(--status-info)' }} />
+                    <span>{t("快速設定指南")}</span>
                   </div>
                   <div className="text-[11px] leading-relaxed" style={{ color: 'var(--fg-2)' }}>
                     {t("您可以在此快速切換介面語系、調整外觀主題，以及變更面板的字型大小。")}
