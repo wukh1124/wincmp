@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle, GripVertical, Lightbulb } from 'lucide-react';
+import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle, GripVertical, Lightbulb, Lock } from 'lucide-react';
 import ProjectTerminal from './ProjectTerminal';
 import {
   GetConfig, SaveConfig, GetScanResult, GetServicesStatus,
@@ -489,7 +489,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
   // ─── Styles ─────────────────────────────────────────────
   const thStyle: React.CSSProperties = {
-    padding: '10px 16px', fontWeight: 700, fontSize: 10,
+    padding: '10px 8px', fontWeight: 700, fontSize: 10,
     letterSpacing: '0.05em', textTransform: 'uppercase',
     color: 'var(--muted)', background: 'var(--table-header-bg, var(--surface))',
     borderBottom: '1px solid var(--border)',
@@ -499,7 +499,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   };
 
   const tdStyle: React.CSSProperties = {
-    padding: '10px 16px', fontSize: 12,
+    padding: '10px 8px', fontSize: 12,
     borderBottom: '1px solid var(--border-soft)',
   };
 
@@ -594,13 +594,13 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
           <table className="w-full text-left text-xs table-auto">
             <thead>
               <tr>
-                <th style={{ ...thStyle, width: 32, textAlign: 'center' }} title={t("拖曳調整排序")}></th>
+                <th style={{ ...thStyle, width: 36, paddingLeft: 16, paddingRight: 4, textAlign: 'center' }} title={t("拖曳調整排序")}></th>
                 <th style={thStyle}>{t("專案名稱")}</th>
                 <th style={thStyle}>{t("類型 / 框架")}</th>
                 <th style={thStyle}>{t("本機網域")}</th>
                 <th style={thStyle}>{t("狀態")}</th>
                 <th style={thStyle}>{t("啟用")}</th>
-                <th style={{ ...thStyle, textAlign: 'center' }}>
+                <th style={{ ...thStyle, textAlign: 'center', paddingRight: 16 }}>
                   {t("操作")}
                 </th>
               </tr>
@@ -633,7 +633,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       transition: 'background 0.15s, border-color 0.15s',
                     }}
                   >
-                    <td style={{ ...tdStyle, width: 32, textAlign: 'center', cursor: 'grab' }} title={t("按住拖曳調整專案順序")}>
+                    <td style={{ ...tdStyle, width: 36, paddingLeft: 16, paddingRight: 4, textAlign: 'center', cursor: 'grab' }} title={t("按住拖曳調整專案順序")}>
                       <div className="flex items-center justify-center text-[var(--meta)] hover:text-[var(--fg)] active:cursor-grabbing">
                         <GripVertical size={13} />
                       </div>
@@ -667,9 +667,14 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                       <div className="flex flex-col gap-1.5">
                         {proj.domains.map((dom, dIdx) => (
                           <div key={dIdx} className="flex items-center gap-1.5 font-medium" style={{ color: 'var(--fg-2)' }}>
-                            <Globe size={11} style={{ color: 'var(--meta)' }} />
+                            {proj.use_ssl ? (
+                              <span title={t("已啟用 HTTPS 安全憑證")} className="inline-flex items-center cursor-help">
+                                <Lock size={11} style={{ color: 'var(--status-info)' }} />
+                              </span>
+                            ) : (
+                              <Globe size={11} style={{ color: 'var(--meta)' }} />
+                            )}
                             <span className="hover:underline cursor-pointer" style={{ color: 'var(--fg-2)' }} onClick={() => handleCopyLink(dom, proj.use_ssl)}>{dom}</span>
-                            {proj.use_ssl && <Shield size={11} style={{ color: 'var(--status-info)' }} />}
                           </div>
                         ))}
                       </div>
@@ -697,7 +702,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                     <td style={tdStyle}>
                       <input type="checkbox" checked={proj.enabled} onChange={() => handleToggleEnable(idx)} className="w-3.5 h-3.5 cursor-pointer accent-blue-500" />
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                    <td style={{ ...tdStyle, textAlign: 'center', paddingRight: 16 }}>
                       <div className="flex gap-1.5 justify-center items-center">
                         {hasRuntime && proj.enabled && (
                           !running ? (

@@ -546,6 +546,9 @@ export const enTranslations: Record<string, string> = {
   "開啟安裝目錄失敗": "Failed to open install directory",
   "從遠端檢查依賴版本": "Check dependency versions from remote",
   "檢查更新": "Check Updates",
+
+  // Project SSL
+  "已啟用 HTTPS 安全憑證": "HTTPS SSL Certificate Enabled",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符
