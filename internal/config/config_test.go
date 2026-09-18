@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -238,5 +239,68 @@ func TestConfig_LoadSaveCustomCommand(t *testing.T) {
 	p := loaded.Projects[0]
 	if p.CustomCommand != "npm run start -- --port %PORT%" {
 		t.Errorf("CustomCommand 欄位反序列化錯誤: 預期 'npm run start -- --port %%PORT%%', 實際 '%s'", p.CustomCommand)
+	}
+}
+
+func TestEnsurePHPIniOptimizations(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "wincmp-phpini-test-*")
+	if err != nil {
+		t.Fatalf("無法建立暫時目錄: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	phpDir := filepath.Join(tempDir, "conf", "php")
+	if err := os.MkdirAll(phpDir, 0755); err != nil {
+		t.Fatalf("建立目錄失敗: %v", err)
+	}
+
+	phpIniPath := filepath.Join(phpDir, "php.ini")
+	bakPath := filepath.Join(phpDir, "php.ini.bak")
+
+	// 1. 檔案不存在的情境
+	if err := EnsurePHPIniOptimizations(tempDir); err != nil {
+		t.Errorf("php.ini 不存在時應安全返回 nil, 錯誤: %v", err)
+	}
+
+	// 2. 既有使用者已自訂 extension=zip 但缺少 opcache
+	originalContent := "upload_max_filesize = 500M\nextension=zip\n"
+	if err := os.WriteFile(phpIniPath, []byte(originalContent), 0644); err != nil {
+		t.Fatalf("寫入自訂 php.ini 失敗: %v", err)
+	}
+
+	if err := EnsurePHPIniOptimizations(tempDir); err != nil {
+		t.Fatalf("EnsurePHPIniOptimizations 執行失敗: %v", err)
+	}
+
+	// 驗證 .bak 檔案被建立，內容與原檔案相同
+	bakData, err := os.ReadFile(bakPath)
+	if err != nil {
+		t.Fatalf("預期產生 php.ini.bak 但讀取失敗: %v", err)
+	}
+	if string(bakData) != originalContent {
+		t.Errorf("備份內容與原檔不符: 預期 %q, 實際 %q", originalContent, string(bakData))
+	}
+
+	// 驗證原檔內容：既保留原有自訂，又追加了 OPcache
+	newIniData, err := os.ReadFile(phpIniPath)
+	if err != nil {
+		t.Fatalf("讀取更新後的 php.ini 失敗: %v", err)
+	}
+	newIniStr := string(newIniData)
+	if !strings.Contains(newIniStr, "extension=zip") {
+		t.Errorf("原有自訂設定被遺失！實際內容: %s", newIniStr)
+	}
+	if !strings.Contains(newIniStr, "zend_extension=opcache") || !strings.Contains(newIniStr, "[opcache]") {
+		t.Errorf("缺少 OPcache 設定區塊！實際內容: %s", newIniStr)
+	}
+
+	// 3. 再次執行時（已包含 opcache），不應再次追加或更動
+	modTimeBefore, _ := os.Stat(phpIniPath)
+	if err := EnsurePHPIniOptimizations(tempDir); err != nil {
+		t.Fatalf("第二次執行失敗: %v", err)
+	}
+	modTimeAfter, _ := os.Stat(phpIniPath)
+	if modTimeBefore.ModTime() != modTimeAfter.ModTime() {
+		t.Errorf("已有 opcache 設定時不應再次修改檔案")
 	}
 }

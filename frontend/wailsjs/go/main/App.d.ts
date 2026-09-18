@@ -45,6 +45,8 @@ export function IsServiceRunning(arg1:string):Promise<boolean>;
 
 export function KillProcessByPort(arg1:number):Promise<void>;
 
+export function OpenDependencyFolder(arg1:string):Promise<void>;
+
 export function OpenFolder(arg1:string):Promise<void>;
 
 export function OpenInHeidiSQL():Promise<void>;
@@ -108,5 +110,3 @@ export function StopRedis():Promise<void>;
 export function StopTerminalSession(arg1:string):Promise<void>;
 
 export function UninstallDependency(arg1:string):Promise<void>;
-
-export function OpenDependencyFolder(arg1:string):Promise<void>;
