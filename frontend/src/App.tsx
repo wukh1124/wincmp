@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, Download, Palette, Languages, Type, Lock, Unlock, Lightbulb } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, ShieldAlert, Download, Palette, Languages, Type, Lock, Unlock, Lightbulb } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -699,8 +699,8 @@ export default function App() {
               style={{ color: isAdmin ? 'var(--status-info)' : 'var(--status-warn)' }}
               title={isAdmin ? t('已取得系統管理員權限，可自動配置 Hosts 網域別名') : t('無管理員權限：可能無法自動修改 Hosts 檔，需手動管理網域別名')}
             >
-              <Shield size={12} />
-              <span>{isAdmin ? t('管理員模式') : t('限制模式')}</span>
+              {isAdmin ? <Shield size={12} /> : <ShieldAlert size={12} />}
+              <span>{isAdmin ? t('管理員權限') : t('一般權限')}</span>
             </div>
             <div className="h-3 w-[1px]" style={{ background: 'var(--border)' }} />
 

@@ -450,9 +450,9 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={handleFetchRemote} disabled={isFetchingRemote} className="p-2 rounded-lg transition flex items-center gap-1 text-xs font-semibold" style={{ color: 'var(--fg-2)' }} title={t("從遠端獲取最新版本")}>
+            <button onClick={handleFetchRemote} disabled={isFetchingRemote} className="p-2 rounded-lg transition flex items-center gap-1 text-xs font-semibold" style={{ color: 'var(--fg-2)' }} title={t("從遠端檢查依賴版本")}>
               <RefreshCw size={14} className={isFetchingRemote ? 'animate-spin' : ''} />
-              <span>{isFetchingRemote ? t('獲取中...') : t('獲取最新')}</span>
+              <span>{isFetchingRemote ? t('檢查中...') : t('檢查更新')}</span>
             </button>
             <button id="btn-close-dep-manager" onClick={onClose} className="p-1.5 rounded-lg transition" style={{ color: 'var(--muted)' }}><X size={18} /></button>
           </div>

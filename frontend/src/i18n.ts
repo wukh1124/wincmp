@@ -56,6 +56,8 @@ export const enTranslations: Record<string, string> = {
   "找不到匹配的專案 😭": "No matching projects found 😭",
   "管理員模式": "Administrator Mode",
   "限制模式": "Restricted Mode",
+  "管理員權限": "Admin Rights",
+  "一般權限": "Standard Rights",
   "已取得系統管理員權限，可自動配置 Hosts 網域別名": "Administrator privileges granted. System Hosts will auto-update.",
   "無管理員權限：可能無法自動修改 Hosts 檔，需手動管理網域別名": "No administrator privileges: Hosts file auto-update may fail, manual setup required.",
   "Go 核心已連線": "Go Core Connected",
@@ -542,6 +544,8 @@ export const enTranslations: Record<string, string> = {
   "重裝 PHP": "Reinstall PHP",
   "開啟安裝目錄": "Open Install Directory",
   "開啟安裝目錄失敗": "Failed to open install directory",
+  "從遠端檢查依賴版本": "Check dependency versions from remote",
+  "檢查更新": "Check Updates",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符
