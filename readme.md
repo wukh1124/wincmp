@@ -1,183 +1,132 @@
-# WinCMP 🚀
+# WinCMP
 
 ![Go Version](https://img.shields.io/badge/Go-1.26.2+-00ADD8?style=for-the-badge&logo=go)
 ![Wails Version](https://img.shields.io/badge/Wails-v2.12.0-red?style=for-the-badge&logo=wails)
 ![React Version](https://img.shields.io/badge/React-v18-blue?style=for-the-badge&logo=react)
-![Platform](https://img.shields.io/badge/Platform-Windows_11-0078D6?style=for-the-badge&logo=windows)
+![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?style=for-the-badge&logo=windows)
 ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
 
-**WinCMP** is a modern, portable local development environment control panel designed specifically for Windows. 
-The name is derived from **Win**dows + **C**addy + **M**ariaDB + **P**HP.
+**WinCMP** is a portable local development control panel for Windows.
+The name stands for **Win**dows + **C**addy + **M**ariaDB + **P**HP.
 
-Inspired by XAMPP and Laragon, WinCMP aims to provide a more lightweight, **portable (no installation required)**, and **mostly admin-privilege-free** development solution (excluding optional Hosts file modifications). Built with Go core and the Wails v2 framework, it features a premium React 18 frontend with low resource usage, fast startup speeds, and beautiful visual aesthetics.
+Inspired by XAMPP and Laragon, but lighter: no installer, no system PATH pollution, and core services run without admin rights (Hosts sync is optional and needs UAC). Built with Go + Wails v2 and a React 18 UI.
+
+**Download:** [GitHub Releases](https://github.com/wukh1124/wincmp/releases/latest)
 
 ---
 
-## 📸 Preview
+## Preview
 
 ![WinCMP Dashboard](screenshot/sketch/dashboard.png)
 
 ---
 
-## ✨ Features
+## Features
 
-- 🪶 **Lightweight & Single Executable**: Statically compiled in Go + Wails. Runs entirely from a single `wincmp.exe` without extra setup, automatically generating default config files on startup.
-- 📦 **Fully Portable & Easy Migration**: Easily migrate your workspace by copying the core `conf/wincmp.json` and the `/bin` directory. Fully portable and ready to run on any Windows machine instantly.
-- 🛡️ **No Admin Privileges Needed for Core Services**: Fully supports running under restricted environments without modifying system environment variables or writing to the registry. *(Note: Automatic writing to the Windows `hosts` file for custom domains is optional and requires Administrator elevation/UAC prompt).*
-- 🎨 **Modern UI/UX**: Premium Dark Professional theme with smooth sidebar navigation, real-time status monitoring, and interactive micro-animations.
-- 🔄 **PHP Multi-Process Load Balancing**: Leverages Caddy's upstream mechanism to run multiple FastCGI processes for each PHP version.
-- 📂 **Automated Project Management**: Visually manage Laravel, Next.js, Nuxt, Astro, Vite, Python, Go, and other projects. Automatically detects frameworks and generates configurations.
-- 🚀 **Runtime Multi-Environment Execution**: Supports Node.js, Bun, Python, Go (Air/Run), and Custom development environments, with options to start in Background or Terminal mode.
-- 💻 **Project Integrated Interactive Terminal**: Spawns a beautiful drawer-based Terminal (PowerShell, CMD, Git Bash, WSL) at the project root using Windows ConPTY and `xterm.js` with interactive CLI and auto-completion support.
-- 📜 **Isolated Environments**: Dynamically injects `PATH` when launching subprocesses to ensure PHP and its extensions run in the correct binary environments.
+- **Lightweight single EXE** — Go + Wails, uses native WebView2 (not Electron). Idle UI memory is roughly 150–250MB.
+- **Portable** — migrate with `conf/wincmp.json` + `/bin` only.
+- **No admin for core services** — Caddy, PHP-CGI, MariaDB, Mailpit, Redis run in user space. *(Hosts sync and some dependency downloads may prompt UAC.)*
+- **Modern UI** — dark / light themes, live service status, project terminal drawer.
+- **PHP multi-process** — Caddy upstream load balancing; default 3 FastCGI processes per version (adjustable in Dashboard). Ports follow `3<major><minor><index>`.
+- **Project presets** — auto-detect Laravel, Next.js, Nuxt, Astro, Vite, Django/FastAPI/Flask, PocketBase, Go API, etc.
+- **Runtimes** — Node.js, Bun, Python, Go, Custom; Background or Terminal launch modes.
+- **Built-in terminal** — ConPTY + xterm.js drawer (PowerShell / CMD / Git Bash / WSL) with TAB completion.
+- **Dependency downloader** — fetch Caddy, PHP, MariaDB, Mailpit, Redis, Node.js, Bun, Composer, HeidiSQL into `/bin`.
+- **DB tools** — built-in DB Explorer; open the same connection in HeidiSQL.
+- **Env isolation** — injects `PATH` per subprocess instead of rewriting system variables.
+- **Hot reload** — project settings write to `conf/sites/` and reload Caddy without restarting the panel.
 
 ---
 
-## 📁 Project Architecture & Directory Layout
-
-To achieve "plug-and-play" simplicity, WinCMP strictly adheres to the following directory structure:
+## Layout
 
 ```text
 wincmp/
-├── main.go                  # Application entry point: initializes and starts Wails
-├── app.go                   # Wails lifecycle manager (startup, shutdown) and monitor triggers
-├── bridge.go                # Wails & Go Binding API (frontend-backend RPC endpoints)
-├── downloader_bridge.go     # Wails dependency downloader binding API
-├── wincmp.json              # WinCMP global & project configurations (UI data source)
-├── conf/                    # Configuration center
-│   ├── ssl/                 # SSL Certificates (crt/key)
-│   ├── snippets/            # Shared Caddy configuration snippets
-│   ├── sites/               # Dynamically generated project Caddyfiles
-│   ├── Caddyfile            # Caddy entry point (Imports snippets & sites)
-│   └── my.ini               # MariaDB initialization config
-├── bin/                     # Binary executables directory (pre-included or auto-downloaded)
-│   ├── caddy/               # caddy-x.xx.x/caddy.exe
-│   ├── mariadb/             # mariadb-x.x.x/bin/mariadbd.exe
-│   ├── php/                 # php-x.x.x/php-cgi.exe
-│   ├── node/                # node-x.x.x/npm.cmd
-│   ├── bun/                 # bun-x.x.x/bun.exe
-│   ├── composer/            # composer-x.x.x/composer.bat
-│   ├── heidisql/            # heidisql-x.xx/heidisql.exe
-│   └── mailpit/             # mailpit-x.xx.x/mailpit.exe
-├── data/                    # Data storage
-│   └── mariadb/             # Default MariaDB data directory
-├── logs/                    # Service execution logs (grouped by date)
-├── www/                     # Default web projects root directory
-├── internal/                # Core logic (independent of GUI)
-│   ├── config/              # JSON configuration reader/writer
-│   ├── scanner/             # Dynamic version scanning for the bin directory
-│   ├── process/             # Subprocess lifecycle management (Manager)
-│   ├── detect/              # Laravel project detection (confidence-score based)
-│   ├── preset/              # Project preset system (framework detection & command templates)
-│   ├── hosts/               # Windows Hosts file manager
-│   ├── port/                # Port occupation checker
-│   ├── resource/            # Resource monitoring (CPU/RAM/Subprocess stack)
-│   ├── crypto/              # MariaDB password encryption
-│   └── singleinstance/      # Single instance lock + window focus helper
-└── frontend/                # Frontend React + TSX project
-    ├── src/                 # Frontend source files (Dashboard, Projects, etc.)
-    └── tailwind.config.js   # Tailwind style configurations
+├── main.go / app.go / bridge.go
+├── downloader_bridge.go
+├── conf/
+│   ├── wincmp.json          # main config (projects + global)
+│   ├── Caddyfile
+│   ├── my.ini
+│   ├── dependencies.json    # downloader catalog
+│   ├── snippets/  sites/  ssl/
+├── bin/                     # service binaries (yours or downloaded)
+│   ├── caddy/  mariadb/  php/
+│   ├── mailpit/  redis/
+│   ├── node/  bun/  composer/  heidisql/
+├── data/mariadb/
+├── logs/
+├── www/
+├── internal/                # config, scanner, process, detect, preset, hosts, ...
+└── frontend/                # React + TypeScript
 ```
 
----
-
-## 🛠️ Architecture & Under-the-Hood Logic
-
-### 1. PHP Process Management & Port Mapping
-WinCMP utilizes a **3-version-sequence** pattern to assign service ports, ensuring different versions of PHP can run concurrently without conflicts:
-- **Naming Convention**: `3<Major><Minor><Sequence 00-99>`
-  - PHP 7.3 → `37300`, `37301`, `37302`
-  - PHP 8.2 → `38200`, `38201`, `38202`
-- **Load Balancing**: Each PHP version starts 3 `php-cgi` processes by default. WinCMP defines `php_fastcgi 127.0.0.1:38200 127.0.0.1:38201 ...` in Caddyfile to balance the requests.
-
-### 2. Dynamic Caddy Configuration
-When a user updates project settings in the UI:
-1. `conf/wincmp.json` is updated.
-2. The Go application rewrites `conf/sites/{project}.caddy`.
-3. Calls `caddy reload` for a zero-downtime hot reload.
-
-### 3. Dynamic Environment Variables Injection
-To avoid modifying the system's global `PATH`, WinCMP prepends the corresponding binary directories to the subprocess's `Env` list via `os/exec` (e.g., when launching PHP), ensuring that extensions and dependencies locate their correct DLLs.
+Config path used by the app: **`conf/wincmp.json`**.
 
 ---
 
-## 🚀 Development & Compilation
+## Architecture notes
 
-### 1. Prerequisites
-- [Go 1.26.2+](https://go.dev/dl/)
-- [Wails CLI](https://wails.io/docs/gettingstarted/installation/): Make sure Wails v2 is installed on your system. Otherwise install it using `go install github.com/wailsapp/wails/v2/cmd/wails@latest`.
-- C Compiler: MinGW-w64 (WinLibs) for compiling underlying native Windows bindings. Make sure `gcc -v` works.
-- [Node.js](https://nodejs.org/): Node.js 18+ for compiling frontend components.
+**PHP ports** — `3<major><minor><sequence>`:
+PHP 7.3 → `37300+`; PHP 8.2 → `38200+`. Default process count is 3 per version.
 
-### 2. Development Hot Reload
+**Config apply** — UI updates `conf/wincmp.json` → rewrite `conf/sites/{project}.caddy` → `caddy reload`.
+
+**PATH isolation** — binary dirs are prepended to the child process env only; system PATH is left untouched.
+
+---
+
+## Development
+
+### Prerequisites
+
+- Go 1.26.2+
+- [Wails v2](https://wails.io/docs/gettingstarted/installation/)
+- MinGW-w64 (WinLibs) so `gcc -v` works
+- Node.js 18+
+
+### Commands
+
 ```cmd
-# Start Wails dev server (watches both Go backend and React frontend)
 wails dev
-```
 
-### 3. Build Commands
-```cmd
-# Tidy Go modules & frontend packages
 go mod tidy
 cd frontend && npm install && cd ..
-
-# Build with debug console and developer tools
-wails build -debug
-
-# Release build (no CMD window console, outputs wincmp.exe)
 wails build -clean
-
-# Production build with stripped symbols for size optimization
 wails build -clean -ldflags "-s -w"
+wails build -ldflags "-X main.AppVersion=v2.1.0"
 
-# Production build with dynamic version injection (e.g., v2.0.0)
-wails build -ldflags "-X main.AppVersion=v2.0.0"
-
-# Build for website release info (Manually to Test Only)
 node scripts/generate-release-json.js
 ```
 
----
-
-## 🗺️ Roadmap
-
-### ✅ Completed
-- [x] **Modern UI** prototype and project management interface (rebuilt with Wails + React 18).
-- [x] **Multi-tab system logs** with log-rotation mechanism (lumberjack).
-- [x] **MariaDB scanning** and database viewer (simple preview + one-click download HeidiSQL).
-- [x] **Multi-process PHP** load balancing for Caddy (runs multiple PHP instances on different ports, with Caddy responsible for distribution).
-- [x] **Windows System Tray** minimization support.
-- [x] **Resume Last Services**: Auto-starts services that were running when the app was closed (saved in `wincmp.json`).
-- [x] **Service Uptime Tracker** (independent stats for Caddy, MariaDB, and PHP).
-- [x] **Laravel Auto-Detection** (confidence score system, automatically routing to `public/`).
-- [x] **Port Conflict Check** (runs checks before launch to minimize race conditions).
-- [x] **Hosts File Auto-Management** (automatically syncs local domains after prompting for UAC elevation).
-- [x] **Dark/Light Theme Toggle** (integrated with Tailwind CSS).
-- [x] **Runtime Multi-Environment Support** (Node.js, Bun, Python, Go Air/Run, Custom).
-- [x] **Framework Preset Auto-Detection** (Next.js, Nuxt, Astro, Vite, Django, FastAPI, Flask, PocketBase, Go API).
-- [x] **Double Launch Mode for Runtimes** (Background / Terminal).
-- [x] **Legacy Project Auto-Migration** (node_port → runtime_port, etc.).
-- [x] **Mailpit Integration** (start/stop toggle on Dashboard and configuration dialog).
-- [x] **Project Integrated Interactive Terminal** (integrated Windows ConPTY with `xterm.js` to support interactive CLI, auto-completion, and customization in Settings).
-- [x] **Version Auto-Downloader**: Service executables (Caddy/PHP/MariaDB, etc.) multi-version auto-downloader.
-
-### ⏳ Planned
-- **Dev Toolchain**: Embedded Composer support (no `composer.phar` installation needed), PHP process watchdog with auto-recovery.
+End-user install docs live in [`packaging/wincmp/readme.md`](packaging/wincmp/readme.md).
 
 ---
 
-## 🤝 Acknowledgments (Credits)
+## Roadmap
 
-WinCMP wouldn't be possible without the inspiration and support of these fantastic open-source projects:
-- **Core Technologies**:
-  - [Go 1.26+](https://go.dev/) — High-performance backend engine
-  - [Wails v2](https://wails.io/) — Lightweight framework for desktop apps
-  - [React 18](https://react.dev/) — Fluid and powerful frontend library
-  - [Windows ConPTY](https://learn.microsoft.com/en-us/windows/console/pseudoconsole) & [xterm.js](https://xtermjs.org/) — Immersive built-in terminal experience
-- **Design & Themes**:
-  - Special thanks to the [Open Design](https://github.com/nexu-io/open-design) community for providing visual guidelines and design tokens for the premium Dark Professional theme.
+### Done
 
-## 📄 License
+- Wails + React UI, multi-tab logs, system tray, resume last services
+- MariaDB scan, DB Explorer + HeidiSQL, hosts sync with backup
+- PHP multi-process balancing, runtime multi-env, framework presets
+- Project terminal (ConPTY + xterm.js), Mailpit, Redis + PHP Redis ext
+- Dependency downloader (Caddy/PHP/MariaDB/Node/Bun/Composer/HeidiSQL/Mailpit/Redis)
+- PHP OPcache auto-tuning, project drag-and-drop order
 
-This project is licensed under the [MIT License](https://opensource.org/license/mit/).
-Feel free to submit Pull Requests or open Issues to share your feedback!
+### Planned
+
+- PHP process watchdog / auto-recovery
+
+---
+
+## Credits
+
+- [Go](https://go.dev/), [Wails v2](https://wails.io/), [React 18](https://react.dev/)
+- [Windows ConPTY](https://learn.microsoft.com/windows/console/pseudoconsole), [xterm.js](https://xtermjs.org/)
+- Managed stacks: Caddy, MariaDB, PHP, Mailpit, Redis
+- Theme inspiration: [Open Design](https://github.com/nexu-io/open-design)
+
+## License
+
+[MIT](LICENSE)
