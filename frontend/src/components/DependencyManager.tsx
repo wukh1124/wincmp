@@ -391,7 +391,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
                   <button
                     onClick={() => { setActiveDropdown(null); handleDownload(key); }}
-                    className="w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                    className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
                   >
                     <RotateCw size={13} style={{ color: 'var(--status-info)' }} />
                     <span>
@@ -404,7 +404,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                   {isPhp && phpRedisInfo?.supported && (
                     <button
                       onClick={() => handleInstallRedisExt(key)}
-                      className="w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                      className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
                     >
                       <Zap size={13} style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--status-warn)' }} />
                       <span>{phpRedisInfo?.installed ? t("單獨重裝 Redis 擴充") : t("單獨安裝 Redis 擴充")}</span>
@@ -413,7 +413,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
                   <button
                     onClick={() => handleOpenFolder(key)}
-                    className="w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                    className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
                   >
                     <FolderOpen size={13} style={{ color: 'var(--status-info)' }} />
                     <span>{t("開啟安裝目錄")}</span>
@@ -423,7 +423,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
                   <button
                     onClick={() => handleUninstall(key, label)}
-                    className="w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--status-error-bg)] text-[var(--status-error)] transition"
+                    className="dropdown-menu-item dropdown-menu-item-danger w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--status-error-bg)] text-[var(--status-error)] transition"
                   >
                     <Trash2 size={13} />
                     <span>{isPhp ? t("移除此版本") : t("移除依賴")}</span>

@@ -94,8 +94,23 @@ button {
   line-height: 1 !important;
 }
 
-button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-btn):not(.log-control-btn):not(.log-tab-btn):not(.log-action-btn) {
+button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-btn):not(.log-control-btn):not(.log-tab-btn):not(.log-action-btn):not(.dropdown-menu-item) {
   padding: 10px 16px !important;
+}
+
+/* 下拉選單/彈窗內部選項按鈕 */
+.dropdown-menu-item {
+  padding: 8px 10px !important;
+  cursor: pointer;
+}
+
+.dropdown-menu-item:hover {
+  background-color: var(--surface-hover) !important;
+}
+
+.dropdown-menu-item-danger:hover {
+  background-color: var(--status-error-bg) !important;
+  color: var(--status-error) !important;
 }
 
 /* 日誌控制台 VSCode 風格幽靈動作按鈕 */
@@ -134,6 +149,27 @@ button[class*="px-"]:not(.quick-setting-btn):not(.nav-item):not(.version-update-
   padding: 8px 12px !important;
   font-size: 0.6875rem !important; /* 11px 相對大小 */
   line-height: 1 !important;
+  background-color: transparent !important;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  transition: all var(--motion-fast, 150ms) var(--ease-standard);
+  user-select: none;
+}
+
+.log-tab-btn:hover:not(.active) {
+  color: var(--fg) !important;
+  background-color: var(--surface-warm) !important;
+}
+
+.log-tab-btn.active {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+  background-color: transparent !important;
+}
+
+.log-tab-btn.active:hover {
+  background-color: transparent !important;
+  opacity: 0.85;
 }
 
 .log-control-select {
@@ -274,7 +310,7 @@ html[data-theme="sketch"] .btn-custom-hover:hover:not(:disabled) {
 }
 
 /* 3. 主按鈕 (Accent / Primary Buttons) */
-button[style*="var(--accent)"]:not(:disabled):hover,
+button[style*="var(--accent)"]:not(:disabled):not(.log-tab-btn):not(.log-action-btn):hover,
 .version-update-btn:not(:disabled):hover {
   background-color: var(--accent-hover) !important;
   border-color: var(--accent-hover) !important;

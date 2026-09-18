@@ -197,29 +197,26 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
         style={{ backgroundColor: 'var(--surface)', borderBottomColor: 'var(--border)' }}
       >
         <div className="flex overflow-x-auto scrollbar-none">
-          {CATEGORIES.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id);
-                setUnreadTabs(prev => ({ ...prev, [tab.id]: false }));
-              }}
-              className={`log-tab-btn font-bold border-b-2 transition duration-200 shrink-0 flex items-center gap-1.5 ${
-                activeTab === tab.id
-                  ? ''
-                  : 'hover:text-[var(--fg)]'
-              }`}
-              style={activeTab === tab.id
-                ? { borderBottomColor: 'var(--accent)', color: 'var(--accent)', backgroundColor: 'var(--card-hover)' }
-                : { borderBottomColor: 'transparent', color: 'var(--muted)' }
-              }
-            >
-              <span>{t(tab.label)}</span>
-              {unreadTabs[tab.id] && activeTab !== tab.id && (
-                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: 'var(--status-warn)' }} />
-              )}
-            </button>
-          ))}
+          {CATEGORIES.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setUnreadTabs(prev => ({ ...prev, [tab.id]: false }));
+                }}
+                className={`log-tab-btn font-bold shrink-0 flex items-center gap-1.5 ${
+                  isActive ? 'active' : ''
+                }`}
+              >
+                <span>{t(tab.label)}</span>
+                {unreadTabs[tab.id] && !isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: 'var(--status-warn)' }} />
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-1 py-1 shrink-0">
