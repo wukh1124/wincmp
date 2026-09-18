@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, RefreshCw, Layers, Cpu, Database, Server, CheckCircle, XCircle, AlertTriangle, Package, Folder, LayoutGrid, Terminal, X } from 'lucide-react';
+import { Play, Square, RefreshCw, Layers, Cpu, Database, Server, CheckCircle, XCircle, AlertTriangle, Package, Folder, LayoutGrid, Terminal, X, Zap } from 'lucide-react';
 import {
   GetConfig, SaveConfig, ScanServices, GetScanResult, GetServicesStatus,
   StartCaddy, StopCaddy, ReloadCaddy, StartMariaDB, StopMariaDB,
-  StartMailpit, StopMailpit, StartPHP, StopPHP,
+  StartMailpit, StopMailpit, StartRedis, StopRedis, RestartRedis, StartPHP, StopPHP,
   CheckMissingCoreDependencies, CheckPortConflicts
 } from '../../wailsjs/go/main/App';
 import { scanner } from '../../wailsjs/go/models';
@@ -135,6 +135,12 @@ export default function Dashboard() {
           await StartMailpit(extraInfo.Version, extraInfo.ExePath, config?.global?.mailpit_smtp_port || 1025, config?.global?.mailpit_http_port || 8025, config?.global?.mailpit_use_db || false);
           triggerAutoExpandLogs();
         } else if (action === 'stop') await StopMailpit();
+      } else if (serviceName === 'redis') {
+        if (action === 'start') {
+          await StartRedis(extraInfo.Version, extraInfo.ExePath, 6379);
+          triggerAutoExpandLogs();
+        } else if (action === 'stop') await StopRedis();
+        else if (action === 'reload') await RestartRedis(extraInfo.Version, extraInfo.ExePath, 6379);
       } else if (serviceName.startsWith('php')) {
         const version = extraInfo.Version;
         if (action === 'start') { await StartPHP(version); triggerAutoExpandLogs(); }
@@ -261,7 +267,7 @@ export default function Dashboard() {
           <h3 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("核心系統服務")}</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Caddy */}
           {(() => {
             const caddy = scanResult?.CaddyList?.[0];
@@ -401,6 +407,57 @@ export default function Dashboard() {
                     <button onClick={() => handleServiceAction('mailpit', 'stop', mailpit)} disabled={loadingStop} className="btn-danger-hover w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
                       <Square size={12} /> {loadingStop ? t("停止中...") : t("停止服務")}
                     </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Redis */}
+          {(() => {
+            const redis = scanResult?.RedisList?.[0];
+            const running = isRunning('redis');
+            const loadingStart = loadingServices['redis-start'];
+            const loadingStop = loadingServices['redis-stop'];
+            const loadingReload = loadingServices['redis-reload'];
+
+            return (
+              <div className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
+                <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
+                  <span className="relative flex" style={{ width: '8px', height: '8px' }}>
+                    {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                    <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                  </span>
+                  <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                    {running ? t("運行中") : t("已停止")}
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="p-2.5 rounded-lg" style={{ background: running ? 'var(--status-warn-bg)' : 'var(--surface)', color: running ? 'var(--status-warn)' : 'var(--muted)' }}>
+                    <Zap size={22} />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("Redis 快取服務")}</h4>
+                    <p className="text-[11px] font-medium" style={{ color: 'var(--meta)' }}>{t("版本: ")}{redis ? redis.Version : t("未安裝")}</p>
+                    <p className="text-[11px]" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{t("埠口: ")}6379</p>
+                  </div>
+                </div>
+
+                <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
+                  {!running ? (
+                    <button onClick={() => handleServiceAction('redis', 'start', redis)} disabled={loadingStart || !redis} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !redis ? 0.5 : 1 }}>
+                      <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
+                    </button>
+                  ) : (
+                    <>
+                      <button onClick={() => handleServiceAction('redis', 'stop', redis)} disabled={loadingStop} className="btn-danger-hover flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', color: 'var(--status-error)' }}>
+                        <Square size={12} /> {loadingStop ? t("停止中...") : t("停止")}
+                      </button>
+                      <button onClick={() => handleServiceAction('redis', 'reload', redis)} disabled={loadingReload} className="btn-custom-hover flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
+                        <RefreshCw size={12} /> {loadingReload ? t("重載中...") : t("重載")}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

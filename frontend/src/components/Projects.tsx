@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle } from 'lucide-react';
+import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle, GripVertical } from 'lucide-react';
 import ProjectTerminal from './ProjectTerminal';
 import {
   GetConfig, SaveConfig, GetScanResult, GetServicesStatus,
@@ -47,6 +47,54 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [isMonorepo, setIsMonorepo] = useState(false);
   const effectivelyUseCustomCmd = useCustomCmd || editingProject?.type === 'custom';
   const isAnyLoading = Object.values(loadingProjects).some(Boolean);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', `${index}`);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+    if (draggedIndex === null || draggedIndex === dropIndex || !config?.projects) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const updatedProjects = [...config.projects];
+    const [movedProject] = updatedProjects.splice(draggedIndex, 1);
+    updatedProjects.splice(dropIndex, 0, movedProject);
+
+    const newCfg = { ...config, projects: updatedProjects };
+    setConfig(newCfg);
+    setDraggedIndex(null);
+
+    try {
+      await SaveConfig(newCfg);
+      await ReloadCaddy();
+    } catch (err) {
+      console.error("保存專案排序失敗:", err);
+      (window as any).customAlert(`${t("保存專案排序失敗")}: ${err}`);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   useEffect(() => {
     if (config?.projects && config.projects.length > 0) {
@@ -545,6 +593,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
           <table className="w-full text-left text-xs table-auto">
             <thead>
               <tr>
+                <th style={{ ...thStyle, width: 32, textAlign: 'center' }} title={t("拖曳調整排序")}></th>
                 <th style={thStyle}>{t("專案名稱")}</th>
                 <th style={thStyle}>{t("類型 / 框架")}</th>
                 <th style={thStyle}>{t("本機網域")}</th>
@@ -562,18 +611,32 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                 const running = hasRuntime && !!servicesStatus[runtimeKey];
                 const loading = loadingProjects[proj.name];
                 const isHighlighted = proj.name === highlightedRow;
+                const isDragging = draggedIndex === idx;
+                const isOver = dragOverIndex === idx;
 
                 return (
                   <tr
-                    key={idx}
+                    key={proj.name || idx}
                     id={`project-row-${proj.name}`}
-                    className={isHighlighted ? 'animate-highlight' : ''}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, idx)}
+                    onDragOver={(e) => handleDragOver(e, idx)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, idx)}
+                    onDragEnd={handleDragEnd}
+                    className={`${isHighlighted ? 'animate-highlight' : ''}`}
                     style={{
-                      opacity: proj.enabled ? 1 : 0.5,
-                      background: isHighlighted ? 'var(--status-info-bg)' : 'var(--table-row-bg, transparent)',
-                      transition: 'all 0.3s',
+                      opacity: proj.enabled ? (isDragging ? 0.35 : 1) : 0.5,
+                      background: isHighlighted ? 'var(--status-info-bg)' : isOver ? 'var(--card-hover)' : 'var(--table-row-bg, transparent)',
+                      borderTop: isOver ? '2px solid var(--accent)' : '1px solid transparent',
+                      transition: 'background 0.15s, border-color 0.15s',
                     }}
                   >
+                    <td style={{ ...tdStyle, width: 32, textAlign: 'center', cursor: 'grab' }} title={t("按住拖曳調整專案順序")}>
+                      <div className="flex items-center justify-center text-[var(--meta)] hover:text-[var(--fg)] active:cursor-grabbing">
+                        <GripVertical size={13} />
+                      </div>
+                    </td>
                     <td style={tdStyle}>
                       <div className="space-y-0.5">
                         <div className="text-sm font-bold" style={{ color: 'var(--fg)' }}>{proj.name}</div>

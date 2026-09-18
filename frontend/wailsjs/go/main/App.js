@@ -185,3 +185,20 @@ export function StopProjectRuntime(arg1) {
 export function StopTerminalSession(arg1) {
   return window['go']['main']['App']['StopTerminalSession'](arg1);
 }
+
+export function StartRedis(arg1, arg2, arg3) {
+  return window['go']['main']['App']['StartRedis'](arg1, arg2, arg3);
+}
+
+export function StopRedis() {
+  return window['go']['main']['App']['StopRedis']();
+}
+
+export function RestartRedis(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RestartRedis'](arg1, arg2, arg3);
+}
+
+export function OpenSystemConfigFile(arg1) {
+  return window['go']['main']['App']['OpenSystemConfigFile'](arg1);
+}
+

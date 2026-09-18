@@ -499,6 +499,20 @@ export const enTranslations: Record<string, string> = {
   // Sidebar Quick Settings Guide
   "快速設定指南": "Quick Settings Guide",
   "您可以在此快速切換介面語系、調整外觀主題，以及變更面板的字型大小。": "You can quickly switch the interface language, adjust appearance themes, and change editor & panel font sizes here.",
+
+  // v2.1.0 Updates
+  "Redis 快取服務": "Redis Cache Service",
+  "Redis": "Redis",
+  "自動切換分頁": "Auto-switch Tab",
+  "有新日誌時自動切換到該分頁": "Automatically switch to the log tab when new logs arrive",
+  "拖曳調整排序": "Drag to reorder",
+  "按住拖曳調整專案順序": "Hold and drag to reorder projects",
+  "保存專案排序失敗": "Failed to save project order",
+  "打開 SSL 目錄": "Open SSL Directory",
+  "Caddyfile": "Caddyfile",
+  "common.caddy": "common.caddy",
+  "系統運作與自動化行為": "System & Automation Behaviors",
+  "啟動 Redis 失敗: %w": "Failed to start Redis: %w",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

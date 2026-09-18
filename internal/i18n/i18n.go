@@ -574,4 +574,23 @@ var enTranslations = map[string]string{
 	"🛡️ %s 的 SHA-256 校驗成功！":         "🛡️ SHA-256 check succeeded for %s!",
 	"ℹ️ %s 未設定 SHA-256 校驗值，跳過完整性檢查": "ℹ️ SHA-256 value not configured for %s, skipping integrity check",
 	"SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。\n\n💡 建議指引：\n1. 請先嘗試在依賴管理面板點擊「獲取最新」，然後重試下載。\n2. 若問題持續，請手動下載：%s\n3. 並解壓放置於以下 bin 目錄位置：%s": "SHA-256 integrity check failed! The downloaded file might be corrupted, incomplete, or tampered with by a man-in-the-middle.\n\n💡 Troubleshooting Guide:\n1. Try clicking 'Fetch Latest' on the dependency manager panel and download again.\n2. If the issue persists, please download manually: %s\n3. Extract it and place it in the following bin directory: %s",
+
+	// Redis & v2.1.0 支援
+	"Redis 已經在運行中":              "Redis is already running",
+	"Redis 未在運行":                "Redis is not running",
+	"🚀 啟動 Redis 服務...":         "🚀 Starting Redis service...",
+	"  連線埠: 127.0.0.1:%d":        "  Port: 127.0.0.1:%d",
+	"Redis 啟動失敗":                "Failed to start Redis",
+	"✅ Redis (%s) 已啟動 (PID: %d)": "✅ Redis (%s) started (PID: %d)",
+	"🛑 停止 Redis...":              "🛑 Stopping Redis...",
+	"Redis 停止失敗":                "Failed to stop Redis",
+	"✅ Redis 已停止":                "✅ Redis stopped",
+	"啟動 Redis 失敗: %w":            "Failed to start Redis: %w",
+	"自動啟動上次執行的服務: Redis":        "Auto starting last executed service: Redis",
+	"自動啟動 Redis 失敗":            "Failed to auto start Redis",
+	"  ✓ 已安裝 php_redis.dll 至: %s": "  ✓ Installed php_redis.dll to: %s",
+	"安裝 php_redis.dll 至 %s 失敗":  "Failed to install php_redis.dll to %s",
+	"ℹ️ 尚未檢測到 PHP %s 的安裝目錄，已保留暫存擴充檔案於 %s": "ℹ️ PHP %s installation directory not detected, temporary extension files kept in %s",
+	"解壓縮目錄未找到 php_redis.dll: %s": "php_redis.dll not found in extracted directory: %s",
+	"未知的設定檔類型: %s":             "Unknown config file type: %s",
 }

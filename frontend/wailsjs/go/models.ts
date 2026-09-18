@@ -395,6 +395,7 @@ export namespace scanner {
 	    HeidiSQLList: ServiceInfo[];
 	    MariaDBList: ServiceInfo[];
 	    MailpitList: ServiceInfo[];
+	    RedisList: ServiceInfo[];
 	    NodeList: ServiceInfo[];
 	    BunList: ServiceInfo[];
 	    PHPList: PHPVersionInfo[];
@@ -413,6 +414,7 @@ export namespace scanner {
 	        this.HeidiSQLList = this.convertValues(source["HeidiSQLList"], ServiceInfo);
 	        this.MariaDBList = this.convertValues(source["MariaDBList"], ServiceInfo);
 	        this.MailpitList = this.convertValues(source["MailpitList"], ServiceInfo);
+	        this.RedisList = this.convertValues(source["RedisList"], ServiceInfo);
 	        this.NodeList = this.convertValues(source["NodeList"], ServiceInfo);
 	        this.BunList = this.convertValues(source["BunList"], ServiceInfo);
 	        this.PHPList = this.convertValues(source["PHPList"], PHPVersionInfo);

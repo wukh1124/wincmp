@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -135,6 +136,14 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 		name = "Mailpit v" + item.Version
 		destZip = filepath.Join(binDir, "mailpit_"+item.Version+".zip")
 		destDir = filepath.Join(binDir, "mailpit", "mailpit-"+item.Version)
+	} else if key == "redis" {
+		name = "Redis v" + item.Version
+		destZip = filepath.Join(binDir, "redis_"+item.Version+".zip")
+		destDir = filepath.Join(binDir, "redis", "redis-"+item.Version)
+	} else if strings.HasPrefix(key, "php_redis") {
+		name = "PHP Redis Extension (" + key + ") v" + item.Version
+		destZip = filepath.Join(binDir, key+"_"+item.Version+".zip")
+		destDir = filepath.Join(binDir, "temp_"+key)
 	} else if strings.HasPrefix(key, "php") {
 		name = "PHP v" + item.Version + " NTS"
 		destZip = filepath.Join(binDir, "php_"+item.Version+".zip")
@@ -245,6 +254,48 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 				}
 			}
 		}
+
+		// 處理 php_redis 擴充套件搬移
+		if strings.HasPrefix(key, "php_redis") {
+			dllSource := filepath.Join(destDir, "php_redis.dll")
+			if _, err := os.Stat(dllSource); err == nil {
+				targetMajorMin := ""
+				if strings.HasSuffix(key, "_82") {
+					targetMajorMin = "8.2"
+				} else if strings.HasSuffix(key, "_83") {
+					targetMajorMin = "8.3"
+				} else if strings.HasSuffix(key, "_84") {
+					targetMajorMin = "8.4"
+				} else if strings.HasSuffix(key, "_73") {
+					targetMajorMin = "7.3"
+				}
+
+				phpBaseDir := filepath.Join(binDir, "php")
+				copiedCount := 0
+				if entries, rErr := os.ReadDir(phpBaseDir); rErr == nil {
+					for _, entry := range entries {
+						if entry.IsDir() && strings.HasPrefix(entry.Name(), "php-"+targetMajorMin) {
+							extPath := filepath.Join(phpBaseDir, entry.Name(), "ext")
+							_ = os.MkdirAll(extPath, 0755)
+							targetDll := filepath.Join(extPath, "php_redis.dll")
+							if copyErr := copyFile(dllSource, targetDll); copyErr == nil {
+								copiedCount++
+								a.handleLog("system", i18n.Tfmt("  ✓ 已安裝 php_redis.dll 至: %s", targetDll))
+							} else {
+								a.handleErrorLog("system", i18n.Tfmt("安裝 php_redis.dll 至 %s 失敗", targetDll), copyErr)
+							}
+						}
+					}
+				}
+				if copiedCount == 0 {
+					a.handleLog("system", i18n.Tfmt("ℹ️ 尚未檢測到 PHP %s 的安裝目錄，已保留暫存擴充檔案於 %s", targetMajorMin, destDir))
+				} else {
+					_ = os.RemoveAll(destDir)
+				}
+			} else {
+				a.handleErrorLog("system", i18n.Tfmt("解壓縮目錄未找到 php_redis.dll: %s", destDir), nil)
+			}
+		}
 	} else {
 		// 非 zip 檔案處理 (例如 Composer.phar 獨立檔)
 		if key == "composer" {
@@ -287,4 +338,22 @@ func (a *App) emitProgress(key string, status string, percent float64, current, 
 		"totalMB":   totalMB,
 		"error":     errStr,
 	})
+}
+
+// copyFile 複製檔案輔助函式
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
 }

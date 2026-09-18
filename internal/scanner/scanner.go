@@ -43,6 +43,7 @@ type ScanResult struct {
 	HeidiSQLList  []ServiceInfo
 	MariaDBList   []ServiceInfo
 	MailpitList   []ServiceInfo
+	RedisList     []ServiceInfo
 	NodeList      []ServiceInfo
 	BunList       []ServiceInfo
 	PHPList       []PHPVersionInfo
@@ -310,6 +311,35 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 		}
 	}
 
+	// 9. 掃描 Redis 版本
+	redisDir := filepath.Join(binDir, "redis")
+	if entries, err := os.ReadDir(redisDir); err == nil {
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				if entry.Name() == "redis-server.exe" {
+					redisExe := filepath.Join(redisDir, "redis-server.exe")
+					result.RedisList = append(result.RedisList, ServiceInfo{
+						Name:    "redis",
+						Version: "latest",
+						ExePath: redisExe,
+					})
+				}
+				continue
+			}
+			if strings.HasPrefix(entry.Name(), "redis-") {
+				redisExe := filepath.Join(redisDir, entry.Name(), "redis-server.exe")
+				if _, err := os.Stat(redisExe); err == nil {
+					version := strings.TrimPrefix(entry.Name(), "redis-")
+					result.RedisList = append(result.RedisList, ServiceInfo{
+						Name:    "redis",
+						Version: version,
+						ExePath: redisExe,
+					})
+				}
+			}
+		}
+	}
+
 	// 進行版本排序，確保最新版本排在 Slice 的最前面 (index 0)
 	sortServiceList := func(list []ServiceInfo) {
 		sort.Slice(list, func(i, j int) bool {
@@ -332,9 +362,12 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 	sortServiceList(result.NodeList)
 	sortServiceList(result.BunList)
 	sortServiceList(result.MailpitList)
-	// 只保留最新的 Mailpit 版本，避免多個 Mailpit 版本同時顯示與啟動造成衝突
 	if len(result.MailpitList) > 1 {
 		result.MailpitList = result.MailpitList[:1]
+	}
+	sortServiceList(result.RedisList)
+	if len(result.RedisList) > 1 {
+		result.RedisList = result.RedisList[:1]
 	}
 
 	return result, nil

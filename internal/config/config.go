@@ -71,6 +71,7 @@ type LastServiceState struct {
 	Caddy   bool            `json:"caddy"`
 	MariaDB bool            `json:"mariadb"`
 	Mailpit bool            `json:"mailpit"`
+	Redis   bool            `json:"redis"`
 	PHP     map[string]bool `json:"php"` // key 為 PHP 版本號 (例: "8.2.30"), value 為啟動狀態
 }
 

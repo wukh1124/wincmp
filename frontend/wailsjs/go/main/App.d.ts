@@ -98,3 +98,11 @@ export function StopPHP(arg1:string):Promise<void>;
 export function StopProjectRuntime(arg1:string):Promise<void>;
 
 export function StopTerminalSession(arg1:string):Promise<void>;
+
+export function StartRedis(arg1:string,arg2:string,arg3:number):Promise<void>;
+
+export function StopRedis():Promise<void>;
+
+export function RestartRedis(arg1:string,arg2:string,arg3:number):Promise<void>;
+
+export function OpenSystemConfigFile(arg1:string):Promise<void>;

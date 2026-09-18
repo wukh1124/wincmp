@@ -9,6 +9,7 @@ const CATEGORIES = [
   { id: 'caddy', label: 'Caddy' },
   { id: 'mariadb', label: 'MariaDB' },
   { id: 'mailpit', label: 'Mailpit' },
+  { id: 'redis', label: 'Redis' },
   { id: 'php', label: 'PHP' },
   { id: 'runtime', label: '運行環境 (Node/Bun)' }
 ];
@@ -19,16 +20,20 @@ export default function TerminalLogs() {
   const [activeRuntimeProject, setActiveRuntimeProject] = useState('');
   const [logs, setLogs] = useState<LogData>(logStore.getLogs());
   const [autoScroll, setAutoScroll] = useState(true);
+  const [autoSwitchTab, setAutoSwitchTab] = useState<boolean>(() => {
+    return localStorage.getItem('wincmp_auto_switch_tab') === 'true'; // 預設為 false，避免搶焦點
+  });
+  const [unreadTabs, setUnreadTabs] = useState<Record<string, boolean>>({});
 
   const logEndRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // 用於追蹤當前啟動的分頁與 Runtime 專案，以避免在 handleAutoSwitch 中閉包抓到舊值
+  // 用於追蹤當前啟動的分頁與狀態，避免閉包陳舊
   const activeTabRef = useRef(activeTab);
   const activeRuntimeProjectRef = useRef(activeRuntimeProject);
+  const autoSwitchTabRef = useRef(autoSwitchTab);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 當 activeTab 或 activeRuntimeProject 改變時，更新 Ref
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
@@ -37,6 +42,10 @@ export default function TerminalLogs() {
     activeRuntimeProjectRef.current = activeRuntimeProject;
   }, [activeRuntimeProject]);
 
+  useEffect(() => {
+    autoSwitchTabRef.current = autoSwitchTab;
+  }, [autoSwitchTab]);
+
   // 訂閱全域 logStore 的日誌更新
   useEffect(() => {
     return logStore.subscribe((newLogs) => {
@@ -44,15 +53,23 @@ export default function TerminalLogs() {
     });
   }, []);
 
-  // 訂閱 Go 端的日誌 Event 以進行防抖自動切換
+  // 訂閱 Go 端的日誌 Event
   useEffect(() => {
     const handleAutoSwitch = (data: any) => {
       if (!data || !data.category) return;
       const category = data.category === 'node' ? 'runtime' : data.category;
       const projName = category === 'runtime' ? data.projectName : undefined;
 
-      const isValidCategory = ['system', 'caddy', 'mariadb', 'mailpit', 'php', 'runtime'].includes(category);
+      const isValidCategory = ['system', 'caddy', 'mariadb', 'mailpit', 'php', 'redis', 'runtime'].includes(category);
       if (!isValidCategory) return;
+
+      // 若未開啟自動跳轉，只在非當前 tab 標註有未讀日誌，絕不強行奪取焦點
+      if (!autoSwitchTabRef.current) {
+        if (category !== activeTabRef.current) {
+          setUnreadTabs(prev => ({ ...prev, [category]: true }));
+        }
+        return;
+      }
 
       // 檢查是否需要切換 tab 或切換專案
       const needsTabSwitch = category !== activeTabRef.current;
@@ -65,6 +82,7 @@ export default function TerminalLogs() {
         debounceTimerRef.current = setTimeout(() => {
           if (needsTabSwitch) {
             setActiveTab(category);
+            setUnreadTabs(prev => ({ ...prev, [category]: false }));
           }
           if (category === 'runtime' && projName) {
             setActiveRuntimeProject(projName);
@@ -178,8 +196,11 @@ export default function TerminalLogs() {
           {CATEGORIES.map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2.5 text-[11px] font-bold border-b-2 transition duration-200 shrink-0 ${
+              onClick={() => {
+                setActiveTab(tab.id);
+                setUnreadTabs(prev => ({ ...prev, [tab.id]: false }));
+              }}
+              className={`px-4 py-2.5 text-[11px] font-bold border-b-2 transition duration-200 shrink-0 flex items-center gap-1.5 ${
                 activeTab === tab.id
                   ? ''
                   : 'hover:text-[var(--fg)]'
@@ -189,12 +210,30 @@ export default function TerminalLogs() {
                 : { borderBottomColor: 'transparent', color: 'var(--muted)' }
               }
             >
-              {t(tab.label)}
+              <span>{t(tab.label)}</span>
+              {unreadTabs[tab.id] && activeTab !== tab.id && (
+                <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: 'var(--status-warn)' }} />
+              )}
             </button>
           ))}
         </div>
 
         <div className="flex items-center gap-2 py-1.5 shrink-0">
+          {/* 自動切換分頁開關 */}
+          <label className="flex items-center gap-1.5 text-[10px] font-semibold cursor-pointer select-none px-2 py-1 rounded-lg border transition" style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--border)', color: autoSwitchTab ? 'var(--accent)' : 'var(--muted)' }} title={t("有新日誌時自動切換到該分頁")}>
+            <input
+              type="checkbox"
+              checked={autoSwitchTab}
+              onChange={(e) => {
+                const val = e.target.checked;
+                setAutoSwitchTab(val);
+                localStorage.setItem('wincmp_auto_switch_tab', val ? 'true' : 'false');
+              }}
+              className="w-3 h-3 rounded cursor-pointer accent-blue-500"
+            />
+            <span>{t("自動切換分頁")}</span>
+          </label>
+
           {/* Runtime 專案下拉選單 */}
           {activeTab === 'runtime' && (
             <div className="flex items-center gap-1.5 mr-2">

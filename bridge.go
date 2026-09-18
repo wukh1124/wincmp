@@ -191,6 +191,9 @@ func (a *App) GetServicesStatus() map[string]bool {
 	// Mailpit
 	status["mailpit"] = a.procMgr.IsRunning(process.MailpitServiceKey())
 
+	// Redis
+	status["redis"] = a.procMgr.IsRunning(process.RedisServiceKey())
+
 	// MariaDB
 	for _, m := range a.scanRes.MariaDBList {
 		key := process.MariaDBServiceKey(m.Version)
@@ -342,6 +345,40 @@ func (a *App) StopMailpit() error {
 	a.procMgr.StopMailpit()
 	a.saveLastServiceState()
 	return nil
+}
+
+// StartRedis 啟動 Redis 快取服務
+func (a *App) StartRedis(version string, exePath string, port int) error {
+	if a.procMgr == nil {
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
+	}
+	if port <= 0 {
+		port = 6379
+	}
+	if err := a.procMgr.StartRedis(version, exePath, port); err != nil {
+		return fmt.Errorf(i18n.T("啟動 Redis 失敗: %w"), err)
+	}
+	a.saveLastServiceState()
+	return nil
+}
+
+// StopRedis 停止 Redis 服務
+func (a *App) StopRedis() error {
+	if a.procMgr == nil {
+		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
+	}
+	if err := a.procMgr.StopRedis(); err != nil {
+		return err
+	}
+	a.saveLastServiceState()
+	return nil
+}
+
+// RestartRedis 重啟 Redis 服務
+func (a *App) RestartRedis(version string, exePath string, port int) error {
+	_ = a.StopRedis()
+	time.Sleep(500 * time.Millisecond)
+	return a.StartRedis(version, exePath, port)
 }
 
 // StartPHP 啟動特定版本的 PHP-CGI 多行程服務
@@ -777,6 +814,44 @@ func (a *App) SelectFolder() (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+// OpenSystemConfigFile 依類型開啟系統核心設定檔案或目錄
+func (a *App) OpenSystemConfigFile(targetType string) error {
+	var targetPath string
+	isFolder := false
+
+	switch targetType {
+	case "hosts":
+		targetPath = `C:\Windows\System32\drivers\etc\hosts`
+	case "phpini":
+		targetPath = filepath.Join(a.baseDir, "conf", "php", "php.ini")
+	case "wincmpjson":
+		targetPath = filepath.Join(a.baseDir, "conf", "wincmp.json")
+	case "ssl":
+		targetPath = filepath.Join(a.baseDir, "conf", "ssl")
+		isFolder = true
+	case "caddyfile":
+		targetPath = filepath.Join(a.baseDir, "conf", "Caddyfile")
+	case "caddycommon":
+		targetPath = filepath.Join(a.baseDir, "conf", "snippets", "common.caddy")
+	default:
+		return fmt.Errorf("未知的設定檔類型: %s", targetType)
+	}
+
+	if isFolder {
+		_ = os.MkdirAll(targetPath, 0755)
+		return a.OpenFolder(targetPath)
+	}
+
+	// 確保檔案所在目錄存在
+	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+		_ = os.MkdirAll(filepath.Dir(targetPath), 0755)
+		_ = os.WriteFile(targetPath, []byte("# WinCMP Configuration\n"), 0644)
+	}
+
+	cmd := exec.Command("cmd", "/c", "start", "", filepath.Clean(targetPath))
+	return cmd.Start()
 }
 
 // ==========================================
