@@ -5,11 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="doc_title">WinCMP - Portable Local Development Control Panel for Windows (Caddy + MariaDB + PHP
-        + Mailpit)</title>
+        + Mailpit + Redis)</title>
     <meta name="description"
-        content="WinCMP is a lightweight, portable local development control panel for Windows. Integrates Caddy, MariaDB, PHP and Mailpit. Starts without admin rights, using low memory.">
+        content="WinCMP is a lightweight, portable local development control panel for Windows. Integrates Caddy, MariaDB, PHP, Mailpit and Redis. Starts without admin rights, using low memory.">
     <meta name="keywords"
-        content="WinCMP, Windows, Caddy, MariaDB, PHP, Mailpit, Local Dev Environment, XAMPP alternative, Laragon alternative, Wails, Go, React">
+        content="WinCMP, Windows, Caddy, MariaDB, PHP, Mailpit, Redis, Local Dev Environment, XAMPP alternative, Laragon alternative, Wails, Go, React">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,7 @@
             <nav class="nav-links">
                 <a href="#features" class="nav-link" data-i18n="nav_features">Features</a>
                 <a href="#gallery" class="nav-link" data-i18n="nav_gallery">Screenshots</a>
-                <a href="#comparison" class="nav-link" data-i18n="nav_comparison">Comparison</a>
+                <a href="#comparison" class="nav-link" data-i18n="nav_comparison">Tech Specs</a>
                 <a href="#architecture" class="nav-link" data-i18n="nav_architecture">Architecture</a>
                 <a href="#changelog" class="nav-link" data-i18n="nav_changelog">Changelog</a>
 
@@ -99,14 +99,14 @@
                         class="gradient-text">Local Dev Control Panel</span> for Windows</h1>
                 <p class="hero-subtitle" data-i18n="hero_subtitle">
                     Integrated with <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> +
-                    <strong>Mailpit</strong> and interactive terminal. Core development services run entirely without
-                    admin privileges. Fast, lightweight, and hassle-free!
+                    <strong>Mailpit</strong> + <strong>Redis</strong> and an interactive project terminal. Core
+                    services run without admin privileges — lightweight, portable, and practical.
                 </p>
                 <div class="hero-actions">
                     <a href="https://github.com/wukh1124/wincmp/releases/latest" target="_blank" class="btn btn-primary"
                         id="download-btn">
                         <i data-lucide="download"></i>
-                        <span data-i18n="hero_download_btn">Download Now (WinCMP.exe)</span>
+                        <span data-i18n="hero_download_btn">Download for Windows</span>
                     </a>
                     <a href="https://github.com/wukh1124/wincmp" target="_blank" class="btn btn-secondary">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -141,9 +141,9 @@
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title" data-i18n="features_title">Why Choose WinCMP?</h2>
-                    <p class="section-subtitle" data-i18n="features_subtitle">Get rid of XAMPP's bloat and Laragon's
-                        dependency on system environment variables, and enjoy the ultimate local Web development
-                        environment on Windows!</p>
+                    <p class="section-subtitle" data-i18n="features_subtitle">A portable control panel for local Web
+                        development on Windows. Core binaries stay out of system PATH; dependencies can be fetched
+                        from the built-in downloader.</p>
                 </div>
                 <div class="features-grid">
                     <!-- 卡片 1 -->
@@ -153,8 +153,8 @@
                         </div>
                         <h3 class="feature-card-title" data-i18n="feat_1_title">Lightweight</h3>
                         <p class="feature-card-desc" data-i18n="feat_1_desc">Statically compiled in Go + Wails,
-                            leveraging native OS WebView2 without Electron. Starts in milliseconds, idling memory usage
-                            is about 150-250MB (due to WebView2).</p>
+                            rendering via native Windows WebView2 instead of Electron. Fast startup; idle memory is
+                            about 150-250MB (includes WebView2).</p>
                     </div>
                     <!-- 卡片 2 -->
                     <div class="feature-card">
@@ -162,9 +162,9 @@
                             <i data-lucide="shield-check"></i>
                         </div>
                         <h3 class="feature-card-title" data-i18n="feat_2_title">Admin-Privilege-Free Core</h3>
-                        <p class="feature-card-desc" data-i18n="feat_2_desc">Caddy, PHP-CGI, MariaDB, and Mailpit run
-                            entirely under restricted user permissions. No system registry writes or path pollution,
-                            fully portable.</p>
+                        <p class="feature-card-desc" data-i18n="feat_2_desc">Caddy, PHP-CGI, MariaDB, Mailpit, and
+                            Redis run under restricted user permissions. No registry writes or global PATH pollution.
+                            Note: Hosts sync and some dependency downloads may require UAC.</p>
                     </div>
                     <!-- 卡片 3 -->
                     <div class="feature-card">
@@ -173,8 +173,8 @@
                         </div>
                         <h3 class="feature-card-title" data-i18n="feat_3_title">Interactive Terminal Drawer</h3>
                         <p class="feature-card-desc" data-i18n="feat_3_desc">Built-in Windows ConPTY and xterm.js at
-                            project root. Slide out a fully functional terminal drawer supporting PowerShell/CMD/Git
-                            Bash/WSL with autocomplete.</p>
+                            the project root. Slide out a terminal drawer for PowerShell/CMD/Git Bash/WSL with
+                            interactive commands and TAB completion.</p>
                     </div>
                     <!-- 卡片 4 -->
                     <div class="feature-card">
@@ -182,9 +182,9 @@
                             <i data-lucide="shuffle"></i>
                         </div>
                         <h3 class="feature-card-title" data-i18n="feat_4_title">PHP Multi-Process Balancing</h3>
-                        <p class="feature-card-desc" data-i18n="feat_4_desc">Utilizes Caddy's upstream load balancing to
-                            spawn 3 independent FastCGI processes for each PHP version, boosting local development
-                            reliability.</p>
+                        <p class="feature-card-desc" data-i18n="feat_4_desc">Uses Caddy upstream load balancing to run
+                            multiple independent FastCGI processes per PHP version (default 3, adjustable) for more
+                            reliable local development.</p>
                     </div>
                     <!-- 卡片 5 -->
                     <div class="feature-card">
@@ -192,9 +192,10 @@
                             <i data-lucide="toy-brick"></i>
                         </div>
                         <h3 class="feature-card-title" data-i18n="feat_5_title">Runtime Multi-Environment</h3>
-                        <p class="feature-card-desc" data-i18n="feat_5_desc">Supports Node.js, Bun, Python, and Go
-                            frameworks. Easily toggle between running in the background or spawning inside a separate
-                            terminal window.</p>
+                        <p class="feature-card-desc" data-i18n="feat_5_desc">Supports Node.js, Bun, Python, Go and
+                            more. Auto-detects presets such as Laravel, Next.js, Nuxt, Astro, Vite,
+                            Django/FastAPI/Flask, PocketBase, and Go API; start in background or a separate
+                            terminal.</p>
                     </div>
                     <!-- 卡片 6 -->
                     <div class="feature-card">
@@ -202,8 +203,8 @@
                             <i data-lucide="shield-alert"></i>
                         </div>
                         <h3 class="feature-card-title" data-i18n="feat_6_title">Hosts Sync & Backup (Needs Admin)</h3>
-                        <p class="feature-card-desc" data-i18n="feat_6_desc">Easily sync custom domains to the Windows
-                            hosts file. Due to Windows security protection, this writing and backup feature requires UAC
+                        <p class="feature-card-desc" data-i18n="feat_6_desc">Sync custom local domains to the Windows
+                            hosts file. Because Windows protects this file, write and backup require UAC
                             elevation.</p>
                     </div>
                     <!-- 卡片 7 -->
@@ -213,8 +214,28 @@
                         </div>
                         <h3 class="feature-card-title" data-i18n="feat_7_title">Portable Single-EXE</h3>
                         <p class="feature-card-desc" data-i18n="feat_7_desc">Runs via a single executable without
-                            installation. Migrate easily by taking the 'conf/wincmp.json' config and '/bin' directory to
-                            any new location.</p>
+                            installation. Migrate by taking conf/wincmp.json and the /bin directory to any new
+                            location.</p>
+                    </div>
+                    <!-- 卡片 8 -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i data-lucide="download-cloud"></i>
+                        </div>
+                        <h3 class="feature-card-title" data-i18n="feat_8_title">One-Click Dependency Downloader</h3>
+                        <p class="feature-card-desc" data-i18n="feat_8_desc">Built-in downloader for Caddy, PHP,
+                            MariaDB, Mailpit, Redis, Node.js, Bun, Composer, HeidiSQL and more — place binaries under
+                            /bin and WinCMP scans them automatically.</p>
+                    </div>
+                    <!-- 卡片 9 -->
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i data-lucide="database"></i>
+                        </div>
+                        <h3 class="feature-card-title" data-i18n="feat_9_title">Database Explorer</h3>
+                        <p class="feature-card-desc" data-i18n="feat_9_desc">Browse databases and tables from the
+                            panel, then open the same connection in HeidiSQL with one click when you need a full GUI
+                            client.</p>
                     </div>
                 </div>
             </div>
@@ -225,8 +246,8 @@
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title" data-i18n="gallery_title">Intuitive & Modern User Interface</h2>
-                    <p class="section-subtitle" data-i18n="gallery_subtitle">Every screen is carefully polished with
-                        smooth transitions and real-time status monitoring. Beautiful and powerful!</p>
+                    <p class="section-subtitle" data-i18n="gallery_subtitle">Every screen is carefully polished, with
+                        smooth micro-interactions and real-time service status monitoring.</p>
                 </div>
 
                 <div class="gallery-tabs" id="gallery-tabs">
@@ -275,74 +296,95 @@
             </div>
         </section>
 
-        <!-- 性能對比區 -->
+        <!-- 技術規格區（目前版本架構與配置） -->
         <section id="comparison" class="comparison-section">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title" data-i18n="compare_title">WinCMP Version Comparison</h2>
-                    <p class="section-subtitle" data-i18n="compare_subtitle">Hardcore metrics comparison between WinCMP
-                        v1 and v2 on Windows:</p>
+                    <h2 class="section-title" data-i18n="compare_title">WinCMP Architecture & Configuration</h2>
+                    <p class="section-subtitle" data-i18n="compare_subtitle">Technical stack, managed services, and
+                        default configuration of the current WinCMP release (not a historical version
+                        comparison):</p>
                 </div>
 
                 <div class="table-responsive">
                     <table class="comparison-table">
                         <thead>
                             <tr>
-                                <th data-i18n="compare_head_metric">Metric</th>
-                                <th data-i18n="compare_head_v1">WinCMP v1 (Fyne)</th>
-                                <th class="highlight-column" data-i18n="compare_head_v2">WinCMP v2 (Wails)</th>
+                                <th data-i18n="compare_head_item">Item</th>
+                                <th data-i18n="compare_head_desc">Current WinCMP</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td class="feature-name" data-i18n="compare_row_1_name">Architecture</td>
-                                <td data-i18n="compare_row_1_val_1">Go + Fyne (Native GUI)</td>
-                                <td class="highlight-column" data-i18n="compare_row_1_val_2">Go 1.26 + Wails v2 + React
-                                    18</td>
+                                <td class="feature-name" data-i18n="compare_row_1_name">App Architecture</td>
+                                <td data-i18n="compare_row_1_val">Go 1.26 + Wails v2 + React 18 (rendered via Windows
+                                    WebView2, not Electron)</td>
                             </tr>
                             <tr>
-                                <td class="feature-name" data-i18n="compare_row_2_name">Startup Speed</td>
-                                <td data-i18n="compare_row_2_val_1">Instant (Same Go core)</td>
-                                <td class="highlight-column" data-i18n="compare_row_2_val_2">Instant (Same Go core)</td>
+                                <td class="feature-name" data-i18n="compare_row_2_name">Platform</td>
+                                <td data-i18n="compare_row_2_val">Windows; portable single-executable launch, no
+                                    installer required</td>
                             </tr>
                             <tr>
-                                <td class="feature-name" data-i18n="compare_row_3_name">Idle RAM</td>
-                                <td data-i18n="compare_row_3_val_1">Medium (~80-120MB)</td>
-                                <td class="highlight-column" data-i18n="compare_row_3_val_2">~150-250MB (Includes WebView2)</td>
+                                <td class="feature-name" data-i18n="compare_row_3_name">Core Services</td>
+                                <td data-i18n="compare_row_3_val">Caddy (reverse proxy / HTTPS), MariaDB, PHP-CGI,
+                                    Mailpit, Redis</td>
                             </tr>
                             <tr>
-                                <td class="feature-name" data-i18n="compare_row_4_name">Privilege</td>
-                                <td data-i18n="compare_row_4_val_1">Requires Admin</td>
-                                <td class="highlight-column" data-i18n="compare_row_4_val_2">User Space (No Admin)</td>
+                                <td class="feature-name" data-i18n="compare_row_4_name">Privilege Model</td>
+                                <td data-i18n="compare_row_4_val">Core services run in user space; Hosts sync and some
+                                    dependency downloads may prompt for UAC</td>
                             </tr>
                             <tr>
-                                <td class="feature-name" data-i18n="compare_row_5_name">Hosts Control</td>
-                                <td data-i18n="compare_row_5_val_1">Yes (No backup)</td>
-                                <td class="highlight-column" data-i18n="compare_row_5_val_2">Yes (UAC check with
-                                    auto-backup)</td>
+                                <td class="feature-name" data-i18n="compare_row_5_name">PHP Runtime</td>
+                                <td data-i18n="compare_row_5_val">Multi-version parallel execution; default 3 FastCGI
+                                    processes per version (configurable); port rule 3&lt;major&gt;&lt;minor&gt;&lt;index&gt;</td>
                             </tr>
                             <tr>
-                                <td class="feature-name" data-i18n="compare_row_6_name">Terminal</td>
-                                <td data-i18n="compare_row_6_val_1">None</td>
-                                <td class="highlight-column" data-i18n="compare_row_6_val_2">Built-in ConPTY + xterm.js
-                                    drawer</td>
+                                <td class="feature-name" data-i18n="compare_row_6_name">App Runtimes</td>
+                                <td data-i18n="compare_row_6_val">Node.js / Bun / Python / Go / Custom; Background or
+                                    Terminal launch modes</td>
                             </tr>
                             <tr>
-                                <td class="feature-name" data-i18n="compare_row_7_name">Email Sandbox</td>
-                                <td data-i18n="compare_row_7_val_1">Supported (Manual download required)</td>
-                                <td class="highlight-column" data-i18n="compare_row_7_val_2">Supported (One-click Mailpit download)</td>
+                                <td class="feature-name" data-i18n="compare_row_7_name">Built-in Terminal</td>
+                                <td data-i18n="compare_row_7_val">ConPTY + xterm.js drawer; PowerShell / CMD / Git Bash
+                                    / WSL with TAB completion</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_8_name">Config Apply</td>
-                                <td data-i18n="compare_row_8_val_1">Manual restart required</td>
-                                <td class="highlight-column" data-i18n="compare_row_8_val_2">Auto Hot Reload (Zero
-                                    Downtime)</td>
+                                <td data-i18n="compare_row_8_val">Project settings written under conf/ and applied via
+                                    Caddy hot-reload</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_9_name">Idle Footprint</td>
+                                <td data-i18n="compare_row_9_val">Control panel UI itself is about 150-250MB idle
+                                    (includes WebView2; varies by environment)</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_10_name">Dependency Manager</td>
+                                <td data-i18n="compare_row_10_val">Built-in downloader: Caddy, PHP, MariaDB, Mailpit,
+                                    Redis, Node.js, Bun, Composer, HeidiSQL</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_11_name">Database Tools</td>
+                                <td data-i18n="compare_row_11_val">Built-in DB Explorer; one-click open in
+                                    HeidiSQL</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_12_name">Portability</td>
+                                <td data-i18n="compare_row_12_val">Migrate with conf/wincmp.json + /bin directory
+                                    only</td>
+                            </tr>
+                            <tr>
+                                <td class="feature-name" data-i18n="compare_row_13_name">Framework Presets</td>
+                                <td data-i18n="compare_row_13_val">Auto-detect Laravel, Next.js, Nuxt, Astro, Vite,
+                                    Django/FastAPI/Flask, PocketBase, Go API and more</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <p class="table-note" data-i18n="compare_table_note">* Note: Comparison is based on default
-                    configurations. RAM usage refers to the Control Panel UI itself in idle state.</p>
+                <p class="table-note" data-i18n="compare_table_note">* Note: Idle RAM refers to the control panel UI
+                    itself. Actual usage varies with the OS environment and which services are running.</p>
             </div>
         </section>
 
@@ -350,9 +392,9 @@
         <section id="architecture" class="architecture-section">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title" data-i18n="arch_title">WinCMP Architecture</h2>
-                    <p class="section-subtitle" data-i18n="arch_subtitle">Here is a glimpse of how the backend is
-                        designed for high performance and isolation:</p>
+                    <h2 class="section-title" data-i18n="arch_title">How WinCMP Works</h2>
+                    <p class="section-subtitle" data-i18n="arch_subtitle">Design principles behind isolation and
+                        service management:</p>
                 </div>
 
                 <div class="architecture-grid">
@@ -360,16 +402,16 @@
                         <h3 class="arch-card-title"><span class="arch-num">01</span> <span
                                 data-i18n="arch_card_1_title">Dynamic Env Isolation</span></h3>
                         <p class="arch-card-text" data-i18n="arch_card_1_desc">Instead of modifying Windows system
-                            global variables, WinCMP creates a temporary execution path only for the active project.
-                            This allows multiple projects to run different PHP/Node versions simultaneously without any
-                            system pollution.</p>
+                            global variables, WinCMP injects a temporary PATH only for the child process it starts.
+                            Different projects can therefore run different PHP/Node versions at the same time without
+                            polluting the system.</p>
                     </div>
                     <div class="arch-card">
                         <h3 class="arch-card-title"><span class="arch-num">02</span> <span
                                 data-i18n="arch_card_2_title">Smart Ports & Seamless Reload</span></h3>
-                        <p class="arch-card-text" data-i18n="arch_card_2_desc">WinCMP automatically manages ports to
-                            prevent conflicts when running multiple PHP/Node versions. Any configuration changes are
-                            applied instantly in the background via Caddy's hot-reload, ensuring zero downtime.</p>
+                        <p class="arch-card-text" data-i18n="arch_card_2_desc">Ports are allocated by a deterministic
+                            rule (for example PHP 8.2 uses 38200-382xx) so versions do not collide. When site settings
+                            change, WinCMP rewrites conf/sites and reloads Caddy in the background.</p>
                     </div>
                 </div>
             </div>
@@ -408,8 +450,9 @@
     <footer class="footer">
         <div class="container footer-container">
             <div class="footer-left">
-                <p class="footer-desc" data-i18n="footer_desc">Lightweight, portable, and modern local dev control panel
-                    for Windows developers.</p>
+                <p class="footer-desc" data-i18n="footer_desc">WinCMP gratefully integrates and acknowledges
+                    open-source projects including Caddy, MariaDB, PHP, Mailpit, Redis, Node.js, Composer, HeidiSQL,
+                    Wails, and React.</p>
             </div>
             <div class="footer-right">
                 <p class="copyright">Licensed under the <a href="https://opensource.org/license/mit/"
