@@ -54,6 +54,9 @@ export namespace config {
 	    terminal_shell: string;
 	    auto_check_update: boolean;
 	    last_check_update_time: number;
+	    has_update_available: boolean;
+	    latest_update_version: string;
+	    auto_check_update_hours: number;
 	    php?: PHPSettings;
 	    mariadb_external: boolean;
 	    mariadb_basedir: string;
@@ -95,6 +98,9 @@ export namespace config {
 	        this.terminal_shell = source["terminal_shell"];
 	        this.auto_check_update = source["auto_check_update"];
 	        this.last_check_update_time = source["last_check_update_time"];
+	        this.has_update_available = source["has_update_available"];
+	        this.latest_update_version = source["latest_update_version"];
+	        this.auto_check_update_hours = source["auto_check_update_hours"];
 	        this.php = this.convertValues(source["php"], PHPSettings);
 	        this.mariadb_external = source["mariadb_external"];
 	        this.mariadb_basedir = source["mariadb_basedir"];
@@ -235,6 +241,22 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.text = source["text"];
 	        this.time = source["time"];
+	    }
+	}
+	export class LogFileInfo {
+	    path: string;
+	    name: string;
+	    exists: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new LogFileInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.name = source["name"];
+	        this.exists = source["exists"];
 	    }
 	}
 	export class ProjectDetectResult {

@@ -24,6 +24,8 @@ export function FetchRemoteDependencies():Promise<config.DependencyConfig>;
 
 export function GetAppVersion():Promise<string>;
 
+export function GetCategoryLogFilePath(arg1:string,arg2:string):Promise<main.LogFileInfo>;
+
 export function GetCategoryLogs(arg1:string,arg2:string):Promise<Array<main.LogEntry>>;
 
 export function GetConfig():Promise<config.WincmpConfig>;
@@ -48,11 +50,15 @@ export function IsServiceRunning(arg1:string):Promise<boolean>;
 
 export function KillProcessByPort(arg1:number):Promise<void>;
 
+export function OpenCategoryLogFile(arg1:string,arg2:string):Promise<void>;
+
 export function OpenDependencyFolder(arg1:string):Promise<void>;
 
 export function OpenFolder(arg1:string):Promise<void>;
 
 export function OpenInHeidiSQL():Promise<void>;
+
+export function OpenPathInExplorer(arg1:string):Promise<void>;
 
 export function OpenProjectCaddyfile(arg1:string):Promise<void>;
 
@@ -61,10 +67,6 @@ export function OpenSystemConfigFile(arg1:string):Promise<void>;
 export function QueryDatabases():Promise<Array<string>>;
 
 export function QueryTables(arg1:string):Promise<Array<string>>;
-
-export function RedisDeleteKey(arg1:number,arg2:string):Promise<void>;
-
-export function RedisFlushDB(arg1:number):Promise<void>;
 
 export function RedisGetDBList():Promise<Array<redisexplorer.RedisDBInfo>>;
 

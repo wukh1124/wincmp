@@ -13,13 +13,13 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"gopkg.in/natefinch/lumberjack.v2"
 
+	"fyne.io/systray"
 	"wincmp/internal/config"
 	"wincmp/internal/i18n"
 	"wincmp/internal/process"
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
 	"wincmp/internal/singleinstance"
-	"fyne.io/systray"
 
 	"wincmp/internal/terminal"
 	"wincmp/internal/updater"
@@ -536,7 +536,7 @@ func (a *App) startResourceMonitoring() {
 				if a.ctx == nil {
 					return
 				}
-				
+
 				a.windowHiddenMu.RLock()
 				hidden := a.windowHidden
 				a.windowHiddenMu.RUnlock()
@@ -707,25 +707,36 @@ func (a *App) restoreLastState() {
 	}
 }
 
+// defaultUpdateCheckHours 自動檢查版本更新的預設間隔（小時）
+const defaultUpdateCheckHours = 6
+
+// updateCheckIntervalSec 依設定取得檢查間隔秒數
+func (a *App) updateCheckIntervalSec() int64 {
+	hours := defaultUpdateCheckHours
+	if a.appCfg != nil && a.appCfg.Global.AutoCheckUpdateHours > 0 {
+		hours = a.appCfg.Global.AutoCheckUpdateHours
+	}
+	return int64(hours) * 3600
+}
+
 // shouldCheckUpdate 判斷是否需要執行更新檢查
 func (a *App) shouldCheckUpdate() bool {
 	if a.appCfg == nil || !a.appCfg.Global.AutoCheckUpdate {
 		return false
 	}
 	now := time.Now().Unix()
-	// 判斷是否距離上一次檢查超過 24 小時（86400 秒）
-	return now-a.appCfg.Global.LastCheckUpdateTime >= 86400
+	return now-a.appCfg.Global.LastCheckUpdateTime >= a.updateCheckIntervalSec()
 }
 
-// startUpdateCheckTimer 定時檢查更新
+// startUpdateCheckTimer 定時檢查更新：啟動必查一次，之後依間隔輪詢
 func (a *App) startUpdateCheckTimer() {
-	// 啟動 5 秒後先判斷是否需要檢查
+	// 啟動 5 秒後強制檢查（避免重啟後紅點遺失）
 	time.Sleep(5 * time.Second)
-	if a.shouldCheckUpdate() {
+	if a.appCfg != nil && a.appCfg.Global.AutoCheckUpdate {
 		a.performUpdateCheck()
 	}
 
-	// 每 1 小時輪詢一次，符合 24 小時條件才觸發
+	// 每 1 小時輪詢一次，符合間隔條件才觸發
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
@@ -739,6 +750,38 @@ func (a *App) startUpdateCheckTimer() {
 	}
 }
 
+// persistUpdateCheckResult 寫入檢查結果到設定檔
+func (a *App) persistUpdateCheckResult(hasUpdate bool, latestVersion string) {
+	if a.appCfg == nil {
+		return
+	}
+	a.appCfg.Global.LastCheckUpdateTime = time.Now().Unix()
+	a.appCfg.Global.HasUpdateAvailable = hasUpdate
+	if hasUpdate {
+		a.appCfg.Global.LatestUpdateVersion = latestVersion
+	} else {
+		a.appCfg.Global.LatestUpdateVersion = ""
+	}
+	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
+	if err := a.appCfg.Save(cfgPath); err != nil {
+		a.handleErrorLog("system", "儲存更新檢查時間失敗", err)
+	}
+}
+
+// emitUpdateAvailable 推送新版本可用事件
+func (a *App) emitUpdateAvailable(latestVersion, releaseNotes, publishedAt, downloadURL, assetType string) {
+	if a.ctx == nil {
+		return
+	}
+	runtime.EventsEmit(a.ctx, "update_available", map[string]interface{}{
+		"latest_version": latestVersion,
+		"release_notes":  releaseNotes,
+		"published_at":   publishedAt,
+		"download_url":   downloadURL,
+		"asset_type":     assetType,
+	})
+}
+
 // performUpdateCheck 執行單次更新檢查並推送事件
 func (a *App) performUpdateCheck() {
 	if a.appCfg == nil || !a.appCfg.Global.AutoCheckUpdate {
@@ -748,24 +791,32 @@ func (a *App) performUpdateCheck() {
 	info, err := updater.CheckNewVersionOpt(AppVersion, true)
 	if err != nil {
 		a.handleErrorLog("system", "定時檢查版本更新失敗", err)
+		// 網路失敗時仍保留既有紅點狀態並重新推送
+		if a.appCfg.Global.HasUpdateAvailable {
+			a.emitUpdateAvailable(
+				a.appCfg.Global.LatestUpdateVersion,
+				"", "", "", "",
+			)
+		}
 		return
 	}
 
-	// 檢查成功後（無論是否有更新），更新上次檢查時間戳記並存檔
-	a.appCfg.Global.LastCheckUpdateTime = time.Now().Unix()
-	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
-	if err := a.appCfg.Save(cfgPath); err != nil {
-		a.handleErrorLog("system", "儲存更新檢查時間失敗", err)
+	a.persistUpdateCheckResult(info.HasUpdate, info.LatestVersion)
+
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, "update_status", map[string]interface{}{
+			"has_update": info.HasUpdate,
+		})
 	}
 
-	if info.HasUpdate && a.ctx != nil {
+	if info.HasUpdate {
 		a.handleLog("system", i18n.Tfmt("🔍 定時檢查發現新版本: %s", info.LatestVersion))
-		runtime.EventsEmit(a.ctx, "update_available", map[string]interface{}{
-			"latest_version": info.LatestVersion,
-			"release_notes":  info.ReleaseNotes,
-			"published_at":   info.PublishedAt,
-			"download_url":   info.DownloadURL,
-			"asset_type":     info.AssetType,
-		})
+		a.emitUpdateAvailable(
+			info.LatestVersion,
+			info.ReleaseNotes,
+			info.PublishedAt,
+			info.DownloadURL,
+			info.AssetType,
+		)
 	}
 }

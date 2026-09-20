@@ -34,6 +34,10 @@ export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
 }
 
+export function GetCategoryLogFilePath(arg1, arg2) {
+  return window['go']['main']['App']['GetCategoryLogFilePath'](arg1, arg2);
+}
+
 export function GetCategoryLogs(arg1, arg2) {
   return window['go']['main']['App']['GetCategoryLogs'](arg1, arg2);
 }
@@ -82,6 +86,10 @@ export function KillProcessByPort(arg1) {
   return window['go']['main']['App']['KillProcessByPort'](arg1);
 }
 
+export function OpenCategoryLogFile(arg1, arg2) {
+  return window['go']['main']['App']['OpenCategoryLogFile'](arg1, arg2);
+}
+
 export function OpenDependencyFolder(arg1) {
   return window['go']['main']['App']['OpenDependencyFolder'](arg1);
 }
@@ -92,6 +100,10 @@ export function OpenFolder(arg1) {
 
 export function OpenInHeidiSQL() {
   return window['go']['main']['App']['OpenInHeidiSQL']();
+}
+
+export function OpenPathInExplorer(arg1) {
+  return window['go']['main']['App']['OpenPathInExplorer'](arg1);
 }
 
 export function OpenProjectCaddyfile(arg1) {
@@ -108,14 +120,6 @@ export function QueryDatabases() {
 
 export function QueryTables(arg1) {
   return window['go']['main']['App']['QueryTables'](arg1);
-}
-
-export function RedisDeleteKey(arg1, arg2) {
-  return window['go']['main']['App']['RedisDeleteKey'](arg1, arg2);
-}
-
-export function RedisFlushDB(arg1) {
-  return window['go']['main']['App']['RedisFlushDB'](arg1);
 }
 
 export function RedisGetDBList() {

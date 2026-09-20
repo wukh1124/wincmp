@@ -30,8 +30,8 @@ type GlobalConfig struct {
 	RestoreLastState bool             `json:"restore_last_state"`
 	MinimizeToTray   bool             `json:"minimize_to_tray"`
 	RunOnBoot        bool             `json:"run_on_boot"`
-	Theme            string           `json:"theme"` // 主題設定: "light", "dark", "system" (預設)
-	Language         string           `json:"language"` // 語言設定: "zh-TW" (預設), "en-US"
+	Theme            string           `json:"theme"`     // 主題設定: "light", "dark", "system" (預設)
+	Language         string           `json:"language"`  // 語言設定: "zh-TW" (預設), "en-US"
 	FontSize         string           `json:"font_size"` // 字型大小設定: "small" (預設), "medium", "large"
 	LastServiceState LastServiceState `json:"last_service_state,omitempty"`
 
@@ -41,10 +41,13 @@ type GlobalConfig struct {
 	MaxLogRetention int    `json:"max_log_retention"` // 天數
 	MaxLogLines     int    `json:"max_log_lines"`     // UI 顯示行數限制
 
-	AutoUpdateHosts     bool   `json:"auto_update_hosts"`      // 自動更新 Hosts
-	TerminalShell       string `json:"terminal_shell"`         // 終端 Shell 設定: "powershell.exe", "cmd.exe" 等
-	AutoCheckUpdate     bool   `json:"auto_check_update"`      // 背景定時檢查更新
-	LastCheckUpdateTime int64  `json:"last_check_update_time"` // 上次背景自動檢查更新的時間戳記
+	AutoUpdateHosts      bool   `json:"auto_update_hosts"`       // 自動更新 Hosts
+	TerminalShell        string `json:"terminal_shell"`          // 終端 Shell 設定: "powershell.exe", "cmd.exe" 等
+	AutoCheckUpdate      bool   `json:"auto_check_update"`       // 背景定時檢查更新
+	LastCheckUpdateTime  int64  `json:"last_check_update_time"`  // 上次背景自動檢查更新的時間戳記
+	HasUpdateAvailable   bool   `json:"has_update_available"`    // 是否已偵測到尚未安裝的新版本
+	LatestUpdateVersion  string `json:"latest_update_version"`   // 偵測到的新版本號
+	AutoCheckUpdateHours int    `json:"auto_check_update_hours"` // 自動檢查間隔（小時），預設 6
 
 	PHP PHPSettings `json:"php,omitempty"`
 
@@ -453,4 +456,3 @@ func GetSystemLanguage() string {
 	// 否則預設為英文
 	return "en-US"
 }
-

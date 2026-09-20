@@ -23,6 +23,7 @@
     "max_log_retention": 7,
     "auto_update_hosts": true,
     "auto_check_update": true,
+    "auto_check_update_hours": 6,
     "php": {
       "processes_per_version": 3,
       "processes": {

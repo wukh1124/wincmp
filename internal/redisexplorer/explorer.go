@@ -241,34 +241,6 @@ func GetKeyDetail(addr string, db int, key string) (*RedisKeyDetail, error) {
 	return detail, nil
 }
 
-// DeleteKey 刪除指定的 Key
-func DeleteKey(addr string, db int, key string) error {
-	client := getClient(addr, db)
-	defer client.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	if err := client.Del(ctx, key).Err(); err != nil {
-		return fmt.Errorf("%s: %w", i18n.T("刪除鍵值失敗"), err)
-	}
-	return nil
-}
-
-// FlushDB 清空當前資料庫所有的快取
-func FlushDB(addr string, db int) error {
-	client := getClient(addr, db)
-	defer client.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := client.FlushDB(ctx).Err(); err != nil {
-		return fmt.Errorf("%s: %w", i18n.T("清空資料庫失敗"), err)
-	}
-	return nil
-}
-
 // tryFormatJSON 嘗試將字串排版為美觀 JSON，若非 JSON 則原樣返回
 func tryFormatJSON(raw string) string {
 	trimmed := strings.TrimSpace(raw)

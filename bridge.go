@@ -120,7 +120,7 @@ func (a *App) SaveConfig(newCfg *config.WincmpConfig) error {
 
 	a.appCfg = newCfg
 	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
-	
+
 	if err := a.appCfg.Save(cfgPath); err != nil {
 		return fmt.Errorf(i18n.T("無法儲存設定檔: %w"), err)
 	}
@@ -150,9 +150,10 @@ func (a *App) SaveQuickSettings(theme string, language string, fontSize string) 
 	return nil
 }
 
-
 // ScanServices 重新掃描 bin/ 目錄並更新二進位服務版本資訊
+// 顯式呼叫時先清除掃描快取，確保手動安裝/替換的依賴（如 php_redis）能立即反映
 func (a *App) ScanServices() (*scanner.ScanResult, error) {
+	scanner.InvalidateScanCache()
 	res, err := scanner.ScanBinDir(a.baseDir)
 	if err != nil {
 		return nil, fmt.Errorf(i18n.T("服務掃描失敗: %w"), err)
@@ -792,7 +793,7 @@ func (a *App) triggerHostsUpdate() {
 	if err != nil {
 		errMsg := i18n.T("更新系統 Hosts 失敗 (可能需要管理員權限)")
 		a.handleErrorLog("system", errMsg, err)
-		
+
 		// 既然更新失敗，且剛才已經建立了備份檔，就將其移除，避免殘留無效備份
 		if errRemove := os.Remove(backupPath); errRemove != nil {
 			a.handleErrorLog("system", i18n.T("移除無效備份檔失敗"), errRemove)
@@ -810,6 +811,29 @@ func (a *App) triggerHostsUpdate() {
 // OpenFolder 用系統預設檔案瀏覽器開啟指定的本機資料夾
 func (a *App) OpenFolder(path string) error {
 	cmd := exec.Command("explorer", filepath.Clean(path))
+	return cmd.Start()
+}
+
+// OpenPathInExplorer 用系統預設程式開啟檔案或資料夾（日誌右鍵「開啟檔案」使用）
+func (a *App) OpenPathInExplorer(path string) error {
+	cleaned := strings.TrimSpace(path)
+	if cleaned == "" {
+		return fmt.Errorf("%s", i18n.T("路徑為空"))
+	}
+	// 去除日誌中常見的 :line / :line:col 尾碼
+	cleaned = strings.TrimRight(cleaned, `.,;`)
+	if m := regexp.MustCompile(`:(\d+)(?::\d+)?$`).FindStringSubmatch(cleaned); m != nil {
+		cleaned = cleaned[:len(cleaned)-len(m[0])]
+	}
+	cleaned = filepath.Clean(cleaned)
+	info, err := os.Stat(cleaned)
+	if err != nil {
+		return fmt.Errorf("%s %s: %w", i18n.T("找不到路徑"), cleaned, err)
+	}
+	if info.IsDir() {
+		return a.OpenFolder(cleaned)
+	}
+	cmd := exec.Command("cmd", "/c", "start", "", cleaned)
 	return cmd.Start()
 }
 
@@ -1504,26 +1528,70 @@ type LogEntry struct {
 	Time string `json:"time"`
 }
 
-// GetCategoryLogs 獲取指定分類的當天日誌歷史紀錄
-// 支援 system, caddy, mariadb, mailpit, php, runtime 等分類
-func (a *App) GetCategoryLogs(category string, subCategory string) ([]LogEntry, error) {
-	catKey := strings.ToLower(category)
-	var fileName string
+// LogFileInfo 描述分類日誌檔位置與是否存在
+type LogFileInfo struct {
+	Path   string `json:"path"`
+	Name   string `json:"name"`
+	Exists bool   `json:"exists"`
+}
+
+// categoryLogFilePath 統一計算分類當天日誌檔路徑（與寫入端檔名規則一致）
+func (a *App) categoryLogFilePath(category string, subCategory string) string {
+	catKey := strings.ToLower(strings.TrimSpace(category))
 	dateStr := time.Now().Format("2006-01-02")
 	logDir := filepath.Join(a.baseDir, "logs")
 
 	if catKey == "runtime" {
-		projName := subCategory
+		projName := strings.TrimSpace(subCategory)
 		if projName == "" {
 			projName = "System"
 		}
-		fileName = fmt.Sprintf("runtime-%s-%s.log", projName, dateStr)
-	} else {
-		fileName = fmt.Sprintf("wincmp-%s-%s.log", catKey, dateStr)
+		return filepath.Join(logDir, fmt.Sprintf("runtime-%s-%s.log", projName, dateStr))
+	}
+	if catKey == "" {
+		catKey = "system"
+	}
+	return filepath.Join(logDir, fmt.Sprintf("wincmp-%s-%s.log", catKey, dateStr))
+}
+
+// GetCategoryLogFilePath 取得指定分類當天日誌檔路徑（含存在與否）
+func (a *App) GetCategoryLogFilePath(category string, subCategory string) (*LogFileInfo, error) {
+	path := a.categoryLogFilePath(category, subCategory)
+	_, err := os.Stat(path)
+	exists := err == nil
+
+	// system 若分類檔尚未建立，回退到通用 wincmp-日期.log（舊版/降級寫入）
+	if !exists && strings.EqualFold(strings.TrimSpace(category), "system") {
+		fallback := filepath.Join(a.baseDir, "logs", fmt.Sprintf("wincmp-%s.log", time.Now().Format("2006-01-02")))
+		if _, ferr := os.Stat(fallback); ferr == nil {
+			return &LogFileInfo{Path: fallback, Name: filepath.Base(fallback), Exists: true}, nil
+		}
 	}
 
-	filePath := filepath.Join(logDir, fileName)
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	return &LogFileInfo{Path: path, Name: filepath.Base(path), Exists: exists}, nil
+}
+
+// OpenCategoryLogFile 開啟指定分類當天日誌檔（系統預設程式）
+func (a *App) OpenCategoryLogFile(category string, subCategory string) error {
+	info, err := a.GetCategoryLogFilePath(category, subCategory)
+	if err != nil {
+		return err
+	}
+	if !info.Exists {
+		return fmt.Errorf("%s: %s", i18n.T("日誌檔案不存在"), info.Path)
+	}
+	return a.OpenPathInExplorer(info.Path)
+}
+
+// GetCategoryLogs 獲取指定分類的當天日誌歷史紀錄
+// 支援 system, caddy, mariadb, mailpit, php, runtime 等分類
+func (a *App) GetCategoryLogs(category string, subCategory string) ([]LogEntry, error) {
+	info, err := a.GetCategoryLogFilePath(category, subCategory)
+	if err != nil {
+		return nil, err
+	}
+	filePath := info.Path
+	if !info.Exists {
 		return []LogEntry{}, nil
 	}
 
@@ -1570,9 +1638,36 @@ func (a *App) GetCategoryLogs(category string, subCategory string) ([]LogEntry, 
 	return entries, nil
 }
 
-// CheckNewVersion 檢查是否有新版本可用
+// CheckNewVersion 檢查是否有新版本可用；若偵測到新版本會同步設定檔與前端通知
 func (a *App) CheckNewVersion() (*updater.ReleaseInfo, error) {
-	return updater.CheckNewVersion(AppVersion)
+	info, err := updater.CheckNewVersion(AppVersion)
+	if err != nil {
+		return info, err
+	}
+	if info != nil && a.appCfg != nil {
+		changed := a.appCfg.Global.HasUpdateAvailable != info.HasUpdate
+		if info.HasUpdate && a.appCfg.Global.LatestUpdateVersion != info.LatestVersion {
+			changed = true
+		}
+		if changed {
+			a.persistUpdateCheckResult(info.HasUpdate, info.LatestVersion)
+		}
+		if a.ctx != nil {
+			runtime.EventsEmit(a.ctx, "update_status", map[string]interface{}{
+				"has_update": info.HasUpdate,
+			})
+		}
+		if info.HasUpdate {
+			a.emitUpdateAvailable(
+				info.LatestVersion,
+				info.ReleaseNotes,
+				info.PublishedAt,
+				info.DownloadURL,
+				info.AssetType,
+			)
+		}
+	}
+	return info, nil
 }
 
 // StartAutoUpdate 啟動自動下載並更新覆蓋
@@ -1733,14 +1828,4 @@ func (a *App) RedisScanKeys(db int, cursor uint64, match string, count int64) (*
 // RedisGetKeyDetail 獲取特定 Key 的詳細資料
 func (a *App) RedisGetKeyDetail(db int, key string) (*redisexplorer.RedisKeyDetail, error) {
 	return redisexplorer.GetKeyDetail(a.redisAddr(), db, key)
-}
-
-// RedisDeleteKey 刪除指定 DB 的 Key
-func (a *App) RedisDeleteKey(db int, key string) error {
-	return redisexplorer.DeleteKey(a.redisAddr(), db, key)
-}
-
-// RedisFlushDB 清空指定 DB
-func (a *App) RedisFlushDB(db int) error {
-	return redisexplorer.FlushDB(a.redisAddr(), db)
 }
