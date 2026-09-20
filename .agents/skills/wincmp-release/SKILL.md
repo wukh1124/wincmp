@@ -19,21 +19,24 @@ description: Release management, release_note validation, and release workflow a
 版本號以專案根目錄 `VERSION`（格式 `x.y.z`）為單一信任來源：
 - **Wails 編譯**：`-ldflags "-X main.AppVersion=v$Version"`
 - **前端顯示**：React 透過 `GetAppVersion()`
-- **更新檢查**：比對官網/`release_note/release_info.json` 的 `latest-version`
-- **打包發行**：`release.bat` 讀取 `VERSION` 產出 Zip / Exe
+- **App 更新檢查**：`internal/updater` 直接打 GitHub `releases/latest`
+- **官網 release.json**：`scripts/generate-release-json.js` 讀 **VERSION** + `release_note/vX.Y.Z/release_notes*.md`（日期自 notes 擷取；fallback git tag）
+- **發布日期**：寫在雙語 notes 內固定日期行（見 §2.1），**不再使用** `release_info.json`
+- **打包發行**：`release.bat` / CI `release.ps1` 讀取 `VERSION` 產出 Zip / Exe
 - **對外說明**：`release_note/vX.Y.Z/release_notes*.md`（人工/skill 撰寫）
 
 ### 0.2 標準 Release 流程（新）
 
 ```text
 1. 使用本 Skill 撰寫 release_note/vX.Y.Z/release_notes.md + release_notes_zh.md
-   並完成 audit_commits.md 內部稽核底稿
-2. 更新 VERSION，執行 pre-flight validator
+   （含發布日期行）並完成 audit_commits.md 內部稽核底稿
+2. 更新 VERSION → 執行 pre-flight validator
+   （validator 檢查 notes 日期行；不再檢查/寫入 release_info.json）
 3. 本機啟動 wails dev（http://localhost:34115）
 4. 執行 scripts/capture_release_screenshots.ps1
-   - 以「發布前舊版」備份 screenshot/{dark,sketch} → screenshot/backup/v{prev}/
+   - 以 git tag「發布前舊版」備份 screenshot/{dark,sketch} → screenshot/backup/v{prev}/
    - 重新擷取 16 張官網截圖
-5. 執行 ./bat/release.ps1（建置 + 更新 release_info.json；校驗 release_notes 已存在）
+5. 執行 ./bat/release.ps1（建置；校驗 notes 已存在與日期行）
 6. Git 發行（由開發者審核執行，見 §7）：
    - 在發行分支 commit（VERSION + release_note 等）
    - **線性進入 main**（rebase 後 fast-forward；禁止 merge commit）
@@ -41,7 +44,8 @@ description: Release management, release_note validation, and release workflow a
    - 先 `push origin main`，再 `push origin vX.Y.Z`
 7. GitHub Actions：
    - Build and Release：check_deps → build exe/zip → 建立 GitHub Release
-   - Deploy Website：generate-release-json + 複製 screenshot 至 gh-pages
+     （CI 讀 VERSION）
+   - Deploy Website：generate-release-json（讀 VERSION + notes 日期行）+ 複製 screenshot 至 gh-pages
 ```
 
 ### 0.3 安全防護底線
@@ -68,13 +72,12 @@ git diff --name-only <last_tag>..HEAD -- frontend/ internal/ app.go bridge.go
 wincmp/
 ├── VERSION                               # 單一版號定義 (x.y.z)
 └── release_note/
-    ├── release_info.json                 # latest-version, release-date
     ├── archives/                         # 歷史 CHANGELOG 歸檔（唯讀）
     │   ├── CHANGELOG_en.md
     │   └── CHANGELOG_zh.md
     └── vX.Y.Z/
-        ├── release_notes_zh.md           # 對外繁中發布說明（唯一來源）
-        ├── release_notes.md              # 對外英文發布說明（唯一來源）
+        ├── release_notes_zh.md           # 對外繁中發布說明（唯一來源；含發布日期）
+        ├── release_notes.md              # 對外英文發布說明（唯一來源；含 Release date）
         └── audit_commits.md              # 內部稽核底稿
 ```
 
@@ -84,8 +87,10 @@ wincmp/
 ```markdown
 # WinCMP vX.Y.Z
 
+發布日期：YYYY-MM-DD
+<!-- 英文: Release date: YYYY-MM-DD -->
+
 此版本為 WinCMP 帶來了新的功能、更新與修正。
-<!-- 英文: This release introduces new features, updates, and fixes to WinCMP. -->
 
 ## What's Changed
 
@@ -103,6 +108,11 @@ wincmp/
 2. 解壓縮至您系統中的任何資料夾。
 3. 按兩下 `WinCMP_vX.Y.Z.exe` 啟動控制面板。
 ```
+
+**日期行（必填）**：緊接主標題之後，單獨一行。
+- 英文：`Release date: YYYY-MM-DD`
+- 繁中：`發布日期：YYYY-MM-DD`
+- 擷取由 `validate_release.js` / `generate-release-json.js` 以正規表示法完成，無需 `release_info.json`
 
 #### 分類標籤白名單（嚴格限定以下 7 種）
 - `### Added` / `### Changed` / `### Deprecated` / `### Removed`
@@ -160,9 +170,10 @@ powershell -ExecutionPolicy Bypass -File .agents/skills/wincmp-release/scripts/v
 驗證器將自動檢查：
 1. `VERSION` 是否符合 `x.y.z`
 2. `release_note/vX.Y.Z/release_notes.md` 與 `release_notes_zh.md` 是否存在且有內容
-3. `What's Changed` 分類標籤是否在白名單內
-4. 是否已建立 `audit_commits.md`（警告）
-5. Git 工作區狀態
+3. 雙語 notes 是否含發布日期行（`Release date:` / `發布日期：`）
+4. `What's Changed` 分類標籤是否在白名單內
+5. 是否已建立 `audit_commits.md`（警告）
+6. Git 工作區狀態
 
 ---
 
@@ -184,7 +195,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\capture_release_screenshots.p
 
 腳本行為：
 1. 讀取 `VERSION` 目標版
-2. 從 `release_info.json` / git tag 取得**發布前舊版**版號
+2. 從 **git tag** 取得**發布前舊版**版號（不使用 release_info.json）
 3. 將現有 `screenshot/dark`、`screenshot/sketch` 複製到 `screenshot/backup/v{舊版}/`
 4. 確認 `http://localhost:34115` 可連線（否則結束並提示啟動 `wails dev`）
 5. 執行 `frontend/scripts/capture.cjs` 產出新圖
@@ -205,7 +216,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\capture_release_screenshots.p
 3. 清理 `.gitkeep` / `.example` / 日誌
 4. 產生 `wincmp-v$Version-win-x64.zip` 與獨立 `WinCMP_v$Version.exe`
 5. **校驗**（非產生）`release_note/v$Version/release_notes*.md` 已存在；缺失時才寫入 stub 並警告
-6. 更新 `release_note/release_info.json`
+6. 檢查 notes 是否含發布日期行；若仍存在舊的 `release_info.json` 會自動移除
 
 ---
 
@@ -222,7 +233,8 @@ Tag 應指向「**已進入 main 的最終發行 commit**」。GitHub Actions、
 
 ```bash
 # 1) 在發行分支提交發布內容（依實際變更調整路徑）
-git add VERSION release_note/ screenshot/ conf/dependencies.json scripts/ .github/ .agents/
+#    notes 須含發布日期行；validator 會檢查
+git add VERSION release_note/vX.Y.Z/ screenshot/ conf/dependencies.json scripts/ .github/ .agents/
 # 若功能碼尚未提交，一併 add 對應 frontend/ internal/ 等路徑
 git commit -m "chore(release): bump version to vX.Y.Z"
 

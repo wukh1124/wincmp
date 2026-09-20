@@ -51,7 +51,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\capture_release_screenshots.p
 
 腳本會：
 1. 讀取 `VERSION`（目標發布版）
-2. 從 `release_info.json` 或 git tag 取得**發布前舊版**版號
+2. 從 **git tag** 取得**發布前舊版**版號（不使用 release_info.json）
 3. 將現有截圖備份到 `screenshot/backup/v{舊版}/`（此目錄已 gitignore）
 4. 確認 `localhost:34115` 可連線；未啟動 `wails dev` 會直接中止並提示
 5. 執行 `capture.cjs` 產出新圖，並輸出字體／語系／主題驗證結果

@@ -1,4 +1,7 @@
 # WinCMP v2.1.2
+
+Release date: 2026-09-20
+
 This release introduces new features, updates, and fixes to WinCMP.
 
 ## What's Changed

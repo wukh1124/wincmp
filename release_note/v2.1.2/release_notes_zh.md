@@ -1,4 +1,7 @@
 # WinCMP v2.1.2
+
+發布日期：2026-09-20
+
 此版本為 WinCMP 帶來了新的功能、更新與修正。
 
 ## What's Changed

@@ -205,6 +205,9 @@ if (-not (Test-Path $VersionDir)) {
 if (-not (Test-Path $EnReleaseFile) -or (Get-Item $EnReleaseFile).Length -lt 20) {
     $EnTemplate = @"
 # WinCMP v$Version
+
+Release date: $((Get-Date).ToString('yyyy-MM-dd'))
+
 This release introduces new features, updates, and fixes to WinCMP.
 
 ## What's Changed
@@ -225,6 +228,9 @@ This release introduces new features, updates, and fixes to WinCMP.
 if (-not (Test-Path $ZhReleaseFile) -or (Get-Item $ZhReleaseFile).Length -lt 20) {
     $ZhTemplate = @"
 # WinCMP v$Version
+
+發布日期：$((Get-Date).ToString('yyyy-MM-dd'))
+
 此版本為 WinCMP 帶來了新的功能、更新與修正。
 
 ## What's Changed
@@ -242,19 +248,38 @@ if (-not (Test-Path $ZhReleaseFile) -or (Get-Item $ZhReleaseFile).Length -lt 20)
     Write-Host "    -> Chinese release notes present: $ZhReleaseFile" -ForegroundColor Green
 }
 
-# 9.1 Update release_info.json
-$Today = Get-Date -Format "yyyy-MM-dd"
-$InfoJsonContent = @"
-{
-  "latest-version": "$Version",
-  "release-date": "$Today"
+# 9.1 Notes 須含發布日期行（不再寫 release_info.json；版號以 VERSION 為準）
+function Get-ReleaseDateFromNotes {
+    param([string]$Text)
+    if ([string]::IsNullOrWhiteSpace($Text)) { return $null }
+    $patterns = @(
+        '(?m)^Release\s*date\s*[：:]\s*(\d{4}-\d{2}-\d{2})',
+        '(?m)^發布日期\s*[：:]\s*(\d{4}-\d{2}-\d{2})',
+        '(?m)^发布日期\s*[：:]\s*(\d{4}-\d{2}-\d{2})'
+    )
+    foreach ($p in $patterns) {
+        $m = [regex]::Match($Text, $p)
+        if ($m.Success) { return $m.Groups[1].Value }
+    }
+    return $null
 }
-"@
+
+$EnNotesText = if (Test-Path $EnReleaseFile) { Get-Content -LiteralPath $EnReleaseFile -Raw } else { "" }
+$ZhNotesText = if (Test-Path $ZhReleaseFile) { Get-Content -LiteralPath $ZhReleaseFile -Raw } else { "" }
+$NotesDate = Get-ReleaseDateFromNotes -Text $EnNotesText
+if (-not $NotesDate) { $NotesDate = Get-ReleaseDateFromNotes -Text $ZhNotesText }
+if (-not $NotesDate) {
+    Write-Host "    [Warn] Release notes missing date line (Release date: YYYY-MM-DD / 發布日期：YYYY-MM-DD)" -ForegroundColor Yellow
+} else {
+    Write-Host "    -> Release date from notes: $NotesDate" -ForegroundColor Green
+}
+
+# 若舊檔仍存在則移除，避免與 VERSION 重複維護
 $InfoJsonPath = Join-Path $ReleaseNoteDir "release_info.json"
-[System.IO.File]::WriteAllText($InfoJsonPath, $InfoJsonContent, $utf8NoBom)
-Write-Host "    -> Updated release_info.json: $InfoJsonPath" -ForegroundColor Green
-
-
+if (Test-Path -LiteralPath $InfoJsonPath) {
+    Remove-Item -LiteralPath $InfoJsonPath -Force
+    Write-Host "    -> Removed obsolete release_info.json" -ForegroundColor Yellow
+}
 
 # Return to root
 Set-Location -Path $ProjectRoot

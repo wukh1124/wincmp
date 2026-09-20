@@ -96,7 +96,34 @@ function checkReleaseNotes(filePath, fileLabel) {
   return true;
 }
 
-// 3. 檢查雙語 Release Notes（唯一對外內容來源）
+/** 從 notes 擷取發布日期 */
+function extractReleaseDate(text) {
+  if (!text) return null;
+  const patterns = [
+    /^Release\s*date\s*[：:]\s*(\d{4}-\d{2}-\d{2})/im,
+    /^發布日期\s*[：:]\s*(\d{4}-\d{2}-\d{2})/im,
+    /^发布日期\s*[：:]\s*(\d{4}-\d{2}-\d{2})/im,
+  ];
+  for (const re of patterns) {
+    const m = String(text).match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function checkReleaseDateLine(filePath, fileLabel) {
+  if (!fs.existsSync(filePath)) return false;
+  const content = fs.readFileSync(filePath, 'utf8');
+  const date = extractReleaseDate(content);
+  if (!date) {
+    console.error(`  [錯誤] ${fileLabel} 缺少發布日期行。英文：Release date: YYYY-MM-DD；繁中：發布日期：YYYY-MM-DD`);
+    return false;
+  }
+  console.log(`  -> ${fileLabel} 發布日期: ${date}`);
+  return true;
+}
+
+// 2. 檢查雙語 Release Notes（唯一對外內容來源）+ 日期行
 console.log('[2/5] 檢查雙語 Release Notes...');
 const notesDir = path.join(projectRoot, 'release_note', `v${version}`);
 const zhPassed = checkReleaseNotes(path.join(notesDir, 'release_notes_zh.md'), '繁體中文發布說明 (release_notes_zh.md)');
@@ -106,7 +133,14 @@ if (!zhPassed || !enPassed) {
   hasError = true;
 }
 
-// 4. 檢查內部稽核檔 audit_commits.md
+// 2c. notes 必須含發布日期行（不再使用 release_info.json）
+const zhDateOk = checkReleaseDateLine(path.join(notesDir, 'release_notes_zh.md'), '繁體中文發布說明');
+const enDateOk = checkReleaseDateLine(path.join(notesDir, 'release_notes.md'), '英文發布說明');
+if (!zhDateOk || !enDateOk) {
+  hasError = true;
+}
+
+// 3. 檢查內部稽核檔 audit_commits.md
 console.log('[3/5] 檢查內部稽核檔案 (audit_commits.md)...');
 const auditFile = path.join(notesDir, 'audit_commits.md');
 if (fs.existsSync(auditFile)) {
@@ -115,7 +149,7 @@ if (fs.existsSync(auditFile)) {
   console.warn(`  [提醒] 尚未建立審核底稿: release_note\\v${version}\\audit_commits.md (發布前強烈建議完成以供歷史溯源)`);
 }
 
-// 5. 檢查 Git 狀態
+// 4. 檢查 Git 狀態
 console.log('[4/5] 檢查 Git 工作區狀態...');
 try {
   const gitStatus = execSync('git status --porcelain', { cwd: projectRoot, encoding: 'utf8' }).trim();
@@ -128,7 +162,7 @@ try {
   console.warn('  [警告] 無法執行 git status 檢查。');
 }
 
-// 6. 總結
+// 5. 總結
 console.log('[5/5] 驗證結果彙總...');
 if (hasError) {
   console.error('\n[失敗] 發行前驗證未通過，請修正上述錯誤項目後再行發布！');

@@ -1,4 +1,4 @@
-﻿# WinCMP Release Screenshot Capture
+# WinCMP Release Screenshot Capture
 # Run this script from the WinCMP project root after starting `wails dev`
 # (http://localhost:34115)
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -95,38 +95,23 @@ if ($NewVersion.StartsWith("v")) {
 Write-Host "[1] Target version: v$NewVersion" -ForegroundColor Green
 
 # 2) Backup version = previous published release (before this release)
+# 不再使用 release_info.json；以 git tag 取得上一版
 $PrevVersion = $null
-$InfoPath = Join-Path $ProjectRoot "release_note\release_info.json"
-if (Test-Path -LiteralPath $InfoPath) {
-    try {
-        $info = Get-Content -LiteralPath $InfoPath -Raw | ConvertFrom-Json
-        $rawPrev = $info.'latest-version'
-        if ($rawPrev) {
-            $PrevVersion = $rawPrev.TrimStart('v')
+try {
+    Push-Location $ProjectRoot
+    $tags = @(git tag -l --sort=-v:refname)
+    Pop-Location
+    foreach ($t in $tags) {
+        if (-not $t) { continue }
+        $clean = $t.TrimStart('v')
+        if ($clean -and ($clean -ne $NewVersion)) {
+            $PrevVersion = $clean
+            break
         }
-    }
-    catch {
-        Write-Host "    [Warn] Failed to parse release_info.json" -ForegroundColor Yellow
     }
 }
-
-if ((-not $PrevVersion) -or ($PrevVersion -eq $NewVersion)) {
-    try {
-        Push-Location $ProjectRoot
-        $tags = @(git tag -l --sort=-v:refname)
-        Pop-Location
-        foreach ($t in $tags) {
-            if (-not $t) { continue }
-            $clean = $t.TrimStart('v')
-            if ($clean -and ($clean -ne $NewVersion)) {
-                $PrevVersion = $clean
-                break
-            }
-        }
-    }
-    catch {
-        Write-Host "    [Warn] Failed to read git tags" -ForegroundColor Yellow
-    }
+catch {
+    Write-Host "    [Warn] Failed to read git tags" -ForegroundColor Yellow
 }
 
 if (-not $PrevVersion) {

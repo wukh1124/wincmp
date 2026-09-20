@@ -36,29 +36,34 @@ Agent 會做：對照上一 tag 寫 release notes / audit、更新 `VERSION`、�
    - `audit_commits.md`（內部對照 commit / 檔案）
 
 3. **更新 `VERSION`** 為 `x.y.z`（不加 `v`）
+4. **在雙語 notes 寫入發布日期行**（必填；不再使用 `release_info.json`）
+   - 英文：`Release date: YYYY-MM-DD`
+   - 繁中：`發布日期：YYYY-MM-DD`
+   - 位置：主標題 `# WinCMP vX.Y.Z` 之後單獨一行
+   - 官網 `generate-release-json.js` 以 VERSION 定版號、以 notes 日期行定 `release_date`（缺日期時 fallback git tag）
 
-4. **驗證**
+5. **驗證**
    ```powershell
    node .agents/skills/wincmp-release/scripts/validate_release.js
    go run scripts/check_deps.go --check
    ```
 
-5. **截圖**（需本機 `wails dev` 已啟動）
+6. **截圖**（需本機 `wails dev` 已啟動）
    ```powershell
    # 終端機 A
    wails dev
    # 終端機 B（專案根目錄）
    powershell -ExecutionPolicy Bypass -File .\scripts\capture_release_screenshots.ps1
    ```
-   腳本會把舊圖備份到 `screenshot/backup/v{發布前舊版}/`，再產出 dark/sketch 各 8 張。
+   腳本以 **git tag** 找上一版，把舊圖備份到 `screenshot/backup/v{發布前舊版}/`，再產出 dark/sketch 各 8 張。
 
-6. **打包**（本地驗證產物；正式 build 以 CI 為準）
+7. **打包**（本地驗證產物；正式 build 以 CI 為準）
    ```powershell
    .\release.bat
    ```
-   確認 `release_note/release_info.json` 已更新，且 notes **不是** stub。
+   確認 notes **不是** stub，且含發布日期行。
 
-7. **輸出審核清單給你**（見下一節），等你確認後由你 commit / push / tag。
+8. **輸出審核清單給你**（見下一節），等你確認後由你 commit / push / tag。
 
 ---
 
@@ -72,7 +77,7 @@ Agent 會做：對照上一 tag 寫 release notes / audit、更新 `VERSION`、�
 
 ### 2.2 Git Commit 內容
 - [ ] `git status` / `git diff --cached` 只含該 release 應提交的檔
-- [ ] 建議 staged：`VERSION`、`release_note/`、`screenshot/`、`conf/dependencies.json`（若依賴有改）、本次功能原始碼
+- [ ] 建議 staged：`VERSION`、`release_note/vX.Y.Z/`、`screenshot/`、`conf/dependencies.json`（若依賴有改）、本次功能原始碼
 - [ ] 不要提交：`*.exe` / `*.zip`、`wincmp-release-only/`、`screenshot/backup/`
 - [ ] commit message 使用 `type(scope): description`
 
@@ -146,7 +151,7 @@ Checkout
 → setup Go / Node / Wails
 → npm ci (frontend)
 → go run scripts/check_deps.go --check   # 依賴 URL + SHA256
-→ ./bat/release.ps1                      # build + 組裝 + 更新 release_info
+→ ./bat/release.ps1                      # build + 組裝 + 檢查 notes 日期行
 → 讀取 release_note/vX.Y.Z/release_notes.md 當 Release body
 → softprops/action-gh-release
    上傳 ../wincmp-release-only/wincmp-vX.Y.Z-win-x64.zip
@@ -168,7 +173,7 @@ Checkout
 Checkout
 → icon.svg → website/favicon.svg
 → cp screenshot/* → website/screenshot/
-→ node scripts/generate-release-json.js  # 讀 release_info + release_notes
+→ node scripts/generate-release-json.js  # 讀 VERSION + notes 日期行
 → 推 gh-pages
 ```
 
@@ -229,10 +234,13 @@ git push origin main
 
 ### 7.3 官網版本號 / changelog 沒更新
 
-1. 確認 `release_note/release_info.json` 的 `latest-version` 已是新值  
-2. 確認 `release_note/vX.Y.Z/release_notes*.md` 已 push 到 main  
-3. Actions → Deploy Website → Re-run  
+1. 確認 `VERSION` 已是新值  
+2. 確認 `release_note/vX.Y.Z/release_notes*.md` 已 push 到 main，且含發布日期行  
+3. Actions → Deploy Website → Re-run（腳本讀 VERSION + notes 日期）  
 4. 瀏覽器強制重新整理（CDN/快取）
+
+> App 內建更新檢查走 GitHub `releases/latest`，與官網 json 無關；tag + GitHub Release 正確即可被客戶端看到。  
+> `release_info.json` 已移除，請勿再建立。
 
 ### 7.4 官網截圖仍是舊圖
 
@@ -247,6 +255,7 @@ git push origin main
 | 找不到 release_notes | 由 Agent/skill 先寫 notes，或檢查目錄名 `vX.Y.Z` |
 | 分類不在白名單 | 只用 §2.1 的 7 種 `###` 標題 |
 | notes 過短 | 補齊 What's Changed 實質內容，勿留 stub 上線 |
+| notes 缺少發布日期行 | 補上 `Release date: YYYY-MM-DD` / `發布日期：YYYY-MM-DD` |
 
 ### 7.6 截圖腳本失敗
 
@@ -273,11 +282,10 @@ GitHub 上若已建立錯誤 Release，到 Releases 頁刪除該 Release 再重�
 
 | 路徑 | 用途 |
 |------|------|
-| `VERSION` | 版號唯一來源 `x.y.z` |
-| `release_note/vX.Y.Z/release_notes.md` | 英文對外說明 |
-| `release_note/vX.Y.Z/release_notes_zh.md` | 繁中對外說明 |
+| `VERSION` | 版號唯一來源 `x.y.z`（CI 發版 + 官網 release.json 皆以此為準） |
+| `release_note/vX.Y.Z/release_notes.md` | 英文對外說明（含 `Release date: YYYY-MM-DD`） |
+| `release_note/vX.Y.Z/release_notes_zh.md` | 繁中對外說明（含 `發布日期：YYYY-MM-DD`） |
 | `release_note/vX.Y.Z/audit_commits.md` | 內部稽核 |
-| `release_note/release_info.json` | 最新版號 / 日期（官網 + 更新器） |
 | `release_note/archives/` | 歷史 CHANGELOG（只讀） |
 | `screenshot/{dark,sketch}/` | 官網目前截圖（要 commit） |
 | `screenshot/backup/v*/` | 舊圖備份（不 commit） |
