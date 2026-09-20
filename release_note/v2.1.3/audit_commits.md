@@ -85,5 +85,5 @@
 - [x] 2. `node .agents/skills/wincmp-release/scripts/validate_release.js` 通過
 - [x] 3. `cd frontend && npm run build` 通過
 - [x] 4. `go test ./...` 通過
-- [ ] 5. `wails dev` 已啟動且 `scripts/capture_release_screenshots.ps1` 完成
-- [ ] 6. `.\release.bat` 成功生成 Release 壓縮包
+- [x] 5. `wails dev` 已啟動且 `scripts/capture_release_screenshots.ps1` 完成
+- [x] 6. `.\release.bat` 成功生成 Release 壓縮包
