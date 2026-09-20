@@ -221,7 +221,16 @@ func GetKeyDetail(addr string, db int, key string) (*RedisKeyDetail, error) {
 		if err != nil {
 			return nil, err
 		}
-		bytes, _ := json.MarshalIndent(vals, "", "  ")
+		type zsetRow struct {
+			Member string  `json:"member"`
+			Score  float64 `json:"score"`
+		}
+		rows := make([]zsetRow, 0, len(vals))
+		for _, z := range vals {
+			member := fmt.Sprintf("%v", z.Member)
+			rows = append(rows, zsetRow{Member: member, Score: z.Score})
+		}
+		bytes, _ := json.Marshal(rows)
 		detail.Value = string(bytes)
 		detail.Size = int64(len(vals))
 

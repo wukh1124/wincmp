@@ -95,6 +95,8 @@ export const enTranslations: Record<string, string> = {
   "Binary Path (含 bin 資料夾的根目錄)": "Binary Path (containing 'bin' directory)",
   "Data Path (資料存放目錄)": "Data Path (directory to store database files)",
   "Mailpit 端口配置": "Mailpit Port Configuration",
+  "Redis 端口配置": "Redis Port Configuration",
+  "用於 Redis 服務啟停與內建快取瀏覽器連線。修改後需重啟 Redis 服務才會生效。": "Used for Redis service start/stop and the built-in cache explorer connection. Restart the Redis service after changing this port.",
   "使用內置數據庫持久化保存信箱數據": "Persist Mailpit mailboxes to disk database",
   "本地化語言與日誌設定": "Localization & Log Settings",
   "顯示語言 (Language)": "Display Language",
@@ -594,6 +596,12 @@ export const enTranslations: Record<string, string> = {
   "未找到匹配的 Key": "No matching keys found",
   "暫無鍵值": "No keys available",
   "正在連線 Redis...": "Connecting to Redis...",
+  "複製": "Copy",
+  "已複製": "Copied",
+  "複製內容": "Copy content",
+  "重新整理連線": "Reload connection",
+  "確定要刪除此鍵嗎？此操作不可還原！": "Delete this key? This cannot be undone!",
+  "刪除鍵值失敗": "Failed to delete key",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

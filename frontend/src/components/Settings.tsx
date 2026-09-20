@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Save, FolderOpen, Shield, Database, Mail, Languages, Info, FileText, Package, Palette, Check, Lock } from 'lucide-react';
+import { Settings as SettingsIcon, Save, FolderOpen, Shield, Database, Mail, Languages, Info, FileText, Package, Palette, Check, Lock, Zap } from 'lucide-react';
 import { GetConfig, SaveConfig, SelectFolder, OpenFolder, OpenSystemConfigFile } from '../../wailsjs/go/main/App';
 import DependencyManager from './DependencyManager';
 import { logStore } from './logStore';
@@ -95,6 +95,7 @@ export default function Settings() {
       newCfg.global.mariadb_port = parseInt(newCfg.global.mariadb_port || "3306");
       newCfg.global.mailpit_smtp_port = parseInt(newCfg.global.mailpit_smtp_port || "1025");
       newCfg.global.mailpit_http_port = parseInt(newCfg.global.mailpit_http_port || "8025");
+      newCfg.global.redis_port = parseInt(newCfg.global.redis_port || "6379");
       newCfg.global.max_log_retention = parseInt(newCfg.global.max_log_retention || "30");
       newCfg.global.max_log_lines = parseInt(newCfg.global.max_log_lines || "500");
 
@@ -433,6 +434,28 @@ export default function Settings() {
                   style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)', accentColor: 'var(--status-info)' }}
                 />
               </div>
+            </div>
+
+            {/* Redis 端口設定 */}
+            <div className="pt-4 space-y-3.5" style={{ borderTop: '1px solid var(--border)' }}>
+              <div className="font-bold text-[10px] uppercase tracking-wider flex items-center gap-1 select-none" style={{ color: 'var(--status-warn)' }}>
+                <Zap size={12} /> {t("Redis 端口配置")}
+              </div>
+              <div className="grid grid-cols-2 gap-3 select-none">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase" style={{ color: 'var(--meta)' }}>{t("執行 Port")}</label>
+                  <input
+                    type="number"
+                    value={config.global.redis_port || 6379}
+                    onChange={(e) => handleGlobalFieldChange('redis_port', e.target.value)}
+                    className="w-full rounded-lg px-2.5 py-1.5 outline-none transition font-mono focus:border-blue-500"
+                    style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg)' }}
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] select-none" style={{ color: 'var(--meta)' }}>
+                {t("用於 Redis 服務啟停與內建快取瀏覽器連線。修改後需重啟 Redis 服務才會生效。")}
+              </p>
             </div>
           </div>
 
