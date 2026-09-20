@@ -6,6 +6,7 @@ import {config} from '../models';
 import {resource} from '../models';
 import {process} from '../models';
 import {scanner} from '../models';
+import {redisexplorer} from '../models';
 
 export function CheckMissingCoreDependencies():Promise<Record<string, boolean>>;
 
@@ -16,6 +17,8 @@ export function CheckPortConflicts():Promise<Record<string, boolean>>;
 export function DetectProjectPath(arg1:string):Promise<main.ProjectDetectResult>;
 
 export function DownloadDependency(arg1:string):Promise<void>;
+
+export function EnablePHPRedisExtension():Promise<void>;
 
 export function FetchRemoteDependencies():Promise<config.DependencyConfig>;
 
@@ -58,6 +61,18 @@ export function OpenSystemConfigFile(arg1:string):Promise<void>;
 export function QueryDatabases():Promise<Array<string>>;
 
 export function QueryTables(arg1:string):Promise<Array<string>>;
+
+export function RedisDeleteKey(arg1:number,arg2:string):Promise<void>;
+
+export function RedisFlushDB(arg1:number):Promise<void>;
+
+export function RedisGetDBList():Promise<Array<redisexplorer.RedisDBInfo>>;
+
+export function RedisGetKeyDetail(arg1:number,arg2:string):Promise<redisexplorer.RedisKeyDetail>;
+
+export function RedisPing():Promise<boolean>;
+
+export function RedisScanKeys(arg1:number,arg2:number,arg3:string,arg4:number):Promise<main.RedisScanResult>;
 
 export function ReloadCaddy():Promise<void>;
 

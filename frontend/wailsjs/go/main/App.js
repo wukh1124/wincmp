@@ -22,6 +22,10 @@ export function DownloadDependency(arg1) {
   return window['go']['main']['App']['DownloadDependency'](arg1);
 }
 
+export function EnablePHPRedisExtension() {
+  return window['go']['main']['App']['EnablePHPRedisExtension']();
+}
+
 export function FetchRemoteDependencies() {
   return window['go']['main']['App']['FetchRemoteDependencies']();
 }
@@ -104,6 +108,30 @@ export function QueryDatabases() {
 
 export function QueryTables(arg1) {
   return window['go']['main']['App']['QueryTables'](arg1);
+}
+
+export function RedisDeleteKey(arg1, arg2) {
+  return window['go']['main']['App']['RedisDeleteKey'](arg1, arg2);
+}
+
+export function RedisFlushDB(arg1) {
+  return window['go']['main']['App']['RedisFlushDB'](arg1);
+}
+
+export function RedisGetDBList() {
+  return window['go']['main']['App']['RedisGetDBList']();
+}
+
+export function RedisGetKeyDetail(arg1, arg2) {
+  return window['go']['main']['App']['RedisGetKeyDetail'](arg1, arg2);
+}
+
+export function RedisPing() {
+  return window['go']['main']['App']['RedisPing']();
+}
+
+export function RedisScanKeys(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['RedisScanKeys'](arg1, arg2, arg3, arg4);
 }
 
 export function ReloadCaddy() {

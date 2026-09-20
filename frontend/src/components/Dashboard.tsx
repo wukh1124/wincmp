@@ -507,50 +507,54 @@ export default function Dashboard() {
 
               return (
                 <div key={`php-${idx}`} className="rounded-xl flex flex-col justify-between relative overflow-hidden transition-all duration-200" style={{ ...cardStyle, borderColor: running ? 'var(--border-strong)' : 'var(--border)' }}>
-                  <div className="flex justify-end items-center gap-1.5 select-none text-[11px] mb-1.5">
-                    <span className="relative flex" style={{ width: '8px', height: '8px' }}>
-                      {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                      <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                    </span>
-                    <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                      {running ? t("運行中") : t("已停止")}
-                    </span>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="p-2.5 rounded-lg" style={{ background: running ? 'var(--status-ok-bg)' : 'var(--surface)', color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                      <Server size={22} />
-                    </div>
-                    <div className="space-y-1 flex-1">
-                      <h4 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>PHP {php.Version}</h4>
-                      <p className="text-[11px]" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{t("埠口: ")}{portDisplay}</p>
-                      <div className="pt-1">
-                        {(php as any).RedisStatus === 'enabled' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: 'var(--status-ok-bg)', color: 'var(--status-ok)', border: '1px solid var(--status-ok)' }}>
-                            <Zap size={10} /> {t("Redis 擴充: 已啟用")}
-                          </span>
-                        )}
-                        {(php as any).RedisStatus === 'ini_disabled' && (
-                          <button
-                            onClick={handleEnablePHPRedis}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition hover:opacity-80 active:scale-95 cursor-pointer"
-                            style={{ background: 'var(--status-warn-bg)', color: 'var(--status-warn)', border: '1px solid var(--status-warn)' }}
-                            title={t("點擊一鍵於 php.ini 啟用 Redis 擴充")}
-                          >
-                            <AlertTriangle size={10} /> {t("Redis: 未在 php.ini 啟用 (點擊啟用)")}
-                          </button>
-                        )}
-                        {(php as any).RedisStatus === 'missing_dll' && (
-                          <button
-                            onClick={() => setShowDepManager(true)}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition hover:opacity-80 active:scale-95 cursor-pointer"
-                            style={{ background: 'var(--border-soft)', color: 'var(--muted)', border: '1px solid var(--border)' }}
-                            title={t("點擊前往依賴管理器安裝 Redis 擴充 DLL")}
-                          >
-                            <Zap size={10} /> {t("Redis: 未安裝 DLL")}
-                          </button>
-                        )}
+                  <div>
+                    <div className="flex justify-between items-center select-none mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg flex items-center justify-center shrink-0" style={{ background: running ? 'var(--status-ok-bg)' : 'var(--surface)', color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                          <Server size={16} />
+                        </div>
+                        <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>PHP {php.Version}</h4>
                       </div>
+                      <div className="flex items-center gap-1.5 text-[11px] shrink-0">
+                        <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+                          {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                          <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                        </span>
+                        <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                          {running ? t("運行中") : t("已停止")}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="text-[11px]" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{t("埠口: ")}{portDisplay}</p>
+                      {(php as any).RedisStatus === 'enabled' && (
+                        <p className="text-[11px] font-medium" style={{ color: 'var(--status-ok)' }}>
+                          {t("Redis 擴充: 已啟用")}
+                        </p>
+                      )}
+                      {(php as any).RedisStatus === 'ini_disabled' && (
+                        <button
+                          type="button"
+                          onClick={handleEnablePHPRedis}
+                          className="block text-left text-[11px] font-medium transition hover:opacity-80 cursor-pointer"
+                          style={{ color: 'var(--status-warn)' }}
+                          title={t("點擊一鍵於 php.ini 啟用 Redis 擴充")}
+                        >
+                          {t("Redis 擴充: 未在 php.ini 啟用 (點擊啟用)")}
+                        </button>
+                      )}
+                      {(php as any).RedisStatus === 'missing_dll' && (
+                        <button
+                          type="button"
+                          onClick={() => setShowDepManager(true)}
+                          className="block text-left text-[11px] font-medium transition hover:opacity-80 cursor-pointer"
+                          style={{ color: 'var(--muted)' }}
+                          title={t("點擊前往依賴管理器安裝 Redis 擴充 DLL")}
+                        >
+                          {t("Redis 擴充: 未安裝 DLL")}
+                        </button>
+                      )}
                     </div>
                   </div>
 

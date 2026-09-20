@@ -257,6 +257,38 @@ export namespace main {
 	        this.php_version = source["php_version"];
 	    }
 	}
+	export class RedisScanResult {
+	    keys: redisexplorer.RedisKeyItem[];
+	    next_cursor: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisScanResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.keys = this.convertValues(source["keys"], redisexplorer.RedisKeyItem);
+	        this.next_cursor = source["next_cursor"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 
 }
 
@@ -274,6 +306,61 @@ export namespace process {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
 	        this.pid = source["pid"];
+	    }
+	}
+
+}
+
+export namespace redisexplorer {
+	
+	export class RedisDBInfo {
+	    db: number;
+	    keys: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisDBInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.db = source["db"];
+	        this.keys = source["keys"];
+	    }
+	}
+	export class RedisKeyDetail {
+	    key: string;
+	    type: string;
+	    ttl: number;
+	    value: string;
+	    size: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisKeyDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.type = source["type"];
+	        this.ttl = source["ttl"];
+	        this.value = source["value"];
+	        this.size = source["size"];
+	    }
+	}
+	export class RedisKeyItem {
+	    key: string;
+	    type: string;
+	    ttl: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisKeyItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.type = source["type"];
+	        this.ttl = source["ttl"];
 	    }
 	}
 
@@ -362,6 +449,9 @@ export namespace scanner {
 	    PortBase: number;
 	    PortCount: number;
 	    Extensions: string[];
+	    HasRedisDLL: boolean;
+	    IniRedisEnabled: boolean;
+	    RedisStatus: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new PHPVersionInfo(source);
@@ -375,6 +465,9 @@ export namespace scanner {
 	        this.PortBase = source["PortBase"];
 	        this.PortCount = source["PortCount"];
 	        this.Extensions = source["Extensions"];
+	        this.HasRedisDLL = source["HasRedisDLL"];
+	        this.IniRedisEnabled = source["IniRedisEnabled"];
+	        this.RedisStatus = source["RedisStatus"];
 	    }
 	}
 	export class ServiceInfo {
