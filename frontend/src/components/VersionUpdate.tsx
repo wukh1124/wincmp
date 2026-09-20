@@ -86,6 +86,8 @@ export default function VersionUpdate() {
         // 初始化時靜默獲取最新版本 (後端已加載快取會瞬間返回)
         const info = await CheckNewVersion();
         setReleaseInfo(info as ReleaseInfo);
+        // 同步側邊欄紅點狀態
+        window.dispatchEvent(new CustomEvent('wincmp_has_update', { detail: !!(info as any)?.has_update }));
       } catch (err) {
         console.error("初始化版本更新頁面失敗:", err);
       } finally {

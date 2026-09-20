@@ -136,6 +136,11 @@ export default function App() {
         if (!sidebarGuideShown) {
           setShowSidebarGuide(true);
         }
+
+        // 版本更新紅點：優先讀設定檔持久化狀態
+        if (cfg.global.has_update_available) {
+          setHasUpdate(true);
+        }
       }
     }).catch((err: any) => {
       console.error("獲取語系、主題與字型大小失敗:", err);
@@ -268,8 +273,23 @@ export default function App() {
   // 訂閱版本更新通知
   useEffect(() => {
     const handleUpdateAvailable = () => setHasUpdate(true);
+    const handleUpdateStatus = (data: any) => {
+      if (data && typeof data.has_update === 'boolean') {
+        setHasUpdate(data.has_update);
+      }
+    };
     const unsubscribe = EventsOn('update_available', handleUpdateAvailable);
-    return () => { unsubscribe(); };
+    const unsubscribeStatus = EventsOn('update_status', handleUpdateStatus);
+    const handleHasUpdateSync = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setHasUpdate(detail === true);
+    };
+    window.addEventListener('wincmp_has_update', handleHasUpdateSync);
+    return () => {
+      unsubscribe();
+      unsubscribeStatus();
+      window.removeEventListener('wincmp_has_update', handleHasUpdateSync);
+    };
   }, []);
 
   // 訂閱 Hosts 更新失敗通知，彈出自訂 Alert (含本次啟動不再提醒選項)

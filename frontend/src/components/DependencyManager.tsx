@@ -77,7 +77,13 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
   const handleFetchRemote = async () => {
     setIsFetchingRemote(true);
-    try { setDepConfig(await FetchRemoteDependencies()); (window as any).customAlert(t("成功從遠端獲取最新的建議依賴配置！")); }
+    try {
+      setDepConfig(await FetchRemoteDependencies());
+      // 除遠端建議版本外，同步刷新本機掃描環境（例如手動安裝的 php_redis）
+      await refreshLocalScan();
+      if (onInstalled) onInstalled();
+      (window as any).customAlert(t("成功從遠端獲取最新的建議依賴配置！已同步刷新本機環境。"));
+    }
     catch (err) { (window as any).customAlert(`${t("獲取遠端依賴配置失敗")}: ${err}`); }
     finally { setIsFetchingRemote(false); }
   };
