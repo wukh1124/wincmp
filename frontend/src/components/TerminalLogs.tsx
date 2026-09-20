@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, ArrowDown, ChevronDown, Repeat } from 'lucide-react';
+import { Trash2, ArrowDown, ChevronDown, Repeat, Copy, Check, FolderOpen, ListChecks } from 'lucide-react';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
-import { logStore, LogData, LogLine } from './logStore';
+import { GetCategoryLogFilePath, OpenCategoryLogFile } from '../../wailsjs/go/main/App';
+import { logStore, LogData } from './logStore';
 import { t, useLanguage } from '../i18n';
 
 const CATEGORIES = [
@@ -11,11 +12,24 @@ const CATEGORIES = [
   { id: 'mailpit', label: 'Mailpit' },
   { id: 'redis', label: 'Redis' },
   { id: 'php', label: 'PHP' },
-  { id: 'runtime', label: 'Node / Bun' }
+  { id: 'runtime', label: 'Node / Custom' }
 ];
 
 interface TerminalLogsProps {
   onCollapse?: () => void;
+}
+
+interface LogContextMenu {
+  x: number;
+  y: number;
+  lineIndex: number;
+  lineText: string;
+}
+
+interface LogFileInfoState {
+  path: string;
+  name: string;
+  exists: boolean;
 }
 
 export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
@@ -28,9 +42,15 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
     return localStorage.getItem('wincmp_auto_switch_tab') === 'true'; // 預設為 false，避免搶焦點
   });
   const [unreadTabs, setUnreadTabs] = useState<Record<string, boolean>>({});
+  const [unreadProjects, setUnreadProjects] = useState<Record<string, boolean>>({});
+  const [runtimeDropdownOpen, setRuntimeDropdownOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<LogContextMenu | null>(null);
+  const [copiedFlag, setCopiedFlag] = useState<'selection' | 'line' | null>(null);
+  const [logFileInfo, setLogFileInfo] = useState<LogFileInfoState | null>(null);
 
   const logEndRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const runtimeDropdownRef = useRef<HTMLDivElement | null>(null);
 
   // 用於追蹤當前啟動的分頁與狀態，避免閉包陳舊
   const activeTabRef = useRef(activeTab);
@@ -57,6 +77,22 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
     });
   }, []);
 
+  // 關閉右鍵選單與 runtime 下拉
+  useEffect(() => {
+    const closeMenu = () => setContextMenu(null);
+    const closeDropdown = (e: MouseEvent) => {
+      if (!runtimeDropdownRef.current?.contains(e.target as Node)) {
+        setRuntimeDropdownOpen(false);
+      }
+    };
+    window.addEventListener('click', closeMenu);
+    window.addEventListener('click', closeDropdown);
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('click', closeDropdown);
+    };
+  }, []);
+
   // 訂閱 Go 端的日誌 Event
   useEffect(() => {
     const handleAutoSwitch = (data: any) => {
@@ -67,10 +103,17 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
       const isValidCategory = ['system', 'caddy', 'mariadb', 'mailpit', 'php', 'redis', 'runtime'].includes(category);
       if (!isValidCategory) return;
 
-      // 若未開啟自動跳轉，只在非當前 tab 標註有未讀日誌，絕不強行奪取焦點
+      // 若未開啟自動跳轉，只在非當前 tab / 非當前專案標註有未讀日誌，絕不強行奪取焦點
       if (!autoSwitchTabRef.current) {
         if (category !== activeTabRef.current) {
           setUnreadTabs(prev => ({ ...prev, [category]: true }));
+        }
+        if (
+          category === 'runtime' &&
+          projName &&
+          !(activeTabRef.current === 'runtime' && projName === activeRuntimeProjectRef.current)
+        ) {
+          setUnreadProjects(prev => ({ ...prev, [projName]: true }));
         }
         return;
       }
@@ -90,6 +133,7 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
           }
           if (category === 'runtime' && projName) {
             setActiveRuntimeProject(projName);
+            setUnreadProjects(prev => ({ ...prev, [projName]: false }));
           }
         }, 500);
       }
@@ -121,12 +165,49 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
       if (!activeRuntimeProject || !runtimeProjects.includes(activeRuntimeProject)) {
         if (runtimeProjects.length > 0) {
           setActiveRuntimeProject(runtimeProjects[0]);
+          setUnreadProjects(prev => ({ ...prev, [runtimeProjects[0]]: false }));
         } else {
           setActiveRuntimeProject('');
         }
+      } else {
+        // 已在檢視的專案清除未讀
+        setUnreadProjects(prev => (prev[activeRuntimeProject] ? { ...prev, [activeRuntimeProject]: false } : prev));
       }
     }
   }, [activeTab, runtimeProjects, activeRuntimeProject]);
+
+  // 依目前分類／專案取得當天日誌檔資訊
+  useEffect(() => {
+    let cancelled = false;
+    const loadLogFileInfo = async () => {
+      if (!activeTab) {
+        setLogFileInfo(null);
+        return;
+      }
+      const sub = activeTab === 'runtime' ? activeRuntimeProject : '';
+      try {
+        if ((window as any).go?.main?.App?.GetCategoryLogFilePath) {
+          const info = await GetCategoryLogFilePath(activeTab, sub);
+          if (!cancelled) {
+            setLogFileInfo({
+              path: info?.path || '',
+              name: info?.name || '',
+              exists: !!info?.exists,
+            });
+          }
+        } else {
+          setLogFileInfo(null);
+        }
+      } catch (err) {
+        console.error('取得日誌檔路徑失敗:', err);
+        if (!cancelled) setLogFileInfo(null);
+      }
+    };
+    loadLogFileInfo();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, activeRuntimeProject]);
 
   // 監聽使用者手動滾動，決定是否開啟自動滾動
   const handleScroll = () => {
@@ -139,6 +220,16 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
   const handleClearLogs = () => {
     logStore.clearLogs(activeTab, activeRuntimeProject);
   };
+
+  const selectRuntimeProject = (proj: string) => {
+    setActiveRuntimeProject(proj);
+    setUnreadProjects(prev => ({ ...prev, [proj]: false }));
+    setRuntimeDropdownOpen(false);
+  };
+
+  const hasUnreadOtherProject = runtimeProjects.some(
+    (proj) => proj !== activeRuntimeProject && unreadProjects[proj]
+  );
 
   // Warp 風格日誌著色
   const getLineStyle = (text: string): React.CSSProperties => {
@@ -186,9 +277,73 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
     ? (logs.runtime[activeRuntimeProject] || [])
     : (logs[activeTab as keyof Omit<LogData, 'runtime'>] || []);
 
+  const handleContextMenu = (e: React.MouseEvent, lineIndex: number, lineText: string) => {
+    e.preventDefault();
+    const menuWidth = 180;
+    const menuHeight = 160;
+    const x = Math.min(e.clientX, window.innerWidth - menuWidth - 8);
+    const y = Math.min(e.clientY, window.innerHeight - menuHeight - 8);
+    setContextMenu({ x, y, lineIndex, lineText });
+  };
+
+  const copyText = async (text: string, flag: 'selection' | 'line') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedFlag(flag);
+      setTimeout(() => setCopiedFlag(null), 1200);
+    } catch (err) {
+      console.error('複製日誌失敗:', err);
+    }
+  };
+
+  const handleMenuCopySelection = () => {
+    const sel = window.getSelection()?.toString() || '';
+    if (!sel) return;
+    copyText(sel, 'selection');
+    setContextMenu(null);
+  };
+
+  const handleMenuCopyLine = () => {
+    if (!contextMenu) return;
+    copyText(contextMenu.lineText, 'line');
+    setContextMenu(null);
+  };
+
+  const handleMenuSelectAll = () => {
+    if (!containerRef.current) return;
+    const range = document.createRange();
+    range.selectNodeContents(containerRef.current);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    setContextMenu(null);
+  };
+
+  const handleMenuOpenFile = async () => {
+    const category = activeTab;
+    const sub = activeTab === 'runtime' ? activeRuntimeProject : '';
+    setContextMenu(null);
+    if (!category) return;
+    try {
+      await OpenCategoryLogFile(category, sub);
+    } catch (err) {
+      console.error('開啟日誌檔失敗:', err);
+      (window as any).customAlert(`${t('開啟檔案失敗')}: ${err}`);
+    }
+  };
+
+  const openFileDisabled = !logFileInfo?.exists || (activeTab === 'runtime' && !activeRuntimeProject);
+  const openFileTitle = logFileInfo?.exists
+    ? (logFileInfo.path || logFileInfo.name)
+    : (logFileInfo?.path
+      ? `${t('日誌檔案不存在')}: ${logFileInfo.path}`
+      : (activeTab === 'runtime' && !activeRuntimeProject
+        ? t('暫無運行專案')
+        : t('日誌檔案不存在')));
+
   return (
     <div
-      className="flex flex-col h-full overflow-hidden select-none"
+      className="flex flex-col h-full overflow-hidden select-none relative"
       style={{ backgroundColor: 'var(--bg-deep)' }}
     >
       {/* 分頁 Tab 與控制項 */}
@@ -239,31 +394,59 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
             <span>{t("自動切換")}</span>
           </button>
 
-          {/* Runtime 專案下拉選單 */}
+          {/* Runtime 專案自訂下拉選單 */}
           {activeTab === 'runtime' && (
-            <div className="flex items-center">
-              <select
-                value={activeRuntimeProject}
-                onChange={(e) => setActiveRuntimeProject(e.target.value)}
-                className="log-action-btn font-medium cursor-pointer transition focus:outline-none"
+            <div className="relative flex items-center" ref={runtimeDropdownRef}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRuntimeDropdownOpen((v) => !v);
+                }}
+                className="log-action-btn font-medium cursor-pointer transition flex items-center gap-1.5"
                 style={{
                   backgroundColor: 'var(--surface-warm)',
                   color: 'var(--accent)',
                   border: '1px solid transparent',
-                  paddingRight: '16px'
                 }}
                 title={t("選擇專案日誌")}
               >
-                {runtimeProjects.length > 0 ? (
-                  runtimeProjects.map((proj) => (
-                    <option key={proj} value={proj} style={{ backgroundColor: 'var(--bg)', color: 'var(--fg-2)' }}>
-                      {proj}
-                    </option>
-                  ))
-                ) : (
-                  <option value="" style={{ backgroundColor: 'var(--bg)', color: 'var(--fg-2)' }}>{t("暫無運行專案")}</option>
+                <span className="max-w-[140px] truncate">
+                  {activeRuntimeProject || t("暫無運行專案")}
+                </span>
+                {hasUnreadOtherProject && (
+                  <span className="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={{ backgroundColor: 'var(--status-warn)' }} />
                 )}
-              </select>
+                <ChevronDown size={12} style={{ color: 'var(--accent)' }} />
+              </button>
+              {runtimeDropdownOpen && (
+                <div
+                  className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-h-56 overflow-y-auto rounded-lg border py-1 shadow-lg"
+                  style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)' }}
+                >
+                  {runtimeProjects.length > 0 ? (
+                    runtimeProjects.map((proj) => (
+                      <button
+                        key={proj}
+                        type="button"
+                        onClick={() => selectRuntimeProject(proj)}
+                        className="w-full text-left px-3 py-2 text-xs flex items-center justify-between gap-2 transition hover:bg-[var(--card-hover)]"
+                        style={{
+                          color: proj === activeRuntimeProject ? 'var(--accent)' : 'var(--fg-2)',
+                          backgroundColor: proj === activeRuntimeProject ? 'var(--surface-warm)' : 'transparent',
+                        }}
+                      >
+                        <span className="truncate flex-1">{proj}</span>
+                        {unreadProjects[proj] && proj !== activeRuntimeProject && (
+                          <span className="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={{ backgroundColor: 'var(--status-warn)' }} />
+                        )}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-xs" style={{ color: 'var(--meta)' }}>{t("暫無運行專案")}</div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -318,6 +501,7 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
               <div
                 key={idx}
                 className="hover:bg-[var(--card-hover)] px-1 py-0.5 rounded transition duration-75"
+                onContextMenu={(e) => handleContextMenu(e, idx, line.text)}
               >
                 <span
                   className="select-none mr-2 font-semibold"
@@ -339,6 +523,61 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
           </div>
         )}
       </div>
+
+      {/* 自訂右鍵選單 */}
+      {contextMenu && (
+        <div
+          className="fixed z-[100] min-w-[160px] rounded-lg border py-1 shadow-lg"
+          style={{ left: contextMenu.x, top: contextMenu.y, backgroundColor: 'var(--card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={handleMenuCopySelection}
+            disabled={!window.getSelection()?.toString()}
+            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition hover:bg-[var(--card-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ color: 'var(--fg-2)' }}
+          >
+            {copiedFlag === 'selection' ? <Check size={12} /> : <Copy size={12} />}
+            <span>{t("複製")}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleMenuCopyLine}
+            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition hover:bg-[var(--card-hover)]"
+            style={{ color: 'var(--fg-2)' }}
+          >
+            {copiedFlag === 'line' ? <Check size={12} /> : <Copy size={12} />}
+            <span>{t("複製此行")}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleMenuSelectAll}
+            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition hover:bg-[var(--card-hover)]"
+            style={{ color: 'var(--fg-2)' }}
+          >
+            <ListChecks size={12} />
+            <span>{t("全選")}</span>
+          </button>
+          <div className="my-1 border-t" style={{ borderColor: 'var(--border-soft)' }} />
+          <button
+            type="button"
+            onClick={handleMenuOpenFile}
+            disabled={openFileDisabled}
+            title={openFileTitle}
+            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition hover:bg-[var(--card-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ color: 'var(--fg-2)' }}
+          >
+            <FolderOpen size={12} />
+            <span className="truncate">{t("開啟檔案")}</span>
+            {logFileInfo?.name && (
+              <span className="ml-auto text-[10px] truncate max-w-[90px]" style={{ color: 'var(--meta)' }}>
+                {logFileInfo.name}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
