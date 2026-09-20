@@ -19,6 +19,7 @@ import (
 	"github.com/shirou/gopsutil/v3/process"
 	"wincmp/internal/config"
 	"wincmp/internal/i18n"
+	portutil "wincmp/internal/port"
 	"wincmp/internal/preset"
 )
 
@@ -30,6 +31,12 @@ var shellMetacharPattern = regexp.MustCompile("[&|;<>$\"!(){}\\[\\]`]")
 // 允許的: 一般路徑、參數路徑、冒號、空格、斜線、反斜線（Windows路徑）、點、等號、百分比（佔位符）、減號、底線
 // 禁止的: & | ; < > $ ` " ! ( ) { } [ ]
 func sanitizeRuntimeCommand(cmd string) (string, error) {
+	trimmed := strings.TrimSpace(cmd)
+	lower := strings.ToLower(trimmed)
+	if strings.HasPrefix(lower, "start ") || lower == "start" {
+		return "", fmt.Errorf("%s", i18n.T("啟動指令不應包含 start 前綴（如 'start npm run dev'）。WinCMP 已具備全自動進程生命週期與背景日誌管理，請直接輸入原生指令。"))
+	}
+
 	// 先處理佔位符，替換為暫時安全值以避免被誤判
 	sanitized := cmd
 	if shellMetacharPattern.MatchString(sanitized) {
@@ -256,6 +263,20 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 		}
 	}
 
+	// 檢查執行端口是否已被佔用
+	port := project.RuntimePort
+	if port == 0 {
+		preset_ := preset.GetPreset(project.Type)
+		port = preset_.DefaultPort
+		if port == 0 {
+			port = 3000
+		}
+	}
+	if portutil.IsPortInUse(port) {
+		m.errorLog("runtime", i18n.Tfmt("[%s] 端口 %d 目前已被其他進程佔用", project.Name, port), nil)
+		return fmt.Errorf("%s: %d", i18n.T("指定的執行端口目前已被佔用"), port)
+	}
+
 	// 建構執行指令
 	runtimeCmd := buildRuntimeCommand(project, exePath)
 	if runtimeCmd == "" {
@@ -356,14 +377,6 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 		}
 	}
 
-	port := project.RuntimePort
-	preset_ := preset.GetPreset(project.Type)
-	if port == 0 {
-		port = preset_.DefaultPort
-		if port == 0 {
-			port = 3000
-		}
-	}
 
 	// 根據 Runtime 類型建構實際執行指令
 	var startCmd *exec.Cmd
@@ -801,14 +814,24 @@ func KillProcessByPort(port int) error {
 	}
 
 	pid := FindPIDByPort(port)
-	if pid <= 0 {
-		return nil // 進程已經不存在
+	if pid > 0 {
+		killCmd := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(pid))
+		killCmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // 隱藏 CMD 視窗
+		if err := killCmd.Run(); err != nil {
+			return fmt.Errorf("%s (PID: %d): %w", i18n.T("無法強制結束進程"), pid, err)
+		}
 	}
 
-	killCmd := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(pid))
-	killCmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // 隱藏 CMD 視窗
-	if err := killCmd.Run(); err != nil {
-		return fmt.Errorf("%s (PID: %d): %w", i18n.T("無法強制結束進程"), pid, err)
+	// 輪詢等待 TCP 端口完全釋放 (最多等待 3 秒，每 150ms 檢查一次)
+	for i := 0; i < 20; i++ {
+		time.Sleep(150 * time.Millisecond)
+		if !portutil.IsPortInUse(port) {
+			return nil
+		}
+	}
+
+	if portutil.IsPortInUse(port) {
+		return fmt.Errorf("%s (Port: %d)", i18n.T("進程已送出終止信號，但端口尚未完全釋放，請稍候重試"), port)
 	}
 
 	return nil

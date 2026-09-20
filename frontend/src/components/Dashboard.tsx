@@ -154,6 +154,19 @@ export default function Dashboard() {
     catch (err) { (window as any).customAlert(`${t("保存設定失敗")}: ${err}`); }
   };
 
+  const handleEnablePHPRedis = async () => {
+    try {
+      if ((window as any).go?.main?.App?.EnablePHPRedisExtension) {
+        await (window as any).go.main.App.EnablePHPRedisExtension();
+      }
+      await (window as any).customAlert(t("已成功平滑啟用 php.ini 中的 Redis 擴充！若 PHP 已在運行，請重啟 PHP 服務以生效。"));
+      const res = await ScanServices();
+      setScanResult(res);
+    } catch (err: any) {
+      (window as any).customAlert(`${t("啟用失敗")}: ${err}`);
+    }
+  };
+
   const isRunning = (key: string) => !!servicesStatus[key];
 
   // ─── Reusable Styles ──────────────────────────────────────
@@ -508,9 +521,36 @@ export default function Dashboard() {
                     <div className="p-2.5 rounded-lg" style={{ background: running ? 'var(--status-ok-bg)' : 'var(--surface)', color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
                       <Server size={22} />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 flex-1">
                       <h4 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>PHP {php.Version}</h4>
                       <p className="text-[11px]" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{t("埠口: ")}{portDisplay}</p>
+                      <div className="pt-1">
+                        {(php as any).RedisStatus === 'enabled' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: 'var(--status-ok-bg)', color: 'var(--status-ok)', border: '1px solid var(--status-ok)' }}>
+                            <Zap size={10} /> {t("Redis 擴充: 已啟用")}
+                          </span>
+                        )}
+                        {(php as any).RedisStatus === 'ini_disabled' && (
+                          <button
+                            onClick={handleEnablePHPRedis}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition hover:opacity-80 active:scale-95 cursor-pointer"
+                            style={{ background: 'var(--status-warn-bg)', color: 'var(--status-warn)', border: '1px solid var(--status-warn)' }}
+                            title={t("點擊一鍵於 php.ini 啟用 Redis 擴充")}
+                          >
+                            <AlertTriangle size={10} /> {t("Redis: 未在 php.ini 啟用 (點擊啟用)")}
+                          </button>
+                        )}
+                        {(php as any).RedisStatus === 'missing_dll' && (
+                          <button
+                            onClick={() => setShowDepManager(true)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition hover:opacity-80 active:scale-95 cursor-pointer"
+                            style={{ background: 'var(--border-soft)', color: 'var(--muted)', border: '1px solid var(--border)' }}
+                            title={t("點擊前往依賴管理器安裝 Redis 擴充 DLL")}
+                          >
+                            <Zap size={10} /> {t("Redis: 未安裝 DLL")}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 

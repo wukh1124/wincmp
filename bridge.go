@@ -24,6 +24,7 @@ import (
 	"wincmp/internal/i18n"
 	"wincmp/internal/preset"
 	"wincmp/internal/process"
+	"wincmp/internal/redisexplorer"
 	"wincmp/internal/resource"
 	"wincmp/internal/scanner"
 	"wincmp/internal/singleinstance"
@@ -169,6 +170,15 @@ func (a *App) GetScanResult() *scanner.ScanResult {
 		}
 	}
 	return a.scanRes
+}
+
+// EnablePHPRedisExtension 自動平滑啟用 conf/php/php.ini 中的 extension=redis
+func (a *App) EnablePHPRedisExtension() error {
+	if err := config.EnsurePHPIniRedisExtension(a.baseDir); err != nil {
+		return fmt.Errorf("%s: %w", i18n.T("啟用 Redis 擴充失敗"), err)
+	}
+	scanner.InvalidateScanCache()
+	return nil
 }
 
 // IsServiceRunning 檢查特定服務是否正在運行
@@ -1675,5 +1685,49 @@ func (a *App) KillProcessByPort(port int) error {
 	return process.KillProcessByPort(port)
 }
 
+// ==========================================
+// 12. Redis 資料庫瀏覽器 API
+// ==========================================
 
+// RedisPing 檢查本機 Redis 是否連線成功
+func (a *App) RedisPing() (bool, error) {
+	return redisexplorer.Ping("127.0.0.1:6379")
+}
 
+// RedisGetDBList 獲取本機 Redis 0~15 號資料庫資訊
+func (a *App) RedisGetDBList() ([]redisexplorer.RedisDBInfo, error) {
+	return redisexplorer.GetDBList("127.0.0.1:6379")
+}
+
+// RedisScanResult 封裝 Scan 查詢結果
+type RedisScanResult struct {
+	Keys       []redisexplorer.RedisKeyItem `json:"keys"`
+	NextCursor uint64                       `json:"next_cursor"`
+}
+
+// RedisScanKeys 分頁安全掃描指定 DB 的 Keys
+func (a *App) RedisScanKeys(db int, cursor uint64, match string, count int64) (*RedisScanResult, error) {
+	keys, nextCursor, err := redisexplorer.ScanKeys("127.0.0.1:6379", db, cursor, match, count)
+	if err != nil {
+		return nil, err
+	}
+	return &RedisScanResult{
+		Keys:       keys,
+		NextCursor: nextCursor,
+	}, nil
+}
+
+// RedisGetKeyDetail 獲取特定 Key 的詳細資料
+func (a *App) RedisGetKeyDetail(db int, key string) (*redisexplorer.RedisKeyDetail, error) {
+	return redisexplorer.GetKeyDetail("127.0.0.1:6379", db, key)
+}
+
+// RedisDeleteKey 刪除指定 DB 的 Key
+func (a *App) RedisDeleteKey(db int, key string) error {
+	return redisexplorer.DeleteKey("127.0.0.1:6379", db, key)
+}
+
+// RedisFlushDB 清空指定 DB
+func (a *App) RedisFlushDB(db int) error {
+	return redisexplorer.FlushDB("127.0.0.1:6379", db)
+}

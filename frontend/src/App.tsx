@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, ShieldAlert, Download, Palette, Languages, Type, Lock, Unlock, Lightbulb } from 'lucide-react';
+import { Home, Folder, Database, Settings as SettingsIcon, Terminal, Cpu, HardDrive, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Shield, ShieldAlert, Download, Palette, Languages, Type, Lightbulb } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import Projects from './components/Projects';
 import DBExplorer from './components/DBExplorer';
@@ -39,9 +39,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'projects' | 'db_explorer' | 'resources' | 'settings' | 'logs' | 'update'>('dashboard');
   const [showLogs, setShowLogs] = useState(false);
   const [showSidebarGuide, setShowSidebarGuide] = useState(false);
-  const [isSidebarLocked, setIsSidebarLocked] = useState(() => {
-    return localStorage.getItem('wincmp_sidebar_locked') === 'true';
-  });
+
 
   const dismissSidebarGuide = async () => {
     try {
@@ -57,7 +55,9 @@ export default function App() {
     }
   };
   const [systemResources, setSystemResources] = useState({ cpu: 0, memory: 0 });
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    return localStorage.getItem('wincmp_sidebar_collapsed') === 'true';
+  });
   const [customAlertChecked, setCustomAlertChecked] = useState(false);
   const [customAlert, setCustomAlert] = useState<{
     isOpen: boolean;
@@ -192,13 +192,6 @@ export default function App() {
     (window as any).isSettingsDirty = false;
     setActiveTab(tabId);
 
-    if (!isSidebarLocked) {
-      if (tabId === 'projects') {
-        setIsCollapsed(true);
-      } else {
-        setIsCollapsed(false);
-      }
-    }
   };
 
   // 覆寫與註冊漂亮的自訂彈窗
@@ -252,7 +245,13 @@ export default function App() {
     };
   }, []);
 
-  const toggleSidebar = () => setIsCollapsed(prev => !prev);
+  const toggleSidebar = () => {
+    setIsCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('wincmp_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
   const handleToggleLogs = () => setShowLogs(prev => !prev);
 
   // 訂閱 Go 端推送的 CPU / RAM 資源佔用
@@ -394,20 +393,6 @@ export default function App() {
               )}
             </div>
             <div className="flex flex-col gap-1 items-center flex-shrink-0">
-              <button
-                id="btn-lock-sidebar"
-                onClick={() => {
-                  const newLocked = !isSidebarLocked;
-                  setIsSidebarLocked(newLocked);
-                  localStorage.setItem('wincmp_sidebar_locked', String(newLocked));
-                }}
-                className={`p-1 rounded transition-colors hover:bg-[var(--border-soft)] ${
-                  isSidebarLocked ? 'text-[var(--accent)] hover:text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--fg)]'
-                }`}
-                title={isSidebarLocked ? t('解鎖側邊欄自動收合') : t('鎖定側邊欄自動收合')}
-              >
-                {isSidebarLocked ? <Lock size={14} /> : <Unlock size={14} />}
-              </button>
               <button
                 id="btn-toggle-sidebar"
                 onClick={toggleSidebar}

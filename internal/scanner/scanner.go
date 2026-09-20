@@ -29,12 +29,15 @@ type ServiceInfo struct {
 
 // PHPVersionInfo 描述一個 PHP 版本及其 Port 配置
 type PHPVersionInfo struct {
-	Version    string   // 版本號 (如 "8.2.30")
-	ExePath    string   // php-cgi.exe 路徑
-	MajorMin   string   // 主版本.次版本 (如 "8.2")
-	PortBase   int      // Port 基數 (如 38200)
-	PortCount  int      // 行程數量 (預設 3)
-	Extensions []string // 已安裝的擴充模組檔案 (如 ["php_redis.dll"])
+	Version         string   // 版本號 (如 "8.2.30")
+	ExePath         string   // php-cgi.exe 路徑
+	MajorMin        string   // 主版本.次版本 (如 "8.2")
+	PortBase        int      // Port 基數 (如 38200)
+	PortCount       int      // 行程數量 (預設 3)
+	Extensions      []string // 已安裝的擴充模組檔案 (如 ["php_redis.dll"])
+	HasRedisDLL     bool     // ext 目錄是否存在 php_redis.dll
+	IniRedisEnabled bool     // conf/php/php.ini 是否已啟用 extension=redis
+	RedisStatus     string   // "enabled" | "ini_disabled" | "missing_dll"
 }
 
 // ScanResult 掃描結果
@@ -75,6 +78,13 @@ func ScanBinDir(baseDir string) (*ScanResult, error) {
 	scanCacheMu.Unlock()
 
 	return result, nil
+}
+
+// InvalidateScanCache 主動清除掃描快取
+func InvalidateScanCache() {
+	scanCacheMu.Lock()
+	scanCache = nil
+	scanCacheMu.Unlock()
 }
 
 // scanBinDirInternal 實際掃描邏輯
@@ -164,6 +174,19 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 	phpDir := filepath.Join(binDir, "php")
 	phpMap := make(map[string]PHPVersionInfo) // Key: Major.Minor
 
+	// 檢查 conf/php/php.ini 是否啟用 extension=redis
+	iniRedisEnabled := false
+	phpIniPath := filepath.Join(baseDir, "conf", "php", "php.ini")
+	if iniData, err := os.ReadFile(phpIniPath); err == nil {
+		for _, line := range strings.Split(string(iniData), "\n") {
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "extension=redis" || strings.HasPrefix(trimmed, "extension=redis ") {
+				iniRedisEnabled = true
+				break
+			}
+		}
+	}
+
 	if entries, err := os.ReadDir(phpDir); err == nil {
 		for _, entry := range entries {
 			if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "php-") {
@@ -186,6 +209,22 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 					}
 				}
 
+				hasRedis := false
+				for _, ext := range extensions {
+					if strings.EqualFold(ext, "php_redis.dll") {
+						hasRedis = true
+						break
+					}
+				}
+				redisStatus := "missing_dll"
+				if hasRedis {
+					if iniRedisEnabled {
+						redisStatus = "enabled"
+					} else {
+						redisStatus = "ini_disabled"
+					}
+				}
+
 				// 檢查是否已有同次版本的 PHP，若有則保留較新版本
 				if existing, ok := phpMap[majorMin]; ok {
 					if version > existing.Version {
@@ -194,12 +233,15 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 						// 更新為較新版本
 						portBase := calcPHPPortBase(majorMin)
 						phpMap[majorMin] = PHPVersionInfo{
-							Version:    version,
-							ExePath:    phpCgiExe,
-							MajorMin:   majorMin,
-							PortBase:   portBase,
-							PortCount:  3,
-							Extensions: extensions,
+							Version:         version,
+							ExePath:         phpCgiExe,
+							MajorMin:        majorMin,
+							PortBase:        portBase,
+							PortCount:       3,
+							Extensions:      extensions,
+							HasRedisDLL:     hasRedis,
+							IniRedisEnabled: iniRedisEnabled,
+							RedisStatus:     redisStatus,
 						}
 					} else if version < existing.Version {
 						// 目前掃描到的比 Map 中的舊
@@ -208,12 +250,15 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 				} else {
 					portBase := calcPHPPortBase(majorMin)
 					phpMap[majorMin] = PHPVersionInfo{
-						Version:    version,
-						ExePath:    phpCgiExe,
-						MajorMin:   majorMin,
-						PortBase:   portBase,
-						PortCount:  3,
-						Extensions: extensions,
+						Version:         version,
+						ExePath:         phpCgiExe,
+						MajorMin:        majorMin,
+						PortBase:        portBase,
+						PortCount:       3,
+						Extensions:      extensions,
+						HasRedisDLL:     hasRedis,
+						IniRedisEnabled: iniRedisEnabled,
+						RedisStatus:     redisStatus,
 					}
 				}
 			}

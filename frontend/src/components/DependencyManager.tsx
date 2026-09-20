@@ -171,17 +171,30 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     return '';
   };
 
-  const getPhpRedisStatus = (phpKey: string): { supported: boolean; installed: boolean; version: string } => {
-    if (!scanResult) return { supported: false, installed: false, version: '' };
+  const getPhpRedisStatus = (phpKey: string): { supported: boolean; installed: boolean; iniEnabled: boolean; version: string } => {
+    if (!scanResult) return { supported: false, installed: false, iniEnabled: false, version: '' };
     const verSuffix = phpKey.replace(/^php_?/, '');
     const majorMin = verSuffix.replace(/(\d)(\d)/, '$1.$2');
     const phpInfo = scanResult.PHPList?.find((p: any) => p.MajorMin === majorMin);
-    if (!phpInfo) return { supported: false, installed: false, version: '' };
+    if (!phpInfo) return { supported: false, installed: false, iniEnabled: false, version: '' };
     const hasRedis = phpInfo.Extensions?.some((ext: string) => ext.toLowerCase() === 'php_redis.dll');
+    const iniEnabled = !!(phpInfo as any).IniRedisEnabled;
     const redisKey = 'php_redis_' + verSuffix;
     const isSupported = !!depConfig?.[redisKey];
     const recVer = depConfig?.[redisKey]?.version || '';
-    return { supported: isSupported, installed: !!hasRedis, version: recVer };
+    return { supported: isSupported, installed: !!hasRedis, iniEnabled, version: recVer };
+  };
+
+  const handleEnablePHPRedis = async () => {
+    try {
+      if ((window as any).go?.main?.App?.EnablePHPRedisExtension) {
+        await (window as any).go.main.App.EnablePHPRedisExtension();
+      }
+      await (window as any).customAlert(t("已成功平滑啟用 php.ini 中的 Redis 擴充！若 PHP 已在運行，請重啟 PHP 服務以生效。"));
+      setScanResult(await ScanServices());
+    } catch (err: any) {
+      (window as any).customAlert(`${t("啟用失敗")}: ${err}`);
+    }
   };
 
   if (!isOpen) return null;
@@ -312,12 +325,23 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
             <span className="text-xs mt-0.5 block font-medium truncate" style={{ color: statusColor }}>{statusText}</span>
             {isPhp && localVer !== '' && (
               <div className="mt-1 flex items-center gap-1.5 text-[11px] truncate">
-                <Zap size={11} className="shrink-0" style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--muted)' }} />
-                <span className="truncate" style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--muted)' }}>
+                <Zap size={11} className="shrink-0" style={{ color: (phpRedisInfo?.installed && phpRedisInfo?.iniEnabled) ? 'var(--status-ok)' : (phpRedisInfo?.installed ? 'var(--status-warn)' : 'var(--muted)') }} />
+                <span className="truncate" style={{ color: (phpRedisInfo?.installed && phpRedisInfo?.iniEnabled) ? 'var(--status-ok)' : (phpRedisInfo?.installed ? 'var(--status-warn)' : 'var(--muted)') }}>
                   {phpRedisInfo?.installed
-                    ? t("Redis 擴充: 已就緒 (v%s)", phpRedisInfo.version || '6.0.2')
+                    ? (phpRedisInfo?.iniEnabled
+                        ? t("Redis 擴充: 已就緒 (v%s)", phpRedisInfo.version || '6.0.2')
+                        : t("Redis 擴充: DLL 已安裝，未在 php.ini 啟用"))
                     : (phpRedisInfo?.supported ? t("Redis 擴充: 未配置") : t("Redis 擴充: 不支援"))}
                 </span>
+                {phpRedisInfo?.installed && !phpRedisInfo?.iniEnabled && (
+                  <button
+                    onClick={handleEnablePHPRedis}
+                    className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition hover:opacity-80 active:scale-95"
+                    style={{ background: 'var(--status-warn-bg)', color: 'var(--status-warn)', border: '1px solid var(--status-warn)' }}
+                  >
+                    {t("一鍵啟用")}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -408,6 +432,16 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                     >
                       <Zap size={13} style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--status-warn)' }} />
                       <span>{phpRedisInfo?.installed ? t("單獨重裝 Redis 擴充") : t("單獨安裝 Redis 擴充")}</span>
+                    </button>
+                  )}
+
+                  {isPhp && phpRedisInfo?.installed && !phpRedisInfo?.iniEnabled && (
+                    <button
+                      onClick={handleEnablePHPRedis}
+                      className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                    >
+                      <Zap size={13} style={{ color: 'var(--status-warn)' }} />
+                      <span>{t("一鍵啟用 php.ini Redis 擴充")}</span>
                     </button>
                   )}
 

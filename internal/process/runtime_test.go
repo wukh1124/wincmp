@@ -47,3 +47,34 @@ func TestKillProcessByPort_SecurityProtection(t *testing.T) {
 		t.Error("預期關閉端口 3389 應該被安全保護拒絕，但沒有返回 error")
 	}
 }
+
+func TestSanitizeRuntimeCommand_StartPrefixBlocking(t *testing.T) {
+	// 1. 合法正常指令
+	validCmds := []string{
+		"npm run dev",
+		"bun run dev",
+		"python app.py",
+		"go run main.go",
+	}
+	for _, cmd := range validCmds {
+		if _, err := sanitizeRuntimeCommand(cmd); err != nil {
+			t.Errorf("合法指令 %s 應通過驗證，但被攔截: %v", cmd, err)
+		}
+	}
+
+	// 2. 包含 start 前綴的脫鉤指令
+	blockedCmds := []string{
+		"start npm run dev",
+		"START npm run dev",
+		"  start vite",
+		"start",
+	}
+	for _, cmd := range blockedCmds {
+		if _, err := sanitizeRuntimeCommand(cmd); err == nil {
+			t.Errorf("指令 %s 應該被攔截，但通過了驗證", cmd)
+		} else if !strings.Contains(err.Error(), "start") {
+			t.Errorf("指令 %s 錯誤訊息不符合預期: %v", cmd, err)
+		}
+	}
+}
+

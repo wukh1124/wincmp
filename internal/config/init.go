@@ -73,7 +73,12 @@ func RestoreDefaultConf(baseDir string) error {
 	}
 
 	// 自動檢測並平滑升級既有 php.ini 的 OPcache 配置
-	return EnsurePHPIniOptimizations(baseDir)
+	if err := EnsurePHPIniOptimizations(baseDir); err != nil {
+		return err
+	}
+
+	// 自動檢測並平滑升級既有 php.ini 的 Redis 擴充配置
+	return EnsurePHPIniRedisExtension(baseDir)
 }
 
 // EnsurePHPIniOptimizations 檢查現有的 conf/php/php.ini 是否已配置 OPcache。
@@ -121,6 +126,69 @@ opcache.save_comments = 1
 	newContent := content + opcacheSnippet
 	if err := os.WriteFile(phpIniPath, []byte(newContent), 0644); err != nil {
 		return fmt.Errorf("追加 OPcache 至 php.ini 失敗: %w", err)
+	}
+
+	return nil
+}
+
+// EnsurePHPIniRedisExtension 檢查現有的 conf/php/php.ini 是否已配置 extension=redis。
+// 若為舊版本使用者且 php.ini 缺少該擴充或被註解，會自動建立 .bak 備份並平滑啟用，消除假陽性脫鉤狀況。
+func EnsurePHPIniRedisExtension(baseDir string) error {
+	phpIniPath := filepath.Join(baseDir, "conf", "php", "php.ini")
+	data, err := os.ReadFile(phpIniPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("讀取 php.ini 失敗: %w", err)
+	}
+
+	content := string(data)
+	lines := strings.Split(content, "\n")
+
+	hasActiveRedis := false
+	hasCommentedRedis := false
+	commentedIdx := -1
+
+	for idx, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "extension=redis" || strings.HasPrefix(trimmed, "extension=redis ") {
+			hasActiveRedis = true
+			break
+		}
+		if trimmed == ";extension=redis" || strings.HasPrefix(trimmed, ";extension=redis") {
+			hasCommentedRedis = true
+			commentedIdx = idx
+		}
+	}
+
+	if hasActiveRedis {
+		return nil
+	}
+
+	// 建立安全備份
+	bakPath := filepath.Join(baseDir, "conf", "php", "php.ini.bak")
+	_ = os.WriteFile(bakPath, data, 0644)
+
+	var newContent string
+	if hasCommentedRedis && commentedIdx >= 0 {
+		// 取消註解
+		lines[commentedIdx] = "extension=redis"
+		newContent = strings.Join(lines, "\n")
+	} else {
+		// 安全追加於檔案末尾
+		redisSnippet := `
+; === Redis 快取模組 (WinCMP 自動平滑追加) ===
+extension=redis
+`
+		if !strings.HasSuffix(content, "\n") {
+			redisSnippet = "\n" + redisSnippet
+		}
+		newContent = content + redisSnippet
+	}
+
+	if err := os.WriteFile(phpIniPath, []byte(newContent), 0644); err != nil {
+		return fmt.Errorf("啟用 php.ini redis 擴充失敗: %w", err)
 	}
 
 	return nil
