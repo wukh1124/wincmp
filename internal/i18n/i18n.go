@@ -617,6 +617,8 @@ var enTranslations = map[string]string{
 	"刪除鍵值失敗":                            "Failed to delete key",
 	"清空資料庫失敗":                           "Failed to flush database",
 	"啟動指令不應包含 start 前綴（如 'start npm run dev'）。WinCMP 已具備全自動進程生命週期與背景日誌管理，請直接輸入原生指令。": "Startup command should not include 'start' prefix. WinCMP manages process lifecycle and background output automatically. Please enter the direct command.",
+	"啟動指令不應透過 cmd start 脫鉤執行。WinCMP 已具備全自動進程生命週期與背景日誌管理，請直接輸入原生指令。": "Startup command should not detach via 'cmd start'. WinCMP manages process lifecycle and background output automatically. Please enter the direct command.",
+	"啟動指令不應透過 PowerShell Start-Process 脫鉤執行。WinCMP 已具備全自動進程生命週期與背景日誌管理，請直接輸入原生指令。": "Startup command should not detach via PowerShell Start-Process. WinCMP manages process lifecycle and background output automatically. Please enter the direct command.",
 	"進程已送出終止信號，但端口尚未完全釋放，請稍候重試":                                                             "Process termination signal sent, but port is not fully released yet. Please retry in a moment.",
 	"指定的執行端口目前已被佔用":                                                                         "The specified port is currently in use",
 	"[%s] 端口 %d 目前已被其他進程佔用":                                                                  "[%s] Port %d is currently occupied by another process",

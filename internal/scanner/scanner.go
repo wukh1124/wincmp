@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"wincmp/internal/config"
 )
 
 // scanCache 快取掃描結果與 TTL
@@ -179,8 +181,7 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 	phpIniPath := filepath.Join(baseDir, "conf", "php", "php.ini")
 	if iniData, err := os.ReadFile(phpIniPath); err == nil {
 		for _, line := range strings.Split(string(iniData), "\n") {
-			trimmed := strings.TrimSpace(line)
-			if trimmed == "extension=redis" || strings.HasPrefix(trimmed, "extension=redis ") {
+			if active, _ := config.IsPHPIniRedisExtensionLine(line); active {
 				iniRedisEnabled = true
 				break
 			}

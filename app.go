@@ -697,7 +697,11 @@ func (a *App) restoreLastState() {
 	if a.appCfg.Global.LastServiceState.Redis && len(a.scanRes.RedisList) > 0 {
 		redisInfo := a.scanRes.RedisList[0]
 		a.handleLog("system", i18n.T("自動啟動上次執行的服務: Redis"))
-		if err := a.procMgr.StartRedis(redisInfo.Version, redisInfo.ExePath, 6379); err != nil {
+		redisPort := a.appCfg.Global.RedisPort
+		if redisPort <= 0 {
+			redisPort = 6379
+		}
+		if err := a.procMgr.StartRedis(redisInfo.Version, redisInfo.ExePath, redisPort); err != nil {
 			a.handleErrorLog("redis", "自動啟動 Redis 失敗", err)
 		}
 	}

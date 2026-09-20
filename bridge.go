@@ -364,7 +364,7 @@ func (a *App) StartRedis(version string, exePath string, port int) error {
 		return fmt.Errorf("%s", i18n.T("進程管理器未初始化"))
 	}
 	if port <= 0 {
-		port = 6379
+		port = a.redisPort()
 	}
 	if err := a.procMgr.StartRedis(version, exePath, port); err != nil {
 		return fmt.Errorf(i18n.T("啟動 Redis 失敗: %w"), err)
@@ -1689,14 +1689,27 @@ func (a *App) KillProcessByPort(port int) error {
 // 12. Redis 資料庫瀏覽器 API
 // ==========================================
 
+// redisPort 回傳設定中的 Redis 端口，未設定時預設 6379
+func (a *App) redisPort() int {
+	if a.appCfg != nil && a.appCfg.Global.RedisPort > 0 {
+		return a.appCfg.Global.RedisPort
+	}
+	return 6379
+}
+
+// redisAddr 回傳本機 Redis 連線位址
+func (a *App) redisAddr() string {
+	return fmt.Sprintf("127.0.0.1:%d", a.redisPort())
+}
+
 // RedisPing 檢查本機 Redis 是否連線成功
 func (a *App) RedisPing() (bool, error) {
-	return redisexplorer.Ping("127.0.0.1:6379")
+	return redisexplorer.Ping(a.redisAddr())
 }
 
 // RedisGetDBList 獲取本機 Redis 0~15 號資料庫資訊
 func (a *App) RedisGetDBList() ([]redisexplorer.RedisDBInfo, error) {
-	return redisexplorer.GetDBList("127.0.0.1:6379")
+	return redisexplorer.GetDBList(a.redisAddr())
 }
 
 // RedisScanResult 封裝 Scan 查詢結果
@@ -1707,7 +1720,7 @@ type RedisScanResult struct {
 
 // RedisScanKeys 分頁安全掃描指定 DB 的 Keys
 func (a *App) RedisScanKeys(db int, cursor uint64, match string, count int64) (*RedisScanResult, error) {
-	keys, nextCursor, err := redisexplorer.ScanKeys("127.0.0.1:6379", db, cursor, match, count)
+	keys, nextCursor, err := redisexplorer.ScanKeys(a.redisAddr(), db, cursor, match, count)
 	if err != nil {
 		return nil, err
 	}
@@ -1719,15 +1732,15 @@ func (a *App) RedisScanKeys(db int, cursor uint64, match string, count int64) (*
 
 // RedisGetKeyDetail 獲取特定 Key 的詳細資料
 func (a *App) RedisGetKeyDetail(db int, key string) (*redisexplorer.RedisKeyDetail, error) {
-	return redisexplorer.GetKeyDetail("127.0.0.1:6379", db, key)
+	return redisexplorer.GetKeyDetail(a.redisAddr(), db, key)
 }
 
 // RedisDeleteKey 刪除指定 DB 的 Key
 func (a *App) RedisDeleteKey(db int, key string) error {
-	return redisexplorer.DeleteKey("127.0.0.1:6379", db, key)
+	return redisexplorer.DeleteKey(a.redisAddr(), db, key)
 }
 
 // RedisFlushDB 清空指定 DB
 func (a *App) RedisFlushDB(db int) error {
-	return redisexplorer.FlushDB("127.0.0.1:6379", db)
+	return redisexplorer.FlushDB(a.redisAddr(), db)
 }

@@ -59,6 +59,7 @@ type GlobalConfig struct {
 	MailpitSMTPPort int  `json:"mailpit_smtp_port,omitempty"` // SMTP 端口 (預設 1025)
 	MailpitHTTPPort int  `json:"mailpit_http_port,omitempty"` // 網頁端口 (預設 8025)
 	MailpitUseDB    bool `json:"mailpit_use_db,omitempty"`    // 是否使用 database 持久化存儲
+	RedisPort       int  `json:"redis_port,omitempty"`        // Redis 端口 (預設 6379)
 
 	// Onboarding 引導氣泡顯示狀態
 	WincmpOnboardingShown    bool `json:"wincmp_onboarding_shown"`

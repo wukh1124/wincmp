@@ -23,33 +23,73 @@ import (
 	"wincmp/internal/preset"
 )
 
-// shellMetacharPattern 用於偵測命令注入的中繼字元
+// shellMetaChars 命令注入中繼字元（雙引號另以成對規則處理）
 // 注意：反斜線 (\) 不在禁止清單中，因為 Windows 路徑必須使用反斜線（如 C:\Users\...）
-var shellMetacharPattern = regexp.MustCompile("[&|;<>$\"!(){}\\[\\]`]")
+const shellMetaChars = "&|;<>$`!(){}[]"
+
+var (
+	cmdStartDetachPattern = regexp.MustCompile(`(^|[\s;&|])cmd(\.exe)?\s+(/[ck]\s+)+"?start(\s|"|$)`)
+	psStartProcessPattern = regexp.MustCompile(`(powershell(\.exe)?|pwsh(\.exe)?)\b[\s\S]*\bstart-process\b`)
+	nulRedirectPattern    = regexp.MustCompile(`(?i)>nul\b`)
+)
+
+// firstCommandToken 取得指令第一個 token，支援成對雙引號路徑（含空白）
+func firstCommandToken(cmd string) string {
+	trimmed := strings.TrimSpace(cmd)
+	if strings.HasPrefix(trimmed, `"`) {
+		if end := strings.Index(trimmed[1:], `"`); end >= 0 {
+			return trimmed[1 : 1+end]
+		}
+	}
+	fields := strings.Fields(trimmed)
+	if len(fields) == 0 {
+		return ""
+	}
+	return fields[0]
+}
+
+// validateRuntimeCommandChars 檢查中繼字元與雙引號是否成對
+// 允許成對雙引號包住含空白的 Windows 路徑；引號內外皆禁止 shell 中繼字元
+func validateRuntimeCommandChars(cmd string) error {
+	inQuote := false
+	for i := 0; i < len(cmd); i++ {
+		c := cmd[i]
+		if c == '"' {
+			inQuote = !inQuote
+			continue
+		}
+		if strings.IndexByte(shellMetaChars, c) >= 0 {
+			return fmt.Errorf("unsafe metachar: %c", c)
+		}
+	}
+	if inQuote {
+		return fmt.Errorf("unbalanced double quotes")
+	}
+	return nil
+}
 
 // sanitizeRuntimeCommand 清理 Runtime 啟動指令中的危險中繼字元
-// 允許的: 一般路徑、參數路徑、冒號、空格、斜線、反斜線（Windows路徑）、點、等號、百分比（佔位符）、減號、底線
-// 禁止的: & | ; < > $ ` " ! ( ) { } [ ]
+// 允許的: 一般路徑、參數路徑、成對雙引號路徑、冒號、空格、斜線、反斜線、點、等號、百分比（佔位符）、減號、底線、>nul
+// 禁止的: start 前綴、cmd start / PowerShell Start-Process 脫鉤、& | ; < > $ ` ! ( ) { } [ ]、不成對引號
 func sanitizeRuntimeCommand(cmd string) (string, error) {
 	trimmed := strings.TrimSpace(cmd)
 	lower := strings.ToLower(trimmed)
 	if strings.HasPrefix(lower, "start ") || lower == "start" {
 		return "", fmt.Errorf("%s", i18n.T("啟動指令不應包含 start 前綴（如 'start npm run dev'）。WinCMP 已具備全自動進程生命週期與背景日誌管理，請直接輸入原生指令。"))
 	}
-
-	// 先處理佔位符，替換為暫時安全值以避免被誤判
-	sanitized := cmd
-	if shellMetacharPattern.MatchString(sanitized) {
-		// 檢查是否為允許的特定模式（如 chcp 65001 >nul）
-		// 允許 >nul（Windows 的靜默重導）但禁止其他重導
-		temp := regexp.MustCompile(`>nul`).ReplaceAllString(sanitized, "___REDIRECT_NUL___")
-		temp = regexp.MustCompile(`>NUL`).ReplaceAllString(temp, "___REDIRECT_NUL___")
-		if shellMetacharPattern.MatchString(temp) {
-			return "", fmt.Errorf("%s", i18n.Tfmt("啟動指令含不安全的字元，已拒絕執行: %s", cmd))
-		}
-		sanitized = regexp.MustCompile(`___REDIRECT_NUL___`).ReplaceAllString(temp, ">nul")
+	if cmdStartDetachPattern.MatchString(lower) {
+		return "", fmt.Errorf("%s", i18n.T("啟動指令不應透過 cmd start 脫鉤執行。WinCMP 已具備全自動進程生命週期與背景日誌管理，請直接輸入原生指令。"))
 	}
-	return sanitized, nil
+	if psStartProcessPattern.MatchString(lower) {
+		return "", fmt.Errorf("%s", i18n.T("啟動指令不應透過 PowerShell Start-Process 脫鉤執行。WinCMP 已具備全自動進程生命週期與背景日誌管理，請直接輸入原生指令。"))
+	}
+
+	// 允許 Windows 靜默重導 >nul；其餘中繼字元仍禁止
+	temp := nulRedirectPattern.ReplaceAllString(cmd, "___REDIRECT_NUL___")
+	if err := validateRuntimeCommandChars(temp); err != nil {
+		return "", fmt.Errorf("%s", i18n.Tfmt("啟動指令含不安全的字元，已拒絕執行: %s", cmd))
+	}
+	return cmd, nil
 }
 
 // validateDomainName 驗證域名只包含合法字元
@@ -285,10 +325,8 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 	}
 
 	// 自訂啟動指令安全性驗證 (只允許執行專案根目錄內的腳本或執行檔)
-	fields := strings.Fields(runtimeCmd)
-	if len(fields) > 0 {
-		targetExec := fields[0]
-		targetExec = strings.Trim(targetExec, `"`+`'`)
+	if targetExec := firstCommandToken(runtimeCmd); targetExec != "" {
+		targetExec = strings.Trim(targetExec, `'`)
 		isPath := strings.Contains(targetExec, "/") || strings.Contains(targetExec, "\\")
 		isScriptSuffix := strings.HasSuffix(strings.ToLower(targetExec), ".bat") ||
 			strings.HasSuffix(strings.ToLower(targetExec), ".exe") ||
@@ -765,14 +803,14 @@ func findPIDByPortFallback(port int) int {
 	return 0
 }
 
-// CheckRuntimeRunning 透過 netstat 檢測 Port 是否被佔用
+// CheckRuntimeRunning 以 LISTEN PID 偵測 Runtime 是否仍在監聽該 Port（生命週期追蹤用）
 func CheckRuntimeRunning(port int) bool {
 	return FindPIDByPort(port) > 0
 }
 
-// IsPortAvailable 檢查指定端口是否可用（未被佔用）
+// IsPortAvailable 檢查指定端口是否可用（以 bind 測試為準，與 StartRuntime / KillProcessByPort 一致）
 func IsPortAvailable(port int) bool {
-	return !CheckRuntimeRunning(port)
+	return !portutil.IsPortInUse(port)
 }
 
 // OccupiedProcessInfo 記錄佔用端口的進程資訊
@@ -820,6 +858,11 @@ func KillProcessByPort(port int) error {
 		if err := killCmd.Run(); err != nil {
 			return fmt.Errorf("%s (PID: %d): %w", i18n.T("無法強制結束進程"), pid, err)
 		}
+	}
+
+	// 端口已空閒則直接成功，避免無謂等待
+	if !portutil.IsPortInUse(port) {
+		return nil
 	}
 
 	// 輪詢等待 TCP 端口完全釋放 (最多等待 3 秒，每 150ms 檢查一次)

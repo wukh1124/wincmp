@@ -130,11 +130,12 @@ export default function Dashboard() {
           triggerAutoExpandLogs();
         } else if (action === 'stop') await StopMailpit();
       } else if (serviceName === 'redis') {
+        const redisPort = config?.global?.redis_port || 6379;
         if (action === 'start') {
-          await StartRedis(extraInfo.Version, extraInfo.ExePath, 6379);
+          await StartRedis(extraInfo.Version, extraInfo.ExePath, redisPort);
           triggerAutoExpandLogs();
         } else if (action === 'stop') await StopRedis();
-        else if (action === 'reload') await RestartRedis(extraInfo.Version, extraInfo.ExePath, 6379);
+        else if (action === 'reload') await RestartRedis(extraInfo.Version, extraInfo.ExePath, redisPort);
       } else if (serviceName.startsWith('php')) {
         const version = extraInfo.Version;
         if (action === 'start') { await StartPHP(version); triggerAutoExpandLogs(); }
@@ -460,7 +461,7 @@ export default function Dashboard() {
                   <div className="space-y-1">
                     <p className="text-xs font-semibold" style={{ color: 'var(--fg-2)' }}>{t("快取服務")}</p>
                     <p className="text-[11px] font-medium" style={{ color: 'var(--meta)' }}>{t("版本: ")}{redis ? redis.Version : t("未安裝")}</p>
-                    <p className="text-[11px]" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{t("埠口: ")}6379</p>
+                    <p className="text-[11px]" style={{ color: 'var(--muted)', fontFamily: 'var(--font-mono)' }}>{t("埠口: ")}{config?.global?.redis_port || 6379}</p>
                   </div>
                 </div>
 

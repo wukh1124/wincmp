@@ -65,6 +65,7 @@ export namespace config {
 	    mailpit_smtp_port?: number;
 	    mailpit_http_port?: number;
 	    mailpit_use_db?: boolean;
+	    redis_port?: number;
 	    wincmp_onboarding_shown: boolean;
 	    wincmp_dep_onboarding_shown: boolean;
 	    wincmp_sidebar_guide_shown: boolean;
@@ -105,6 +106,7 @@ export namespace config {
 	        this.mailpit_smtp_port = source["mailpit_smtp_port"];
 	        this.mailpit_http_port = source["mailpit_http_port"];
 	        this.mailpit_use_db = source["mailpit_use_db"];
+	        this.redis_port = source["redis_port"];
 	        this.wincmp_onboarding_shown = source["wincmp_onboarding_shown"];
 	        this.wincmp_dep_onboarding_shown = source["wincmp_dep_onboarding_shown"];
 	        this.wincmp_sidebar_guide_shown = source["wincmp_sidebar_guide_shown"];

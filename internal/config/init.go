@@ -131,6 +131,30 @@ opcache.save_comments = 1
 	return nil
 }
 
+// IsPHPIniRedisExtensionLine 判斷 php.ini 單行是否為 redis 擴充設定
+// 支援 extension=redis、extension = redis、extension=php_redis.dll 等寫法
+func IsPHPIniRedisExtensionLine(line string) (active bool, commented bool) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return false, false
+	}
+	if strings.HasPrefix(trimmed, ";") || strings.HasPrefix(trimmed, "#") {
+		rest := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(trimmed, ";"), "#"))
+		return false, isPHPIniRedisExtValue(rest)
+	}
+	return isPHPIniRedisExtValue(trimmed), false
+}
+
+func isPHPIniRedisExtValue(s string) bool {
+	normalized := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(s), " ", ""))
+	if !strings.HasPrefix(normalized, "extension=") {
+		return false
+	}
+	value := strings.TrimPrefix(normalized, "extension=")
+	value = strings.TrimSuffix(value, ".dll")
+	return value == "redis" || value == "php_redis"
+}
+
 // EnsurePHPIniRedisExtension 檢查現有的 conf/php/php.ini 是否已配置 extension=redis。
 // 若為舊版本使用者且 php.ini 缺少該擴充或被註解，會自動建立 .bak 備份並平滑啟用，消除假陽性脫鉤狀況。
 func EnsurePHPIniRedisExtension(baseDir string) error {
@@ -151,12 +175,12 @@ func EnsurePHPIniRedisExtension(baseDir string) error {
 	commentedIdx := -1
 
 	for idx, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "extension=redis" || strings.HasPrefix(trimmed, "extension=redis ") {
+		active, commented := IsPHPIniRedisExtensionLine(line)
+		if active {
 			hasActiveRedis = true
 			break
 		}
-		if trimmed == ";extension=redis" || strings.HasPrefix(trimmed, ";extension=redis") {
+		if commented {
 			hasCommentedRedis = true
 			commentedIdx = idx
 		}

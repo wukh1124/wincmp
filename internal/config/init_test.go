@@ -71,3 +71,30 @@ func TestEnsurePHPIniRedisExtension(t *testing.T) {
 		t.Errorf("原本已啟動時不應再修改檔案")
 	}
 }
+
+func TestIsPHPIniRedisExtensionLine(t *testing.T) {
+	cases := []struct {
+		line      string
+		active    bool
+		commented bool
+	}{
+		{"extension=redis", true, false},
+		{"extension = redis", true, false},
+		{"extension=php_redis.dll", true, false},
+		{"extension=php_redis", true, false},
+		{"  extension=redis  ", true, false},
+		{";extension=redis", false, true},
+		{"  ; extension = redis", false, true},
+		{"#extension=redis", false, true},
+		{"extension=mysqli", false, false},
+		{"", false, false},
+		{"[PHP]", false, false},
+	}
+	for _, tc := range cases {
+		active, commented := IsPHPIniRedisExtensionLine(tc.line)
+		if active != tc.active || commented != tc.commented {
+			t.Errorf("IsPHPIniRedisExtensionLine(%q) = (%v, %v), want (%v, %v)",
+				tc.line, active, commented, tc.active, tc.commented)
+		}
+	}
+}
