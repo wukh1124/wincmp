@@ -253,9 +253,8 @@ function Get-ReleaseDateFromNotes {
     param([string]$Text)
     if ([string]::IsNullOrWhiteSpace($Text)) { return $null }
     $patterns = @(
-        '(?m)^Release\s*date\s*[：:]\s*(\d{4}-\d{2}-\d{2})',
-        '(?m)^發布日期\s*[：:]\s*(\d{4}-\d{2}-\d{2})',
-        '(?m)^发布日期\s*[：:]\s*(\d{4}-\d{2}-\d{2})'
+        '(?m)^Release\s*date\s*[:\uFF1A]\s*(\d{4}-\d{2}-\d{2})',
+        '(?m)^(?:\u767C\u5E03\u65E5\u671F|\u53D1\u5E03\u65E5\u671F)\s*[:\uFF1A]\s*(\d{4}-\d{2}-\d{2})'
     )
     foreach ($p in $patterns) {
         $m = [regex]::Match($Text, $p)
@@ -264,8 +263,8 @@ function Get-ReleaseDateFromNotes {
     return $null
 }
 
-$EnNotesText = if (Test-Path $EnReleaseFile) { Get-Content -LiteralPath $EnReleaseFile -Raw } else { "" }
-$ZhNotesText = if (Test-Path $ZhReleaseFile) { Get-Content -LiteralPath $ZhReleaseFile -Raw } else { "" }
+$EnNotesText = if (Test-Path $EnReleaseFile) { Get-Content -LiteralPath $EnReleaseFile -Raw -Encoding UTF8 } else { "" }
+$ZhNotesText = if (Test-Path $ZhReleaseFile) { Get-Content -LiteralPath $ZhReleaseFile -Raw -Encoding UTF8 } else { "" }
 $NotesDate = Get-ReleaseDateFromNotes -Text $EnNotesText
 if (-not $NotesDate) { $NotesDate = Get-ReleaseDateFromNotes -Text $ZhNotesText }
 if (-not $NotesDate) {

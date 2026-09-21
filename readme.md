@@ -94,8 +94,9 @@ go mod tidy
 cd frontend && npm install && cd ..
 wails build -clean
 wails build -clean -ldflags "-s -w"
-wails build -ldflags "-X main.AppVersion=v2.1.0"
+wails build -ldflags "-X main.AppVersion=v2.1.4"
 
+# Generate website/release.json (for local website preview; automatically run in CI)
 node scripts/generate-release-json.js
 ```
 

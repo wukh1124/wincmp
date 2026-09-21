@@ -190,6 +190,7 @@ go test ./...
 
 ```powershell
 # 前置：另一個終端機已執行 wails dev；請在專案根目錄執行
+# （腳本會自動檢測並於需要時安裝 frontend playwright 與 chromium 核心）
 powershell -ExecutionPolicy Bypass -File .\scripts\capture_release_screenshots.ps1
 ```
 
@@ -200,7 +201,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\capture_release_screenshots.p
 4. 確認 `http://localhost:34115` 可連線（否則結束並提示啟動 `wails dev`）
 5. 執行 `frontend/scripts/capture.cjs` 產出新圖
 
-`screenshot/backup/` 已在 `.gitignore`，不會進倉庫；目前使用的 `screenshot/{dark,sketch}/` 需隨 release commit 提交，官網部署時會複製到 `website/screenshot/`。
+`screenshot/backup/` 已在 `.gitignore`，不會進倉庫；目前使用的 `screenshot/{dark,sketch}/` 需隨發布流程提交，官網部署時會複製到 `website/screenshot/`。
 
 ---
 
@@ -231,11 +232,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\capture_release_screenshots.p
 
 Tag 應指向「**已進入 main 的最終發行 commit**」。GitHub Actions、官網 `release.json` 與內建更新器皆以 tag / main 為準。
 
+**Commit 規範（建議二進位截圖與版本元數據分離）**：
 ```bash
-# 1) 在發行分支提交發布內容（依實際變更調整路徑）
-#    notes 須含發布日期行；validator 會檢查
-git add VERSION release_note/vX.Y.Z/ screenshot/ conf/dependencies.json scripts/ .github/ .agents/
-# 若功能碼尚未提交，一併 add 對應 frontend/ internal/ 等路徑
+# 1) 若有更新截圖，獨立提交二進位圖檔（避免與純文字 release metadata 混雜干擾 review）
+git add screenshot/
+git commit -m "docs(screenshot): update app screenshots for vX.Y.Z"
+
+# 2) 在發行分支提交版本發布內容（版本號、說明與發布工具）
+git add VERSION release_note/vX.Y.Z/ bat/release.ps1 scripts/ .agents/ readme.md
 git commit -m "chore(release): bump version to vX.Y.Z"
 
 # 2) 更新 main

@@ -184,6 +184,15 @@ if (-not (Test-Path -LiteralPath $FrontendDir)) {
     Write-Error "frontend directory not found at $FrontendDir"
 }
 Set-Location -Path $FrontendDir
+
+# 檢查 playwright 模組是否存在，若無則自動安裝
+$PlaywrightPkg = Join-Path $FrontendDir "node_modules\playwright"
+if (-not (Test-Path -LiteralPath $PlaywrightPkg)) {
+    Write-Host "    [Notice] Playwright not found, installing frontend dependencies..." -ForegroundColor Yellow
+    npm install
+    npx playwright install chromium
+}
+
 node scripts/capture.cjs
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Screenshot capture failed."
