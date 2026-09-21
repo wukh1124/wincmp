@@ -90,6 +90,10 @@ export function OpenCategoryLogFile(arg1, arg2) {
   return window['go']['main']['App']['OpenCategoryLogFile'](arg1, arg2);
 }
 
+export function OpenCategoryLogFolder(arg1, arg2) {
+  return window['go']['main']['App']['OpenCategoryLogFolder'](arg1, arg2);
+}
+
 export function OpenDependencyFolder(arg1) {
   return window['go']['main']['App']['OpenDependencyFolder'](arg1);
 }
@@ -172,6 +176,10 @@ export function SelectFolder() {
 
 export function SendTerminalInput(arg1, arg2) {
   return window['go']['main']['App']['SendTerminalInput'](arg1, arg2);
+}
+
+export function ShowInExplorer(arg1) {
+  return window['go']['main']['App']['ShowInExplorer'](arg1);
 }
 
 export function ShowMainWindow() {

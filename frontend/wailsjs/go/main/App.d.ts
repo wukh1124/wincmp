@@ -52,6 +52,8 @@ export function KillProcessByPort(arg1:number):Promise<void>;
 
 export function OpenCategoryLogFile(arg1:string,arg2:string):Promise<void>;
 
+export function OpenCategoryLogFolder(arg1:string,arg2:string):Promise<void>;
+
 export function OpenDependencyFolder(arg1:string):Promise<void>;
 
 export function OpenFolder(arg1:string):Promise<void>;
@@ -93,6 +95,8 @@ export function ScanServices():Promise<scanner.ScanResult>;
 export function SelectFolder():Promise<string>;
 
 export function SendTerminalInput(arg1:string,arg2:string):Promise<void>;
+
+export function ShowInExplorer(arg1:string):Promise<void>;
 
 export function ShowMainWindow():Promise<void>;
 

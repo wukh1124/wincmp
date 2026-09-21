@@ -17,6 +17,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	mysql "github.com/go-sql-driver/mysql"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"golang.org/x/sys/windows"
 
 	"wincmp/internal/config"
 	"wincmp/internal/detect"
@@ -814,6 +815,42 @@ func (a *App) OpenFolder(path string) error {
 	return cmd.Start()
 }
 
+// ShowInExplorer 在檔案總管中開啟所在資料夾並反白選中該檔案；若為資料夾則直接開啟
+func (a *App) ShowInExplorer(path string) error {
+	cleaned := strings.TrimSpace(path)
+	if cleaned == "" {
+		return fmt.Errorf("%s", i18n.T("路徑為空"))
+	}
+	cleaned = filepath.Clean(cleaned)
+	info, err := os.Stat(cleaned)
+	if err == nil && info.IsDir() {
+		return a.OpenFolder(cleaned)
+	}
+	// Windows explorer /select, 語法直接選中檔案
+	cmd := exec.Command("explorer", fmt.Sprintf("/select,%s", cleaned))
+	return cmd.Start()
+}
+
+// openFileWithFallback 使用 Windows 原生 ShellExecute 開啟檔案（零 cmd 黑視窗），若無關聯程式則自動以記事本開啟
+func openFileWithFallback(path string) error {
+	cleaned := filepath.Clean(path)
+	verbPtr, err := windows.UTF16PtrFromString("open")
+	if err != nil {
+		return err
+	}
+	filePtr, err := windows.UTF16PtrFromString(cleaned)
+	if err != nil {
+		return err
+	}
+	err = windows.ShellExecute(0, verbPtr, filePtr, nil, nil, windows.SW_SHOWNORMAL)
+	if err != nil {
+		// 若系統無對應副檔名關聯或調用失敗，使用記事本作為保底開啟
+		cmd := exec.Command("notepad.exe", cleaned)
+		return cmd.Start()
+	}
+	return nil
+}
+
 // OpenPathInExplorer 用系統預設程式開啟檔案或資料夾（日誌右鍵「開啟檔案」使用）
 func (a *App) OpenPathInExplorer(path string) error {
 	cleaned := strings.TrimSpace(path)
@@ -833,8 +870,7 @@ func (a *App) OpenPathInExplorer(path string) error {
 	if info.IsDir() {
 		return a.OpenFolder(cleaned)
 	}
-	cmd := exec.Command("cmd", "/c", "start", "", cleaned)
-	return cmd.Start()
+	return openFileWithFallback(cleaned)
 }
 
 // SelectFolder 彈出 Wails 原生的目錄選擇對話框，並回傳選擇的路徑
@@ -885,8 +921,7 @@ func (a *App) OpenSystemConfigFile(targetType string) error {
 		_ = os.WriteFile(targetPath, []byte("# WinCMP Configuration\n"), 0644)
 	}
 
-	cmd := exec.Command("cmd", "/c", "start", "", filepath.Clean(targetPath))
-	return cmd.Start()
+	return openFileWithFallback(targetPath)
 }
 
 // ==========================================
@@ -1517,9 +1552,8 @@ func (a *App) OpenProjectCaddyfile(projectName string) error {
 		}
 	}
 
-	// 5. 使用系統預設關聯程式開啟檔案
-	cmd := exec.Command("cmd", "/c", "start", "", filepath.Clean(caddyPath))
-	return cmd.Start()
+	// 5. 使用系統預設關聯程式開啟檔案（無關聯時自動以記事本開啟）
+	return openFileWithFallback(caddyPath)
 }
 
 // LogEntry 描述一筆日誌記錄
@@ -1571,7 +1605,7 @@ func (a *App) GetCategoryLogFilePath(category string, subCategory string) (*LogF
 	return &LogFileInfo{Path: path, Name: filepath.Base(path), Exists: exists}, nil
 }
 
-// OpenCategoryLogFile 開啟指定分類當天日誌檔（系統預設程式）
+// OpenCategoryLogFile 開啟指定分類當天日誌檔（系統預設程式，無關聯時以記事本開啟）
 func (a *App) OpenCategoryLogFile(category string, subCategory string) error {
 	info, err := a.GetCategoryLogFilePath(category, subCategory)
 	if err != nil {
@@ -1580,7 +1614,22 @@ func (a *App) OpenCategoryLogFile(category string, subCategory string) error {
 	if !info.Exists {
 		return fmt.Errorf("%s: %s", i18n.T("日誌檔案不存在"), info.Path)
 	}
-	return a.OpenPathInExplorer(info.Path)
+	return openFileWithFallback(info.Path)
+}
+
+// OpenCategoryLogFolder 開啟指定分類日誌所在資料夾，若日誌檔存在則在檔案總管中反白選中它
+func (a *App) OpenCategoryLogFolder(category string, subCategory string) error {
+	info, err := a.GetCategoryLogFilePath(category, subCategory)
+	if err != nil {
+		return err
+	}
+	if info.Exists {
+		return a.ShowInExplorer(info.Path)
+	}
+	// 日誌檔若尚不存在，直接打開 logs 目錄
+	logsDir := filepath.Join(a.baseDir, "logs")
+	_ = os.MkdirAll(logsDir, 0755)
+	return a.OpenFolder(logsDir)
 }
 
 // GetCategoryLogs 獲取指定分類的當天日誌歷史紀錄

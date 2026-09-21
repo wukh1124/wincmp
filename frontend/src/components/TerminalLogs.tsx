@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, ArrowDown, ChevronDown, Repeat, Copy, Check, FolderOpen, ListChecks } from 'lucide-react';
+import { Trash2, ArrowDown, ChevronDown, Repeat, Copy, Check, FolderOpen, FolderSearch, ListChecks } from 'lucide-react';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
-import { GetCategoryLogFilePath, OpenCategoryLogFile } from '../../wailsjs/go/main/App';
+import { GetCategoryLogFilePath, OpenCategoryLogFile, OpenCategoryLogFolder } from '../../wailsjs/go/main/App';
 import { logStore, LogData } from './logStore';
 import { t, useLanguage } from '../i18n';
 
@@ -50,6 +50,7 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
 
   const logEndRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const runtimeDropdownRef = useRef<HTMLDivElement | null>(null);
 
   // 用於追蹤當前啟動的分頁與狀態，避免閉包陳舊
@@ -279,12 +280,39 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
 
   const handleContextMenu = (e: React.MouseEvent, lineIndex: number, lineText: string) => {
     e.preventDefault();
-    const menuWidth = 180;
-    const menuHeight = 160;
-    const x = Math.min(e.clientX, window.innerWidth - menuWidth - 8);
-    const y = Math.min(e.clientY, window.innerHeight - menuHeight - 8);
+    const menuWidth = 200;
+    const menuHeight = 220;
+    let x = e.clientX;
+    if (x + menuWidth > window.innerWidth - 8) {
+      x = Math.max(8, window.innerWidth - menuWidth - 8);
+    }
+    let y = e.clientY;
+    // 若點擊處下方空間不足以容納選單，優先向上翻轉展開
+    if (y + menuHeight > window.innerHeight - 8) {
+      y = Math.max(8, e.clientY - menuHeight);
+    }
     setContextMenu({ x, y, lineIndex, lineText });
   };
+
+  // 當選單渲染完成後，根據實際 DOM 尺寸二次校正，確保完全不溢出視窗底部
+  useEffect(() => {
+    if (!contextMenu || !menuRef.current) return;
+    const rect = menuRef.current.getBoundingClientRect();
+    const pad = 8;
+    let adjustedY = contextMenu.y;
+    let adjustedX = contextMenu.x;
+
+    if (rect.bottom > window.innerHeight - pad) {
+      adjustedY = Math.max(pad, window.innerHeight - rect.height - pad);
+    }
+    if (rect.right > window.innerWidth - pad) {
+      adjustedX = Math.max(pad, window.innerWidth - rect.width - pad);
+    }
+
+    if (adjustedY !== contextMenu.y || adjustedX !== contextMenu.x) {
+      setContextMenu(prev => (prev ? { ...prev, x: adjustedX, y: adjustedY } : null));
+    }
+  }, [contextMenu?.x, contextMenu?.y]);
 
   const copyText = async (text: string, flag: 'selection' | 'line') => {
     try {
@@ -329,6 +357,19 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
     } catch (err) {
       console.error('開啟日誌檔失敗:', err);
       (window as any).customAlert(`${t('開啟檔案失敗')}: ${err}`);
+    }
+  };
+
+  const handleMenuOpenFolder = async () => {
+    const category = activeTab;
+    const sub = activeTab === 'runtime' ? activeRuntimeProject : '';
+    setContextMenu(null);
+    if (!category) return;
+    try {
+      await OpenCategoryLogFolder(category, sub);
+    } catch (err) {
+      console.error('開啟所在資料夾失敗:', err);
+      (window as any).customAlert(`${t('開啟所在資料夾失敗')}: ${err}`);
     }
   };
 
@@ -527,6 +568,7 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
       {/* 自訂右鍵選單 */}
       {contextMenu && (
         <div
+          ref={menuRef}
           className="fixed z-[100] min-w-[160px] rounded-lg border py-1 shadow-lg"
           style={{ left: contextMenu.x, top: contextMenu.y, backgroundColor: 'var(--card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)' }}
           onClick={(e) => e.stopPropagation()}
@@ -575,6 +617,17 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
                 {logFileInfo.name}
               </span>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={handleMenuOpenFolder}
+            disabled={activeTab === 'runtime' && !activeRuntimeProject}
+            title={t("開啟檔案所在資料夾")}
+            className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition hover:bg-[var(--card-hover)] disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ color: 'var(--fg-2)' }}
+          >
+            <FolderSearch size={12} />
+            <span className="truncate">{t("開啟檔案所在資料夾")}</span>
           </button>
         </div>
       )}
