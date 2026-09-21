@@ -1756,7 +1756,7 @@ func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
 			return
 		}
 
-		a.handleLog("system", i18n.T("✅ 自動更新成功，程式即將重啟！"))
+		a.handleLog("system", i18n.T("自動更新成功，程式即將重啟！"))
 		if a.ctx != nil {
 			runtime.EventsEmit(a.ctx, "update_progress", map[string]interface{}{
 				"status": "completed",
@@ -1774,10 +1774,28 @@ func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
 		}
 
 		if err := cmd.Start(); err != nil {
-			a.handleErrorLog("system", i18n.T("自動重啟失敗"), err)
+			a.handleErrorLog("system", i18n.T("啟動新版本失敗，正在自動復原原版本..."), err)
+
+			// 啟動失敗時緊急回滾：刪除新版 exe，復原原版本 .old
+			if rollbackErr := updater.RollbackUpdate(newExePath); rollbackErr != nil {
+				a.handleErrorLog("system", i18n.T("自動復原原版本失敗"), rollbackErr)
+			} else {
+				a.handleLog("system", i18n.T("已成功復原原版本程式，您可以繼續正常使用。"))
+			}
+
+			// 重新搶回單實例鎖
+			_, _ = singleinstance.TryAcquire()
+
+			if a.ctx != nil {
+				runtime.EventsEmit(a.ctx, "update_progress", map[string]interface{}{
+					"status": "error",
+					"error":  i18n.Tfmt("新版本啟動失敗（可能受防毒軟體或權限攔截），已自動為您復原原版本。\n\n建議指引：\n請前往官方 Releases 頁面手動下載更新包：\n%s", downloadURL),
+				})
+			}
+			return // 終止流程，絕不退出，讓用戶能繼續使用原版本！
 		}
 
-		// 稍微延遲後退出舊進程
+		// 啟動成功，稍微延遲後退出舊進程
 		time.Sleep(1 * time.Second)
 		os.Exit(0)
 	}()

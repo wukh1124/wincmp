@@ -293,7 +293,7 @@ export default function VersionUpdate() {
                     </div>
 
                     <div className="text-[11px] leading-relaxed" style={{ color: 'var(--muted)' }}>
-                      {t("💡 提示：如果因防毒軟體攔截或系統權限不足導致自動更新失敗，建議您前往 GitHub 手動下載最新版本的 ZIP 壓縮包，解壓覆蓋即可。")}
+                      {t("提示：如果因防毒軟體攔截或系統權限不足導致自動更新失敗，建議您前往 GitHub 手動下載最新版本的 ZIP 壓縮包，解壓覆蓋即可。")}
                     </div>
 
                     <div className="flex items-center gap-3">

@@ -647,4 +647,8 @@ var enTranslations = map[string]string{
 	"新版本完整性校驗 (SHA-256) 失敗，已中止更新覆蓋 (預期: %s, 實際: %s)": "Update integrity check (SHA-256) failed, update aborted (expected: %s, actual: %s)",
 	"計算新版本雜湊值失敗: %w":                                "Failed to calculate hash of update file: %w",
 	"計算新版本壓縮檔雜湊值失敗: %w":                              "Failed to calculate hash of update archive: %w",
+	"啟動新版本失敗，正在自動復原原版本...":                           "Failed to launch new version, rolling back to previous version...",
+	"已成功復原原版本程式，您可以繼續正常使用。":                        "Successfully restored previous version, you can continue using the application normally.",
+	"新版本啟動失敗（可能受防毒軟體或權限攔截），已自動為您復原原版本。\n\n建議指引：\n請前往官方 Releases 頁面手動下載更新包：\n%s": "Failed to launch new version (possibly blocked by antivirus or permissions), previous version has been restored.\n\nGuidance:\nPlease download update package manually from official Releases:\n%s",
+	"自動復原原版本失敗":                                      "Failed to restore previous version",
 }

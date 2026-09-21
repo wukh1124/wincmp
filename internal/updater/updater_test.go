@@ -126,3 +126,49 @@ invalid-line
 		t.Errorf("解析數量不符! 預期 2 個，實際得到: %d", len(res))
 	}
 }
+
+func TestRollbackUpdateWithPath(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "wincmp-rollback-test-*")
+	if err != nil {
+		t.Fatalf("建立臨時目錄失敗: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	execPath := filepath.Join(tmpDir, "wincmp.exe")
+	oldPath := execPath + ".old"
+	newExePath := filepath.Join(tmpDir, "wincmp_new.exe")
+
+	// 模擬場景：舊版已被重命名為 .old，新版 exe 存在
+	oldContent := []byte("old-binary-content")
+	newContent := []byte("new-corrupted-binary")
+	if err := os.WriteFile(oldPath, oldContent, 0755); err != nil {
+		t.Fatalf("寫入 old 檔案失敗: %v", err)
+	}
+	if err := os.WriteFile(newExePath, newContent, 0755); err != nil {
+		t.Fatalf("寫入 new 檔案失敗: %v", err)
+	}
+
+	// 執行回滾
+	if err := updater.RollbackUpdateWithPath(execPath, newExePath); err != nil {
+		t.Fatalf("回滾執行失敗: %v", err)
+	}
+
+	// 驗證 1：新版 exe 應被刪除
+	if _, err := os.Stat(newExePath); !os.IsNotExist(err) {
+		t.Errorf("預期新版 exe 應被刪除，但仍存在")
+	}
+
+	// 驗證 2：原本的 .old 應被還原為 wincmp.exe
+	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+		t.Errorf("預期 .old 應被還原，但仍存在")
+	}
+
+	restoredContent, err := os.ReadFile(execPath)
+	if err != nil {
+		t.Fatalf("無法讀取還原後的執行檔: %v", err)
+	}
+	if string(restoredContent) != string(oldContent) {
+		t.Errorf("還原後內容不符! 預期: %s, 實際: %s", string(oldContent), string(restoredContent))
+	}
+}
+

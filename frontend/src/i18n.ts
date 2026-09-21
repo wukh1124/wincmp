@@ -506,7 +506,7 @@ export const enTranslations: Record<string, string> = {
   "請檢查網路連線或稍後再試": "Please check your network connection or try again later",
   "版本更新說明": "Release Notes",
   "新版本更新說明": "New Version Release Notes",
-  "💡 提示：如果因防毒軟體攔截或系統權限不足導致自動更新失敗，建議您前往 GitHub 手動下載最新版本的 ZIP 壓縮包，解壓覆蓋即可。": "💡 Tip: If auto-update fails due to antivirus blocking or insufficient permissions, we recommend downloading the latest ZIP package from GitHub and replacing it manually.",
+  "提示：如果因防毒軟體攔截或系統權限不足導致自動更新失敗，建議您前往 GitHub 手動下載最新版本的 ZIP 壓縮包，解壓覆蓋即可。": "Tip: If auto-update fails due to antivirus blocking or insufficient permissions, we recommend downloading the latest ZIP package from GitHub and replacing it manually.",
   "手動下載 ZIP 更新": "Manual ZIP Download",
 
   // Theme Settings
@@ -630,6 +630,10 @@ export const enTranslations: Record<string, string> = {
   "新版本完整性校驗 (SHA-256) 失敗，已中止更新覆蓋 (預期: %s, 實際: %s)": "Update integrity check (SHA-256) failed, update aborted (expected: %s, actual: %s)",
   "計算新版本雜湊值失敗: %w": "Failed to calculate hash of update file: %w",
   "計算新版本壓縮檔雜湊值失敗: %w": "Failed to calculate hash of update archive: %w",
+  "啟動新版本失敗，正在自動復原原版本...": "Failed to launch new version, rolling back to previous version...",
+  "已成功復原原版本程式，您可以繼續正常使用。": "Successfully restored previous version, you can continue using the application normally.",
+  "新版本啟動失敗（可能受防毒軟體或權限攔截），已自動為您復原原版本。\n\n建議指引：\n請前往官方 Releases 頁面手動下載更新包：\n%s": "Failed to launch new version (possibly blocked by antivirus or permissions), previous version has been restored.\n\nGuidance:\nPlease download update package manually from official Releases:\n%s",
+  "自動復原原版本失敗": "Failed to restore previous version",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

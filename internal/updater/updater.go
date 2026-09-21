@@ -328,19 +328,20 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 	if assetType == "exe" {
 		tempExePath = filepath.Join(tempDir, "wincmp_new.exe")
 		if err := downloader.DownloadFile(url, tempExePath, progressCb); err != nil {
-			return "", fmt.Errorf("下載 exe 失敗: %w", err)
+			_ = os.Remove(tempExePath)
+			return "", fmt.Errorf("下載新版本執行檔失敗：%w。\n\n建議指引：\n請檢查網路連線或直接前往官方 Releases 手動下載更新：\n%s", err, url)
 		}
 
 		// 完整性校驗：若有提供預期 SHA-256，進行比對
 		if expectedSHA256 != "" {
 			actualSHA, err := downloader.CalculateSHA256(tempExePath)
 			if err != nil {
-				os.Remove(tempExePath)
+				_ = os.Remove(tempExePath)
 				return "", fmt.Errorf("計算新版本雜湊值失敗: %w", err)
 			}
 			if !strings.EqualFold(actualSHA, expectedSHA256) {
-				os.Remove(tempExePath)
-				return "", fmt.Errorf("新版本完整性校驗 (SHA-256) 失敗，已中止更新覆蓋 (預期: %s, 實際: %s)", expectedSHA256, actualSHA)
+				_ = os.Remove(tempExePath)
+				return "", fmt.Errorf("新版本完整性校驗 (SHA-256) 失敗，已中止更新覆蓋 (預期: %s, 實際: %s)。\n\n建議指引：\n請直接前往官方 Releases 手動下載安裝包：\n%s", expectedSHA256, actualSHA, url)
 			}
 		}
 
@@ -352,19 +353,20 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 		// zip 流程
 		tempZipPath := filepath.Join(tempDir, "update.zip")
 		if err := downloader.DownloadFile(url, tempZipPath, progressCb); err != nil {
-			return "", fmt.Errorf("下載 zip 失敗: %w", err)
+			_ = os.Remove(tempZipPath)
+			return "", fmt.Errorf("下載新版本壓縮包失敗：%w。\n\n建議指引：\n請檢查網路連線或直接前往官方 Releases 手動下載更新：\n%s", err, url)
 		}
 
 		// 完整性校驗：若有提供預期 SHA-256，在解壓前進行比對
 		if expectedSHA256 != "" {
 			actualSHA, err := downloader.CalculateSHA256(tempZipPath)
 			if err != nil {
-				os.Remove(tempZipPath)
+				_ = os.Remove(tempZipPath)
 				return "", fmt.Errorf("計算新版本壓縮檔雜湊值失敗: %w", err)
 			}
 			if !strings.EqualFold(actualSHA, expectedSHA256) {
-				os.Remove(tempZipPath)
-				return "", fmt.Errorf("新版本完整性校驗 (SHA-256) 失敗，已中止更新覆蓋 (預期: %s, 實際: %s)", expectedSHA256, actualSHA)
+				_ = os.Remove(tempZipPath)
+				return "", fmt.Errorf("新版本完整性校驗 (SHA-256) 失敗，已中止更新覆蓋 (預期: %s, 實際: %s)。\n\n建議指引：\n請直接前往官方 Releases 手動下載安裝包：\n%s", expectedSHA256, actualSHA, url)
 			}
 		}
 
@@ -372,10 +374,10 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 		_ = os.RemoveAll(extractDir)
 
 		if err := downloader.Unzip(tempZipPath, extractDir); err != nil {
-			os.Remove(tempZipPath)
-			return "", fmt.Errorf("解壓縮 zip 失敗: %w", err)
+			_ = os.Remove(tempZipPath)
+			return "", fmt.Errorf("解壓縮新版本 zip 失敗：%w。\n\n建議指引：\n壓縮包可能未下載完整，請直接手動下載安裝：\n%s", err, url)
 		}
-		os.Remove(tempZipPath)
+		_ = os.Remove(tempZipPath)
 
 		// 在解壓縮目錄下尋找 exe 檔案
 		var foundExe string
@@ -391,7 +393,7 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 		})
 		if err != nil || foundExe == "" {
 			_ = os.RemoveAll(extractDir)
-			return "", fmt.Errorf("在壓縮包中找不到任何 exe 執行檔")
+			return "", fmt.Errorf("在壓縮包中找不到任何 exe 執行檔。\n\n建議指引：\n請直接手動下載官方安裝包：\n%s", url)
 		}
 
 		newExeName = filepath.Base(foundExe)
@@ -411,13 +413,14 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 
 	// 安全性格式檢驗：驗證是否為合法 Windows PE 執行檔 (MZ 標頭及大小)
 	if err := ValidateExecutablePE(tempExePath); err != nil {
-		os.Remove(tempExePath)
-		return "", err
+		_ = os.Remove(tempExePath)
+		return "", fmt.Errorf("%w。\n\n建議指引：\n請手動前往官方 Releases 頁面下載標準安裝檔案：\n%s", err, url)
 	}
 
 	// 執行檔案重命名與替換
 	execPath, err := os.Executable()
 	if err != nil {
+		_ = os.Remove(tempExePath)
 		return "", fmt.Errorf("無法取得當前進程的執行檔路徑: %w", err)
 	}
 
@@ -426,6 +429,7 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 
 	// 將當前運行的 exe 重命名為 .old
 	if err := os.Rename(execPath, oldPath); err != nil {
+		_ = os.Remove(tempExePath)
 		return "", fmt.Errorf("無法將當前執行檔重命名，可能權限不足: %w", err)
 	}
 
@@ -435,10 +439,36 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 	if err := os.Rename(tempExePath, newExePath); err != nil {
 		// 若移動失敗，嘗試還原舊版，以防崩潰
 		_ = os.Rename(oldPath, execPath)
-		return "", fmt.Errorf("搬移新執行檔失敗: %w", err)
+		_ = os.Remove(tempExePath)
+		return "", fmt.Errorf("搬移新執行檔失敗，已自動還原原版本: %w", err)
 	}
 
 	return newExePath, nil
+}
+
+// RollbackUpdate 當新版本啟動失敗時，緊急將新 exe 移除並將 .old 復原回原本的 exe
+func RollbackUpdate(newExePath string) error {
+	execPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("無法取得執行檔路徑: %w", err)
+	}
+	return RollbackUpdateWithPath(execPath, newExePath)
+}
+
+// RollbackUpdateWithPath 針對指定執行路徑執行回滾與復原
+func RollbackUpdateWithPath(execPath, newExePath string) error {
+	oldPath := execPath + ".old"
+	if _, statErr := os.Stat(oldPath); statErr == nil {
+		// 刪除可能損壞或被攔截的新版 exe
+		if newExePath != "" {
+			_ = os.Remove(newExePath)
+		}
+		// 還原舊版本
+		if renameErr := os.Rename(oldPath, execPath); renameErr != nil {
+			return fmt.Errorf("還原舊版本執行檔失敗: %w", renameErr)
+		}
+	}
+	return nil
 }
 
 // CleanupOldVersion 清理殘留的舊版本檔案

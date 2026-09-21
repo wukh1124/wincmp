@@ -174,46 +174,57 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 	})
 
 	if err != nil {
-		a.handleErrorLog("system", i18n.Tfmt("❌ 下載 %s 失敗", name), err)
-		a.emitProgress(key, "error", 0, 0, 0, err.Error())
+		_ = os.Remove(destZip)
+		failErr := fmt.Errorf(
+			"%s",
+			i18n.Tfmt("依賴下載失敗：%v\n\n建議指引：\n1. 請檢查您的網路連線或代理設定後重試。\n2. 若持續失敗，可手動下載：%s\n3. 並解壓放置於以下 bin 目錄位置：%s", err, item.URL, destDir),
+		)
+		a.handleErrorLog("system", i18n.Tfmt("下載 %s 失敗", name), failErr)
+		a.emitProgress(key, "error", 0, 0, 0, failErr.Error())
 		return
 	}
 
 	// 2.5 進行 SHA-256 完整性校驗（強制必須校驗）
-	a.handleLog("system", i18n.Tfmt("🛡️ 正在校驗 %s 的完整性...", name))
+	a.handleLog("system", i18n.Tfmt("正在校驗 %s 的完整性...", name))
 	shaVal, shaErr := downloader.CalculateSHA256(destZip)
 	if shaErr != nil {
-		a.handleErrorLog("system", i18n.Tfmt("❌ 計算 %s 的 SHA-256 失敗", name), shaErr)
+		a.handleErrorLog("system", i18n.Tfmt("計算 %s 的 SHA-256 失敗", name), shaErr)
 		a.emitProgress(key, "error", 0, 0, 0, shaErr.Error())
-		os.Remove(destZip)
+		_ = os.Remove(destZip)
 		return
 	}
 	if !strings.EqualFold(shaVal, item.SHA256) {
 		mismatchErr := fmt.Errorf(
 			"%s",
-			i18n.Tfmt("SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。\n\n💡 建議指引：\n1. 請先嘗試在依賴管理面板點擊「獲取最新」，然後重試下載。\n2. 若問題持續，請手動下載：%s\n3. 並解壓放置於以下 bin 目錄位置：%s", item.URL, destDir),
+			i18n.Tfmt("SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。\n\n建議指引：\n1. 請先嘗試在依賴管理面板點擊「獲取最新」，然後重試下載。\n2. 若問題持續，請手動下載：%s\n3. 並解壓放置於以下 bin 目錄位置：%s", item.URL, destDir),
 		)
-		a.handleErrorLog("system", i18n.Tfmt("❌ %s 的完整性校驗失敗", name), mismatchErr)
+		a.handleErrorLog("system", i18n.Tfmt("%s 的完整性校驗失敗", name), mismatchErr)
 		a.emitProgress(key, "error", 0, 0, 0, mismatchErr.Error())
-		os.Remove(destZip)
+		_ = os.Remove(destZip)
 		return
 	}
-	a.handleLog("system", i18n.Tfmt("🛡️ %s 的 SHA-256 校驗成功！", name))
+	a.handleLog("system", i18n.Tfmt("%s 的 SHA-256 校驗成功！", name))
 
 	// 3. 解壓縮處理
 	if strings.HasSuffix(destZip, ".zip") {
-		a.handleLog("system", i18n.Tfmt("📦 正在解壓縮 %s...", name))
+		a.handleLog("system", i18n.Tfmt("正在解壓縮 %s...", name))
 		a.emitProgress(key, "extracting", 0.5, 0, 0, "")
 
 		err = downloader.Unzip(destZip, destDir)
 		if err != nil {
-			a.handleErrorLog("system", i18n.Tfmt("❌ 解壓縮 %s 失敗", name), err)
-			a.emitProgress(key, "error", 0, 0, 0, err.Error())
+			_ = os.RemoveAll(destDir) // 清理殘留目錄，防半殘依賴
+			_ = os.Remove(destZip)    // 清理損壞壓縮包
+			unzipErr := fmt.Errorf(
+				"%s",
+				i18n.Tfmt("解壓縮 %s 失敗：%v\n\n建議指引：\n檔案可能損毀。請手動下載：%s\n並解壓放置於以下目錄：%s", name, err, item.URL, destDir),
+			)
+			a.handleErrorLog("system", i18n.Tfmt("解壓縮 %s 失敗", name), unzipErr)
+			a.emitProgress(key, "error", 0, 0, 0, unzipErr.Error())
 			return
 		}
 
 		// 解壓縮完成後刪除暫存 zip
-		os.Remove(destZip)
+		_ = os.Remove(destZip)
 
 		// 處理 MariaDB 目錄重新命名 (mariadb-11.4.2-winx64 -> mariadb-11.4.2)
 		if key == "mariadb" {
