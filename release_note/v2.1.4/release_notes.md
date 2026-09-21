@@ -1,6 +1,6 @@
 # WinCMP v2.1.4
 
-Release date: 2026-09-21
+Release date: 2026-09-22
 
 This release introduces new features, updates, and fixes to WinCMP.
 
@@ -9,23 +9,23 @@ This release introduces new features, updates, and fixes to WinCMP.
 ### Dependencies
 - **PHP 7.4 and Redis extension**: Added support for PHP 7.4.33 (NTS x64) and PECL Redis 5.3.7 extension, automatically mapped to Laravel 6.x–8.x project recommendations.
 
+### Security
+- **Download and update defense**: Enforced official domain whitelisting, mandatory SHA-256 hash checks, and PE format validation for updater and dependencies, with automatic rollback and diagnostic links on failure.
+
 ### Added
-- **Reveal log in File Explorer**: Added a "Reveal in File Explorer" context menu action in terminal logs to open the folder containing today's log file with the file highlighted.
-- **Terminal log line count tooltip**: Hovering over category tabs now displays the full service name and current buffered line count (e.g., `Caddy - 4 lines total`) while keeping the tab labels clean.
-- **Automatic dependency update check**: Entering the Dependency Manager automatically triggers a silent background update check with cooldown throttling to avoid redundant network requests.
+- **Reveal log in File Explorer**: Added a "Reveal in File Explorer" context menu action in terminal logs to highlight today's log file.
+- **Terminal log line count tooltip**: Hovering over category tabs displays the full service name and current buffered line count (e.g., `Caddy - 4 lines total`).
+- **Automatic dependency checks & download links**: Automatically checks for updates upon entering the Dependency Manager, and added an action to copy official download links for manual troubleshooting.
 
 ### Changed
-- **Database explorer layout refinements**:
-  - Moved the MariaDB and Redis switcher to the top title bar aligned to the right, showing connection address and status via tooltip on hover.
-  - Relocated MariaDB "Refresh" and "Open in HeidiSQL" buttons directly to the database and table list header rows.
-  - Relocated Redis key search to the top of the Keys list, "Refresh" button to the Keys header, and DB selector to the left of the key detail header.
-  - Standardized header row heights across both MariaDB and Redis panels to 48px to eliminate layout jitter during tab switching.
-- **Settings descriptions enhanced**: Streamlined toggle titles and added comprehensive description hints under every setting option for a clean, cohesive layout.
+- **Database explorer layout refinements**: Restructured MariaDB/Redis switchers, toolbar actions, and search placements, standardizing header height to 48px to eliminate layout jitter.
+- **Settings descriptions enhanced**: Streamlined toggle titles and added comprehensive description hints under each setting option.
 
 ### Fixed
-- **Missing Caddy snippets on fresh install**: Fixed an issue where standalone executables running for the first time did not automatically extract embedded `snippets/common.caddy` and `snippets/php-upstream.caddy`, causing Caddy startup errors.
-- **Terminal log open console flicker**: Eliminated console window flicker when opening log files with the default editor, and resolved editor launch failures on specific system paths.
-- **Carbon theme context menu transparency**: Resolved background transparency issues in the Carbon dark theme where context menus and dropdowns suffered from readability and text bleed-through, introducing solid background surfaces with drop shadows.
+- **Dashboard navigation flicker**: Eliminated button and status flickering during view transitions using module caching and adaptive skeletons.
+- **Windows file locking & process warnings**: Added retry logic for directory renames to overcome transient file lock errors on Windows, and suppressed false-positive termination warnings when stopping runtime services.
+- **Missing Caddy snippets on fresh install**: Fixed an issue where standalone executables running for the first time did not automatically extract embedded snippets, causing Caddy startup errors.
+- **Terminal log & context menu display**: Eliminated console window flicker when opening log files, and resolved background transparency bleed-through in the Carbon dark theme.
 
 ## Getting Started
 1. Download `wincmp-v2.1.4-win-x64.zip`.
