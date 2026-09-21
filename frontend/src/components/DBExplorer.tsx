@@ -452,8 +452,8 @@ export default function DBExplorer() {
   }, []);
 
   useEffect(() => {
-    checkMariaDBStatus();
-    loadPorts().then(() => checkRedisStatus());
+    checkMariaDBStatus(false);
+    loadPorts().then(() => checkRedisStatus(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -490,8 +490,9 @@ export default function DBExplorer() {
     }
   };
 
-  const checkMariaDBStatus = async () => {
-    setIsLoadingMariaDB(true);
+  const checkMariaDBStatus = async (isManual = false) => {
+    if (isManual) setIsLoadingMariaDB(true);
+    const startTime = Date.now();
     try {
       const running = await IsMariaDBRunning();
       setIsMariaDBRunning(running);
@@ -502,7 +503,13 @@ export default function DBExplorer() {
     } catch (err) {
       console.error('檢查 MariaDB 失敗:', err);
     } finally {
-      setIsLoadingMariaDB(false);
+      if (isManual) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 500) {
+          await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+        }
+        setIsLoadingMariaDB(false);
+      }
     }
   };
 
@@ -528,8 +535,9 @@ export default function DBExplorer() {
     }
   };
 
-  const checkRedisStatus = async () => {
-    // 連線探測不視為載入中，避免 Redis 未啟動時重新整理圖示一直轉動
+  const checkRedisStatus = async (isManual = false) => {
+    if (isManual) setIsLoadingRedis(true);
+    const startTime = Date.now();
     try {
       let isAlive = false;
       if ((window as any).go?.main?.App?.RedisPing) {
@@ -538,9 +546,8 @@ export default function DBExplorer() {
       setIsRedisRunning(isAlive);
       if (isAlive) {
         await fetchRedisDBList();
-        await scanRedisKeys(selectedDB, 0, searchMatch, true);
+        await scanRedisKeys(selectedDB, 0, searchMatch, true, isManual);
       } else {
-        setIsLoadingRedis(false);
         setRedisKeys([]);
         setRedisCursor(0);
         setPartialSearch(false);
@@ -550,7 +557,14 @@ export default function DBExplorer() {
     } catch (err) {
       console.error('檢查 Redis 失敗:', err);
       setIsRedisRunning(false);
-      setIsLoadingRedis(false);
+    } finally {
+      if (isManual) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 500) {
+          await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+        }
+        setIsLoadingRedis(false);
+      }
     }
   };
 
@@ -575,8 +589,9 @@ export default function DBExplorer() {
   };
 
   /** 多頁 SCAN：避免單頁空結果被誤判為「找不到 Key」 */
-  const scanRedisKeys = async (db: number, cursor: number, match: string, reset = false) => {
-    setIsLoadingRedis(true);
+  const scanRedisKeys = async (db: number, cursor: number, match: string, reset = false, isManual = false) => {
+    if (isManual) setIsLoadingRedis(true);
+    const startTime = Date.now();
     try {
       const batch: RedisKeyItem[] = [];
       let nextCursor = cursor;
@@ -600,7 +615,13 @@ export default function DBExplorer() {
     } catch (err) {
       console.error('掃描 Redis 鍵值失敗:', err);
     } finally {
-      setIsLoadingRedis(false);
+      if (isManual) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 500) {
+          await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+        }
+        setIsLoadingRedis(false);
+      }
     }
   };
 
@@ -651,7 +672,10 @@ export default function DBExplorer() {
 
         <div className="flex items-center gap-1 p-1 rounded-xl border shrink-0" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
           <button
-            onClick={() => setActiveTab('mariadb')}
+            onClick={() => {
+              setActiveTab('mariadb');
+              checkMariaDBStatus(false);
+            }}
             title={isMariaDBRunning ? `127.0.0.1:${mariaDBPort} (${t('運行中')})` : `127.0.0.1:${mariaDBPort} (${t('未啟動')})`}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${activeTab === 'mariadb' ? 'shadow-sm' : ''}`}
             style={{
@@ -664,7 +688,7 @@ export default function DBExplorer() {
           <button
             onClick={() => {
               setActiveTab('redis');
-              checkRedisStatus();
+              checkRedisStatus(false);
             }}
             title={isRedisRunning ? `127.0.0.1:${redisPort} (${t('運行中')})` : `127.0.0.1:${redisPort} (${t('未啟動')})`}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${activeTab === 'redis' ? 'shadow-sm' : ''}`}
@@ -702,14 +726,14 @@ export default function DBExplorer() {
                 >
                   <span>Databases ({databases.length})</span>
                   <button
-                    onClick={checkMariaDBStatus}
+                    onClick={() => checkMariaDBStatus(true)}
                     disabled={isLoadingMariaDB}
-                    title={t('重新整理')}
-                    className="btn-custom-hover px-2 py-1 rounded-md text-[11px] font-semibold border flex items-center gap-1 transition duration-200 shrink-0"
-                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)', color: 'var(--fg-2)' }}
+                    title={t('重新整理 MariaDB 資料庫清單')}
+                    className="btn-custom-hover px-2 py-1 rounded-md text-[11px] font-semibold border flex items-center gap-1 transition duration-200 shrink-0 cursor-pointer"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)', color: 'var(--fg-2)', opacity: isLoadingMariaDB ? 0.7 : 1 }}
                   >
                     <RefreshCw size={11} className={isLoadingMariaDB ? 'animate-spin' : ''} />
-                    <span>{t('重新整理')}</span>
+                    <span>{isLoadingMariaDB ? t('整理中...') : t('重新整理')}</span>
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2.5 space-y-0.5">
@@ -833,14 +857,14 @@ export default function DBExplorer() {
                       </button>
                     )}
                     <button
-                      onClick={() => checkRedisStatus()}
-                      disabled={isLoadingRedis && isRedisRunning}
-                      title={t('重新整理')}
-                      className="btn-custom-hover px-2 py-1 rounded-md text-[11px] font-semibold border flex items-center gap-1 transition duration-200"
-                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)', color: 'var(--fg-2)' }}
+                      onClick={() => checkRedisStatus(true)}
+                      disabled={isLoadingRedis}
+                      title={t('重新整理 Redis 鍵值與連線狀態')}
+                      className="btn-custom-hover px-2 py-1 rounded-md text-[11px] font-semibold border flex items-center gap-1 transition duration-200 cursor-pointer"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)', color: 'var(--fg-2)', opacity: isLoadingRedis ? 0.7 : 1 }}
                     >
-                      <RefreshCw size={11} className={isLoadingRedis && isRedisRunning ? 'animate-spin' : ''} />
-                      <span>{t('重新整理')}</span>
+                      <RefreshCw size={11} className={isLoadingRedis ? 'animate-spin' : ''} />
+                      <span>{isLoadingRedis ? t('整理中...') : t('重新整理')}</span>
                     </button>
                   </div>
                 </div>

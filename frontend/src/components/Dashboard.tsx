@@ -95,14 +95,24 @@ export default function Dashboard() {
 
   const handleScan = async () => {
     setIsScanning(true);
+    const startTime = Date.now();
     try {
       const res = await ScanServices();
       setScanResult(res);
       await updateStatus();
       const missing = await CheckMissingCoreDependencies();
       setMissingCore({ caddy: !!missing?.caddy });
-    } catch (err) { console.error("掃描二進位服務失敗:", err); }
-    finally { setIsScanning(false); }
+
+      // 保證至少 500ms 視覺過渡，避免本機掃描過快造成無感瞬閃
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 500) {
+        await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+      }
+    } catch (err) {
+      console.error("掃描二進位服務失敗:", err);
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   const triggerAutoExpandLogs = () => {
@@ -252,7 +262,18 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-          <button onClick={handleScan} disabled={isScanning} className="btn-custom-hover px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200" style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--fg-2)', opacity: isScanning ? 0.5 : 1 }}>
+          <button
+            onClick={handleScan}
+            disabled={isScanning}
+            className="btn-custom-hover px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 cursor-pointer"
+            style={{
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+              color: 'var(--fg-2)',
+              opacity: isScanning ? 0.7 : 1
+            }}
+            title={t("重新掃描 bin/ 目錄下的所有服務二進位檔與版本")}
+          >
             <RefreshCw size={13} className={isScanning ? 'animate-spin' : ''} />
             {isScanning ? t("掃描中...") : t("重新掃描服務")}
           </button>
