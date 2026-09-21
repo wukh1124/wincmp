@@ -635,4 +635,10 @@ var enTranslations = map[string]string{
 	"進程已送出終止信號，但端口尚未完全釋放，請稍候重試":                                                      "Process termination signal sent, but port is not fully released yet. Please retry in a moment.",
 	"指定的執行端口目前已被佔用":         "The specified port is currently in use",
 	"[%s] 端口 %d 目前已被其他進程佔用": "[%s] Port %d is currently occupied by another process",
+	"依賴項目未提供 SHA-256 校驗碼，基於安全考量拒絕下載":             "Dependency is missing SHA-256 checksum, download rejected for security reasons",
+	"依賴項目的 SHA-256 校驗碼格式無效，基於安全考量拒絕下載":           "Invalid SHA-256 checksum format for dependency, download rejected for security reasons",
+	"依賴項目的下載網址格式無效: %w":                            "Invalid download URL format for dependency: %w",
+	"依賴項目的下載網址必須使用 HTTPS 加密協議":                       "Dependency download URL must use HTTPS protocol",
+	"依賴項目下載來源非受信任網域 (%s)，基於安全考量拒絕下載":             "Dependency download source is not a trusted domain (%s), download rejected for security reasons",
+	"安全性檢查失敗：%s":                                  "Security check failed: %s",
 }

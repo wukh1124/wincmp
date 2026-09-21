@@ -619,6 +619,11 @@ export const enTranslations: Record<string, string> = {
   "刪除鍵值失敗": "Failed to delete key",
   "成功從遠端獲取最新的建議依賴配置！已同步刷新本機環境。": "Fetched latest remote dependency config. Local environment has been rescanned.",
   "共 %d 行": "%d lines in total",
+  "依賴項目未提供 SHA-256 校驗碼，基於安全考量拒絕下載": "Dependency is missing SHA-256 checksum, download rejected for security reasons",
+  "依賴項目的 SHA-256 校驗碼格式無效，基於安全考量拒絕下載": "Invalid SHA-256 checksum format for dependency, download rejected for security reasons",
+  "依賴項目的下載網址必須使用 HTTPS 加密協議": "Dependency download URL must use HTTPS protocol",
+  "依賴項目下載來源非受信任網域 (%s)，基於安全考量拒絕下載": "Dependency download source is not a trusted domain (%s), download rejected for security reasons",
+  "安全性檢查失敗：%s": "Security check failed: %s",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符
