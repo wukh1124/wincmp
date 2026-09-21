@@ -245,8 +245,11 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 			oldDir := filepath.Join(binDir, "mariadb", "mariadb-"+cleanVer+"-winx64")
 			newDir := filepath.Join(binDir, "mariadb", "mariadb-"+cleanVer)
 			if _, err := os.Stat(oldDir); err == nil {
-				os.RemoveAll(newDir)
-				if renameErr := os.Rename(oldDir, newDir); renameErr != nil {
+				if _, statErr := os.Stat(newDir); statErr == nil {
+					_ = os.RemoveAll(newDir)
+					time.Sleep(100 * time.Millisecond) // 等待 NTFS 標記刪除佇列釋放 handle
+				}
+				if renameErr := renameWithRetry(oldDir, newDir, 5, 150*time.Millisecond); renameErr != nil {
 					a.handleErrorLog("system", i18n.T("MariaDB 目錄重新命名失敗"), renameErr)
 				}
 			}
@@ -257,10 +260,12 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 			oldDir := filepath.Join(binDir, "node", "node-v"+item.Version+"-win-x64")
 			newDir := filepath.Join(binDir, "node", "node-"+item.Version)
 			if _, err := os.Stat(oldDir); err == nil {
-				if _, err := os.Stat(newDir); os.IsNotExist(err) {
-					if renameErr := os.Rename(oldDir, newDir); renameErr != nil {
-						a.handleErrorLog("system", i18n.T("Node.js 目錄重新命名失敗"), renameErr)
-					}
+				if _, statErr := os.Stat(newDir); statErr == nil {
+					_ = os.RemoveAll(newDir)
+					time.Sleep(100 * time.Millisecond) // 等待 NTFS 標記刪除佇列釋放 handle
+				}
+				if renameErr := renameWithRetry(oldDir, newDir, 5, 150*time.Millisecond); renameErr != nil {
+					a.handleErrorLog("system", i18n.T("Node.js 目錄重新命名失敗"), renameErr)
 				}
 			}
 		}
@@ -397,6 +402,19 @@ func copyFile(src, dst string) error {
 	defer out.Close()
 
 	_, err = io.Copy(out, in)
+	return err
+}
+
+// renameWithRetry 提供具備退避重試的重命名機制，防範 Windows 上因防毒即時掃描或 NTFS 刪除延遲造成的瞬時 Access is denied
+func renameWithRetry(oldDir, newDir string, retries int, delay time.Duration) error {
+	var err error
+	for i := 0; i < retries; i++ {
+		err = os.Rename(oldDir, newDir)
+		if err == nil {
+			return nil
+		}
+		time.Sleep(delay)
+	}
 	return err
 }
 

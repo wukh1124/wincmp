@@ -13,6 +13,7 @@ Thumbs.db
 *.dylib
 *.test
 *.out
+*.syso
 vendor/
 
 # --- Project Specific Binaries ---
