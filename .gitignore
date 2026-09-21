@@ -75,6 +75,7 @@ vendor/
 .memory-bank/
 
 build/bin/
+build/dev/
 build/windows/installer/
 
 # 項目落地頁

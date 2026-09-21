@@ -77,6 +77,20 @@ func (a *App) startup(ctx context.Context) {
 		a.baseDir = filepath.Dir(execPath)
 	}
 
+	// 若在開發除錯模式 (wails dev 編譯於 build/bin)，將執行目錄隔離至 build/dev，
+	// 避免 wails build -clean 清空已下載的依賴與測試配置，同時徹底隔離專案源碼根目錄。
+	binDirName := filepath.Base(a.baseDir)
+	buildDirName := filepath.Base(filepath.Dir(a.baseDir))
+	projectRoot := filepath.Dir(filepath.Dir(a.baseDir))
+	if strings.EqualFold(binDirName, "bin") && strings.EqualFold(buildDirName, "build") {
+		wailsJSON := filepath.Join(projectRoot, "wails.json")
+		if _, statErr := os.Stat(wailsJSON); statErr == nil {
+			devDir := filepath.Join(projectRoot, "build", "dev")
+			_ = os.MkdirAll(devDir, 0755)
+			a.baseDir = devDir
+		}
+	}
+
 	// 啟動時清理殘留的舊版本檔案及臨時目錄
 	updater.CleanupOldVersion(a.baseDir)
 
