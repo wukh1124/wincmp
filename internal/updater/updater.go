@@ -38,6 +38,81 @@ type ReleaseInfo struct {
 	PublishedAt    string `json:"published_at"`
 	DownloadURL    string `json:"download_url"`
 	AssetType      string `json:"asset_type"` // "exe" 或 "zip"
+	ExpectedSHA256 string `json:"expected_sha256"`
+}
+
+// OfficialReleaseURLPrefix 定義官方 GitHub Release 下載網址前綴
+const OfficialReleaseURLPrefix = "https://github.com/wukh1124/wincmp/releases/download/"
+
+// ValidateReleaseURL 檢查更新下載 URL 是否符合官方倉庫釋出規則
+func ValidateReleaseURL(targetURL string) error {
+	trimmed := strings.TrimSpace(targetURL)
+	if !strings.HasPrefix(trimmed, OfficialReleaseURLPrefix) {
+		return fmt.Errorf("更新下載網址非官方指定來源，基於安全考量拒絕下載")
+	}
+	return nil
+}
+
+// ValidateExecutablePE 檢查二進位檔案是否為合法的 Windows PE 執行檔且大小合理
+func ValidateExecutablePE(filePath string) error {
+	fi, err := os.Stat(filePath)
+	if err != nil {
+		return fmt.Errorf("無法取得檔案狀態: %w", err)
+	}
+	// WinCMP 為 Wails 編譯應用，正常至少大於 5MB；設定門檻 1MB 以杜絕 404 HTML 或微小錯誤文字檔
+	if fi.Size() < 1024*1024 {
+		return fmt.Errorf("下載之更新檔案大小異常 (%d 位元組)，已中止更新覆蓋", fi.Size())
+	}
+
+	f, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("無法開啟檔案進行格式驗證: %w", err)
+	}
+	defer f.Close()
+
+	header := make([]byte, 2)
+	if _, err := io.ReadFull(f, header); err != nil {
+		return fmt.Errorf("讀取執行檔標頭失敗: %w", err)
+	}
+
+	// Windows PE 檔案標頭魔術數字為 "MZ" (0x4D, 0x5A)
+	if header[0] != 'M' || header[1] != 'Z' {
+		return fmt.Errorf("下載之更新檔案非合法的 Windows 執行檔 (缺少 MZ 標頭)，已中止更新覆蓋")
+	}
+	return nil
+}
+
+// ParseChecksumsContent 解析 checksums.txt 內容為檔名對應 SHA-256 的 map
+func ParseChecksumsContent(content string) map[string]string {
+	res := make(map[string]string)
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) >= 2 {
+			hash := strings.TrimSpace(fields[0])
+			filename := strings.TrimSpace(fields[1])
+			filename = strings.TrimPrefix(filename, "*")
+			filename = filepath.Base(filename)
+			if len(hash) == 64 {
+				res[strings.ToLower(filename)] = strings.ToLower(hash)
+			}
+		}
+	}
+	return res
+}
+
+// GetExpectedSHA256 取得當前緩存 Release 中特定下載連結對應的預期 SHA-256
+func GetExpectedSHA256(downloadURL string) string {
+	cacheMu.Lock()
+	defer cacheMu.Unlock()
+	if cachedRelease != nil && cachedRelease.DownloadURL == downloadURL {
+		return cachedRelease.ExpectedSHA256
+	}
+	return ""
 }
 
 var (
@@ -121,6 +196,32 @@ func CheckNewVersionOpt(currentVersion string, force bool) (*ReleaseInfo, error)
 		}
 	}
 
+	// 4. 解析對應資產的 SHA-256（若有 checksums.txt 則優先取得）
+	var expectedSHA string
+	var checksumURL string
+	for _, asset := range release.Assets {
+		nameLower := strings.ToLower(asset.Name)
+		if nameLower == "checksums.txt" || nameLower == "sha256sums.txt" || nameLower == "checksum.txt" {
+			checksumURL = asset.BrowserDownloadURL
+			break
+		}
+	}
+
+	if checksumURL != "" && downloadURL != "" {
+		checksumContent := fetchRawContent(client, checksumURL)
+		checksumMap := ParseChecksumsContent(checksumContent)
+		targetFile := filepath.Base(downloadURL)
+		if hash, ok := checksumMap[strings.ToLower(targetFile)]; ok {
+			expectedSHA = hash
+		}
+	}
+
+	// Fallback：若無 checksums.txt，嘗試從 Release Body 尋找 64 碼 hex
+	if expectedSHA == "" && downloadURL != "" && release.Body != "" {
+		targetFile := filepath.Base(downloadURL)
+		expectedSHA = extractSHAFromReleaseBody(release.Body, targetFile)
+	}
+
 	// 獲取中英文 Release Notes 內容 (從 raw.githubusercontent.com 下載)
 	zhNotesURL := fmt.Sprintf("https://raw.githubusercontent.com/wukh1124/wincmp/main/release_note/%s/release_notes_zh.md", release.TagName)
 	enNotesURL := fmt.Sprintf("https://raw.githubusercontent.com/wukh1124/wincmp/main/release_note/%s/release_notes.md", release.TagName)
@@ -145,6 +246,7 @@ func CheckNewVersionOpt(currentVersion string, force bool) (*ReleaseInfo, error)
 		PublishedAt:    release.PublishedAt,
 		DownloadURL:    downloadURL,
 		AssetType:      assetType,
+		ExpectedSHA256: expectedSHA,
 	}
 
 	cacheMu.Lock()
@@ -153,6 +255,34 @@ func CheckNewVersionOpt(currentVersion string, force bool) (*ReleaseInfo, error)
 	cacheMu.Unlock()
 
 	return info, nil
+}
+
+// extractSHAFromReleaseBody 從 Release Body 中嘗試找出指定資產檔名對應的 SHA-256
+func extractSHAFromReleaseBody(body, filename string) string {
+	lines := strings.Split(body, "\n")
+	targetLower := strings.ToLower(filename)
+	for _, line := range lines {
+		lineLower := strings.ToLower(line)
+		if strings.Contains(lineLower, targetLower) || strings.Contains(lineLower, "sha256") || strings.Contains(lineLower, "sha-256") {
+			fields := strings.Fields(line)
+			for _, f := range fields {
+				cleanF := strings.Trim(f, "`\"':(),[]")
+				if len(cleanF) == 64 && isHex(cleanF) {
+					return strings.ToLower(cleanF)
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func isHex(s string) bool {
+	for _, r := range s {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f') || (r >= 'A' && r <= 'F')) {
+			return false
+		}
+	}
+	return true
 }
 
 // fetchRawContent 輔助函數：從 URL 獲取純文字內容
@@ -181,7 +311,12 @@ func fetchRawContent(client *http.Client, url string) string {
 }
 
 // DownloadAndUpdate 下載並替換二進位檔，成功後返回新執行檔路徑
-func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb func(current, total int64)) (string, error) {
+func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, baseDir string, progressCb func(current, total int64)) (string, error) {
+	// 0. 驗證 URL 白名單，必須為官方 GitHub Release 下載位址
+	if err := ValidateReleaseURL(url); err != nil {
+		return "", err
+	}
+
 	tempDir := filepath.Join(baseDir, "data", "temp")
 	if err := os.MkdirAll(tempDir, 0755); err != nil {
 		return "", fmt.Errorf("無法建立臨時目錄: %w", err)
@@ -195,6 +330,20 @@ func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb 
 		if err := downloader.DownloadFile(url, tempExePath, progressCb); err != nil {
 			return "", fmt.Errorf("下載 exe 失敗: %w", err)
 		}
+
+		// 完整性校驗：若有提供預期 SHA-256，進行比對
+		if expectedSHA256 != "" {
+			actualSHA, err := downloader.CalculateSHA256(tempExePath)
+			if err != nil {
+				os.Remove(tempExePath)
+				return "", fmt.Errorf("計算新版本雜湊值失敗: %w", err)
+			}
+			if !strings.EqualFold(actualSHA, expectedSHA256) {
+				os.Remove(tempExePath)
+				return "", fmt.Errorf("新版本完整性校驗 (SHA-256) 失敗，已中止更新覆蓋 (預期: %s, 實際: %s)", expectedSHA256, actualSHA)
+			}
+		}
+
 		newExeName = filepath.Base(url)
 		if !strings.HasSuffix(strings.ToLower(newExeName), ".exe") {
 			newExeName = "wincmp.exe"
@@ -204,6 +353,19 @@ func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb 
 		tempZipPath := filepath.Join(tempDir, "update.zip")
 		if err := downloader.DownloadFile(url, tempZipPath, progressCb); err != nil {
 			return "", fmt.Errorf("下載 zip 失敗: %w", err)
+		}
+
+		// 完整性校驗：若有提供預期 SHA-256，在解壓前進行比對
+		if expectedSHA256 != "" {
+			actualSHA, err := downloader.CalculateSHA256(tempZipPath)
+			if err != nil {
+				os.Remove(tempZipPath)
+				return "", fmt.Errorf("計算新版本壓縮檔雜湊值失敗: %w", err)
+			}
+			if !strings.EqualFold(actualSHA, expectedSHA256) {
+				os.Remove(tempZipPath)
+				return "", fmt.Errorf("新版本完整性校驗 (SHA-256) 失敗，已中止更新覆蓋 (預期: %s, 實際: %s)", expectedSHA256, actualSHA)
+			}
 		}
 
 		extractDir := filepath.Join(tempDir, "extracted")
@@ -245,6 +407,12 @@ func DownloadAndUpdate(url string, assetType string, baseDir string, progressCb 
 	// 檢查新 exe 是否確實存在
 	if _, err := os.Stat(tempExePath); err != nil {
 		return "", fmt.Errorf("無法驗證下載的執行檔: %w", err)
+	}
+
+	// 安全性格式檢驗：驗證是否為合法 Windows PE 執行檔 (MZ 標頭及大小)
+	if err := ValidateExecutablePE(tempExePath); err != nil {
+		os.Remove(tempExePath)
+		return "", err
 	}
 
 	// 執行檔案重命名與替換

@@ -92,7 +92,27 @@ wincmp/
 
 ---
 
-## 5. Agent 交付前自檢清單 (Checklist)
+## 5. 安全防護與供應鏈防禦規範
+
+所有涉及網路下載、執行檔替換、外部輸入或子進程啟動的新功能與重構，必須嚴格遵守以下安全規範：
+
+### 5.1 遠端下載與白名單約束
+* **強制 HTTPS 與官方網域**：嚴禁自非信任來源下載檔案。
+  * 依賴下載 (`internal/downloader`)：僅允許 `downloader.TrustedHostSuffixes` 官方白名單（`github.com`, `curl.se`, `mariadb.org`, `nodejs.org`, `php.net` 等）。
+  * 主程式更新 (`internal/updater`)：僅允許官方 GitHub Release 位址（前綴為 `https://github.com/wukh1124/wincmp/releases/download/`）。
+
+### 5.2 完整性與格式雙重校驗 (嚴禁略過)
+* **強制 SHA-256**：下載後解壓或執行前，**必須**透過 `downloader.CalculateSHA256` 進行雜湊比對。**嚴禁**允許空 Hash 略過校驗；比對不符必須立即刪除臨時檔並中斷流程。
+* **Windows PE 格式檢驗**：覆蓋執行檔前，必須調用 `ValidateExecutablePE` 檢查檔案大小門檻及前 2 位元組 `MZ` 標頭，防止 404 HTML 或錯誤文字檔損毀主程式。
+* **發布資產不可變與 Checksums**：Release 發布必須隨附 `checksums.txt`，且 GitHub 倉庫需維持開啟 `Enable release immutability`。
+
+### 5.3 命令注入與權限防護
+* **Runtime 命令淨化**：所有專案自訂指令必須經 `SanitizeRuntimeCommand` 檢查，防範 Shell 惡意字元注入與 `cmd start` / `Start-Process` 脫鉤繞過。
+* **路徑防遍歷**：解壓縮必須嚴格防範 Zip Slip，禁止包含 `..` 的相對路徑穿越。
+
+---
+
+## 6. Agent 交付前自檢清單 (Checklist)
 
 每次完成代碼變更交付前，請確認：
 - [ ] 無新產生之編譯產物或垃圾檔（`*.exe`, `dist/`, 臨時日誌）留存於 git 暫存區。
@@ -101,4 +121,6 @@ wincmp/
 - [ ] 新增字串皆透過 i18n 機制，繁中為 Key 且英譯已補齊；無新增 Emoji。
 - [ ] 未更動系統全域 PATH，路徑正斜線轉換正確。
 - [ ] 涉及 `internal/preset` 或 `internal/detect` 時職責邊界清楚，無混用。
+- [ ] 涉及檔案下載或更新時，落實官方 URL 白名單、強制 SHA-256 比對與 PE 標頭驗證。
 - [ ] 執行 `go test ./...` 零錯誤。
+

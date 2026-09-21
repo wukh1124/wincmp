@@ -624,6 +624,12 @@ export const enTranslations: Record<string, string> = {
   "依賴項目的下載網址必須使用 HTTPS 加密協議": "Dependency download URL must use HTTPS protocol",
   "依賴項目下載來源非受信任網域 (%s)，基於安全考量拒絕下載": "Dependency download source is not a trusted domain (%s), download rejected for security reasons",
   "安全性檢查失敗：%s": "Security check failed: %s",
+  "更新下載網址非官方指定來源，基於安全考量拒絕下載": "Update download URL is not from the official source, download rejected for security reasons",
+  "下載之更新檔案大小異常 (%d 位元組)，已中止更新覆蓋": "Downloaded update file size is abnormal (%d bytes), update aborted",
+  "下載之更新檔案非合法的 Windows 執行檔 (缺少 MZ 標頭)，已中止更新覆蓋": "Downloaded update file is not a valid Windows executable (missing MZ header), update aborted",
+  "新版本完整性校驗 (SHA-256) 失敗，已中止更新覆蓋 (預期: %s, 實際: %s)": "Update integrity check (SHA-256) failed, update aborted (expected: %s, actual: %s)",
+  "計算新版本雜湊值失敗: %w": "Failed to calculate hash of update file: %w",
+  "計算新版本壓縮檔雜湊值失敗: %w": "Failed to calculate hash of update archive: %w",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

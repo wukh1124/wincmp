@@ -71,6 +71,20 @@ jobs:
               echo "HAS_NOTES=false" >> $env:GITHUB_OUTPUT
           }
 
+      - name: Generate Checksums
+        shell: pwsh
+        run: |
+          $releaseDir = Resolve-Path "../wincmp-release-only"
+          $checksumsFile = Join-Path $releaseDir "checksums.txt"
+          Remove-Item -Path $checksumsFile -ErrorAction SilentlyContinue
+          
+          Get-ChildItem -Path $releaseDir -File | Where-Object { $_.Name -ne "checksums.txt" } | ForEach-Object {
+              $hash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLower()
+              "$hash  $($_.Name)" | Out-File -FilePath $checksumsFile -Encoding utf8 -Append
+          }
+          Write-Host "Generated checksums.txt:"
+          Get-Content $checksumsFile
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -82,5 +96,6 @@ jobs:
           files: |
             ../wincmp-release-only/wincmp-v${{ steps.release_info.outputs.VERSION }}-win-x64.zip
             ../wincmp-release-only/WinCMP_v${{ steps.release_info.outputs.VERSION }}.exe
+            ../wincmp-release-only/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

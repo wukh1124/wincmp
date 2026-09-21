@@ -1723,9 +1723,12 @@ func (a *App) CheckNewVersion() (*updater.ReleaseInfo, error) {
 func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
 	a.handleLog("system", i18n.Tfmt("🚀 開始下載新版本：%s (類型: %s)...", downloadURL, assetType))
 
+	// 取得當前緩存 Release 資訊中的預期 SHA-256（若有）
+	expectedSHA := updater.GetExpectedSHA256(downloadURL)
+
 	// 在協程中執行更新，避免阻塞 Wails
 	go func() {
-		newExePath, err := updater.DownloadAndUpdate(downloadURL, assetType, a.baseDir, func(current, total int64) {
+		newExePath, err := updater.DownloadAndUpdate(downloadURL, assetType, expectedSHA, a.baseDir, func(current, total int64) {
 			var percent float64 = 0
 			if total > 0 {
 				percent = float64(current) / float64(total)

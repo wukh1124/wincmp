@@ -280,6 +280,18 @@ if (Test-Path -LiteralPath $InfoJsonPath) {
     Write-Host "    -> Removed obsolete release_info.json" -ForegroundColor Yellow
 }
 
+# 10. Generate checksums.txt in release parent directory
+Write-Host "[10] Generating checksums.txt for release assets..." -ForegroundColor Gray
+$ChecksumsFile = Join-Path $ReleaseParentDir "checksums.txt"
+if (Test-Path -LiteralPath $ChecksumsFile) {
+    Remove-Item -LiteralPath $ChecksumsFile -Force
+}
+Get-ChildItem -Path $ReleaseParentDir -File | Where-Object { $_.Name -ne "checksums.txt" } | ForEach-Object {
+    $hash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLower()
+    "$hash  $($_.Name)" | Out-File -FilePath $ChecksumsFile -Encoding utf8 -Append
+}
+Write-Host "    -> Generated checksums.txt at: $ChecksumsFile" -ForegroundColor Green
+
 # Return to root
 Set-Location -Path $ProjectRoot
 
