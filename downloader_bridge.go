@@ -268,6 +268,8 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 					targetMajorMin = "8.4"
 				} else if strings.HasSuffix(key, "_73") {
 					targetMajorMin = "7.3"
+				} else if strings.HasSuffix(key, "_74") {
+					targetMajorMin = "7.4"
 				}
 
 				phpBaseDir := filepath.Join(binDir, "php")

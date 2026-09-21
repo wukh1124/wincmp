@@ -14,6 +14,7 @@
       "mariadb": false,
       "php": {
         "7.3.33": false,
+        "7.4.33": false,
         "8.2.30": false,
         "8.3.28": false
       }
@@ -28,6 +29,7 @@
       "processes_per_version": 3,
       "processes": {
         "7.3": 3,
+        "7.4": 3,
         "8.2": 10,
         "8.3": 3
       }

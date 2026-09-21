@@ -39,6 +39,11 @@
     "url": "https://windows.php.net/downloads/releases/archives/php-7.3.33-nts-Win32-VC15-x64.zip",
     "sha256": "5eaf3cad80e678623f222a42c99bcefcc60eea359d407fb51e805afdb3b13e5e"
   },
+  "php74": {
+    "version": "7.4.33",
+    "url": "https://windows.php.net/downloads/releases/archives/php-7.4.33-nts-Win32-vc15-x64.zip",
+    "sha256": "14ae3250d4447c8ccfc4c45a70d90adfbcd61e728d85f0be56a7ddf8f9c8aace"
+  },
   "php82": {
     "version": "8.2.33",
     "url": "https://windows.php.net/downloads/releases/php-8.2.33-nts-Win32-vs16-x64.zip",
@@ -53,6 +58,11 @@
     "version": "8.4.25",
     "url": "https://windows.php.net/downloads/releases/php-8.4.25-nts-Win32-vs17-x64.zip",
     "sha256": "43a8f67ed2e5223fafb21293c85976361808855405278cef2cf3037c3ae2529c"
+  },
+  "php_redis_74": {
+    "version": "5.3.7",
+    "url": "https://downloads.php.net/~windows/pecl/releases/redis/5.3.7/php_redis-5.3.7-7.4-nts-vc15-x64.zip",
+    "sha256": "dd846e3215740049d7ee5bfe11e10ebe1fce5c4db910065df3749b6a846cfbfc"
   },
   "php_redis_82": {
     "version": "6.3.0",

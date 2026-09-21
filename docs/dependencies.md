@@ -14,10 +14,11 @@ WinCMP 依賴的二進位檔案目錄定義於 [`conf/dependencies.json`](../con
 | `caddy` | Caddy | 2.11.4 | `caddy/caddy-2.11.4/caddy.exe` |
 | `mariadb` | MariaDB | 11.4.10 | `mariadb/mariadb-11.4.10/bin/mariadbd.exe` |
 | `php73` | PHP 7.3 | 7.3.33 | `php/php-<zip 資料夾名>/php-cgi.exe` |
+| `php74` | PHP 7.4 | 7.4.33 | 同上（例如 `php/php-7.4.33-nts-Win32-vc15-x64/`） |
 | `php82` | PHP 8.2 | 8.2.33 | 同上（例如 `php/php-8.2.33-nts-Win32-vs16-x64/`） |
 | `php83` | PHP 8.3 | 8.3.33 | 同上 |
 | `php84` | PHP 8.4 | 8.4.25 | 同上（vs17） |
-| `php_redis_82` 等 | PHP Redis 擴充 | 6.3.0 | 解壓後的 `php_redis.dll` → `php/php-*/ext/` |
+| `php_redis_*` | PHP Redis 擴充 | 5.3.7 (7.4) / 6.3.0 (8.x) | 解壓後的 `php_redis.dll` → `php/php-*/ext/` |
 | `redis` | Redis | 5.0.14.1 | `redis/redis-5.0.14.1/redis-server.exe` |
 | `mailpit` | Mailpit | 1.31.1 | `mailpit/mailpit-1.31.1/mailpit.exe` |
 | `node` | Node.js | 24.21.0 | `node/node-24.21.0/npm.cmd` |
