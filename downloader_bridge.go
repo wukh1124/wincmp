@@ -163,8 +163,11 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 	// 1.5 安全性預檢：驗證下載網址合法性、HTTPS 協議、官方白名單與 SHA-256 必填規則
 	if err := downloader.ValidateSecurity(item.URL, item.SHA256); err != nil {
 		diagErr := fmt.Errorf(
-			"%s\n\n建議指引與診斷資訊：\n1. 遠端配置來源 (DependencyURL)：%s\n2. 可能原因：遠端建議設定檔尚未發布該項目版本、SHA-256 遺漏或本地配置缺少雜湊值。\n3. 請嘗試在依賴管理面板點擊「獲取最新」同步設定；若為自訂/測試環境，請確認倉庫分支或本地 dependencies.json 是否已填入正確的 sha256。",
-			err.Error(), depURL,
+			"%s",
+			i18n.Tfmt(
+				"%s\n\n建議指引與診斷資訊：\n1. 遠端配置來源 (DependencyURL)：%s\n2. 可能原因：遠端建議設定檔尚未發布該項目版本、SHA-256 遺漏或本地配置缺少雜湊值。\n3. 請嘗試在依賴管理面板點擊「獲取最新」同步設定；若為自訂/測試環境，請確認倉庫分支或本地 dependencies.json 是否已填入正確的 sha256。",
+				i18n.T(err.Error()), depURL,
+			),
 		)
 		a.handleErrorLog("system", i18n.Tfmt("安全性檢查失敗：%s", name), diagErr)
 		a.emitProgress(key, "error", 0, 0, 0, diagErr.Error())

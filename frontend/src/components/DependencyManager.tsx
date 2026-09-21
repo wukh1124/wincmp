@@ -3,7 +3,7 @@ import {
   X, RefreshCw, Download, ArrowUpCircle, CheckCircle2,
   Loader2, AlertTriangle, Cpu, Database, Settings as SettingsIcon,
   HelpCircle, Server, Terminal, HardDrive, Zap, ChevronDown,
-  Trash2, RotateCw, FolderOpen
+  Trash2, RotateCw, FolderOpen, Copy, Check
 } from 'lucide-react';
 import {
   GetDependencyConfig, FetchRemoteDependencies, DownloadDependency,
@@ -25,6 +25,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
   const [isFetchingRemote, setIsFetchingRemote] = useState(false);
   const [progressMap, setProgressMap] = useState<Record<string, ProgressData>>({});
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const lastAutoFetchRef = useRef<number>(0);
 
   const loadData = async () => {
@@ -64,6 +65,16 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
   useEffect(() => {
     if (isOpen) {
       loadData();
+      // 清除先前的錯誤與非進行中狀態，避免重開視窗時卡在舊的失敗畫面
+      setProgressMap(prev => {
+        const next: Record<string, ProgressData> = {};
+        for (const [k, v] of Object.entries(prev)) {
+          if (v.status === 'downloading' || v.status === 'extracting' || v.status === 'preparing') {
+            next[k] = v;
+          }
+        }
+        return next;
+      });
       const now = Date.now();
       // 首次進入或距上次更新超過 3 分鐘時自動觸發靜默檢查
       if (now - lastAutoFetchRef.current > 3 * 60 * 1000) {
@@ -155,6 +166,59 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
       console.error("開啟安裝目錄失敗:", err);
       (window as any).customAlert(`${t("開啟安裝目錄失敗")}: ${err}`);
     }
+  };
+
+  const handleCopyUrl = async (url: string, key: string) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else if ((window as any).runtime?.ClipboardSetText) {
+        await (window as any).runtime.ClipboardSetText(url);
+      }
+      setCopiedKey(key);
+      setTimeout(() => {
+        setCopiedKey(null);
+      }, 1800);
+    } catch (err) {
+      console.error("複製下載網址失敗:", err);
+    }
+  };
+
+  const formatErrorMessage = (errStr: string): string => {
+    if (!errStr) return '';
+    const lines = errStr.split('\n');
+    const prefixRules: Array<[string, string]> = [
+      ['1. 遠端配置來源 (DependencyURL)：', t('1. 遠端配置來源 (DependencyURL)：')],
+      ['1. 遠端配置來源：', t('1. 遠端配置來源：')],
+      ['2. 可能原因：遠端建議設定檔尚未發布該項目版本、SHA-256 遺漏或本地配置缺少雜湊值。', t('2. 可能原因：遠端建議設定檔尚未發布該項目版本、SHA-256 遺漏或本地配置缺少雜湊值。')],
+      ['3. 請嘗試在依賴管理面板點擊「獲取最新」同步設定；若為自訂/測試環境，請確認倉庫分支或本地 dependencies.json 是否已填入正確的 sha256。', t('3. 請嘗試在依賴管理面板點擊「獲取最新」同步設定；若為自訂/測試環境，請確認倉庫分支或本地 dependencies.json 是否已填入正確的 sha256。')],
+      ['2. 請檢查您的網路連線或代理設定後重試。', t('2. 請檢查您的網路連線或代理設定後重試。')],
+      ['3. 若持續失敗，可手動下載：', t('3. 若持續失敗，可手動下載：')],
+      ['4. 並解壓放置於以下 bin 目錄位置：', t('4. 並解壓放置於以下 bin 目錄位置：')],
+      ['2. 請先嘗試在依賴管理面板點擊「獲取最新」，然後重試下載。', t('2. 請先嘗試在依賴管理面板點擊「獲取最新」，然後重試下載。')],
+      ['3. 若問題持續，請手動下載：', t('3. 若問題持續，請手動下載：')],
+      ['建議指引與診斷資訊：', t('建議指引與診斷資訊：')],
+      ['建議指引：', t('建議指引：')],
+      ['檔案可能損毀。請手動下載：', t('檔案可能損毀。請手動下載：')],
+      ['並解壓放置於以下目錄：', t('並解壓放置於以下目錄：')],
+      ['依賴項目未提供 SHA-256 校驗碼，基於安全考量拒絕下載', t('依賴項目未提供 SHA-256 校驗碼，基於安全考量拒絕下載')],
+      ['SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。', t('SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。')],
+    ];
+
+    return lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return line;
+      const translated = t(trimmed);
+      if (translated !== trimmed) {
+        return line.replace(trimmed, translated);
+      }
+      for (const [zhPrefix, targetPrefix] of prefixRules) {
+        if (line.includes(zhPrefix)) {
+          return line.replace(zhPrefix, targetPrefix);
+        }
+      }
+      return line;
+    }).join('\n');
   };
 
   const compareVersions = (v1: string, v2: string) => {
@@ -329,14 +393,51 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           <div className="flex flex-col gap-2 p-3 rounded-lg" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)' }}>
             <div className="flex justify-between items-center text-xs">
               <span className="font-semibold flex items-center gap-2" style={{ color: 'var(--status-error)' }}>{icon} {t(label)}</span>
-              <span className="flex items-center gap-1" style={{ color: 'var(--status-error)' }}>
-                <AlertTriangle size={12} /> {t("安裝失敗")}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1" style={{ color: 'var(--status-error)' }}>
+                  <AlertTriangle size={12} /> {t("安裝失敗")}
+                </span>
+                <button
+                  onClick={() => {
+                    setProgressMap(prev => {
+                      const copy = { ...prev };
+                      delete copy[key];
+                      return copy;
+                    });
+                  }}
+                  title={t("清除錯誤")}
+                  className="p-1 rounded hover:bg-black/10 transition"
+                  style={{ color: 'var(--status-error)' }}
+                >
+                  <X size={13} />
+                </button>
+              </div>
             </div>
-            <p className="text-[11px] mt-1 break-all p-1.5 rounded select-text" style={{ color: 'var(--fg-2)', background: 'var(--surface)', fontFamily: 'var(--font-mono)', whiteSpace: 'pre-wrap', userSelect: 'text', WebkitUserSelect: 'text' }}>{error}</p>
-            <button onClick={() => handleDownload(key)} className="mt-1 text-center py-1 rounded text-xs transition" style={{ background: 'var(--status-error-bg)', color: 'var(--status-error)' }}>
-              {t("重試安裝")}
-            </button>
+            <p className="text-[11px] mt-1 break-all p-2 rounded select-text" style={{ color: 'var(--fg-2)', background: 'var(--surface)', fontFamily: 'var(--font-mono)', whiteSpace: 'pre-wrap', userSelect: 'text', WebkitUserSelect: 'text' }}>
+              {formatErrorMessage(error)}
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                onClick={() => handleDownload(key)}
+                className="flex-1 text-center py-1.5 rounded text-xs font-semibold transition hover:brightness-110 active:brightness-95"
+                style={{ background: 'var(--status-error)', color: '#fff' }}
+              >
+                {t("重試安裝")}
+              </button>
+              <button
+                onClick={() => {
+                  setProgressMap(prev => {
+                    const copy = { ...prev };
+                    delete copy[key];
+                    return copy;
+                  });
+                }}
+                className="px-3 py-1.5 rounded text-xs font-medium transition hover:bg-[var(--surface-hover)]"
+                style={{ color: 'var(--fg-2)', border: '1px solid var(--border)' }}
+              >
+                {t("清除錯誤")}
+              </button>
+            </div>
           </div>
         );
       }
@@ -374,129 +475,164 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
         </div>
 
         {showBtn && (
-          localVer === '' ? (
-            <button
-              onClick={() => !btnDisabled && handleDownload(key)}
-              disabled={btnDisabled}
-              className="shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition select-none whitespace-nowrap shadow-sm hover:opacity-90 active:scale-95"
-              style={btnStyle}
+          <div className="relative shrink-0 split-btn-dropdown flex items-center">
+            {/* 一體化精巧按鈕組 */}
+            <div
+              className="inline-flex items-stretch rounded-md shadow-sm overflow-hidden transition"
+              style={{
+                border: (localVer === '' || isUpdate) ? 'none' : '1px solid var(--border)',
+                background: localVer === '' ? 'var(--status-info)' : (isUpdate ? 'var(--status-warn)' : 'var(--card)')
+              }}
             >
-              {btnIcon}<span>{btnText}</span>
-            </button>
-          ) : (
-            <div className="relative shrink-0 split-btn-dropdown flex items-center">
-              {/* 一體化精巧按鈕組 */}
+              {/* 主按鈕 */}
+              <button
+                onClick={() => !btnDisabled && handleDownload(key)}
+                disabled={btnDisabled}
+                className={`px-2.5 py-1 text-xs font-semibold flex items-center justify-center gap-1.5 transition select-none whitespace-nowrap ${(localVer === '' || isUpdate)
+                  ? 'text-white hover:brightness-110 active:brightness-95'
+                  : 'text-[var(--fg-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
+                  }`}
+                title={localVer === '' ? t("下載安裝此依賴") : (isUpdate ? t("立即更新至最新版") : (isPhp ? (phpRedisInfo?.supported ? t("重裝 PHP (含 Redis)") : t("重裝 PHP")) : t("重裝此依賴")))}
+              >
+                {btnIcon}
+                <span>{btnText}</span>
+              </button>
+
+              {/* 垂直細緻分隔線 */}
               <div
-                className="inline-flex items-stretch rounded-md shadow-sm overflow-hidden transition"
+                className="w-[1px] self-stretch my-0.5"
+                style={{ background: (localVer === '' || isUpdate) ? 'rgba(255,255,255,0.3)' : 'var(--border)' }}
+              />
+
+              {/* 下拉箭頭按鈕：精緻緊湊點擊區 */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveDropdown(prev => prev === key ? null : key);
+                }}
+                className={`w-6 shrink-0 flex items-center justify-center transition select-none ${(localVer === '' || isUpdate)
+                  ? 'text-white hover:brightness-110 active:brightness-95'
+                  : 'hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
+                  }`}
+                style={{ color: (localVer === '' || isUpdate) ? '#fff' : 'var(--fg-2)' }}
+                title={t("更多操作與來源資訊")}
+              >
+                <ChevronDown size={13} className={`shrink-0 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+
+            {/* 下拉選單 Popover */}
+            {isDropdownOpen && (
+              <div
+                className="absolute right-0 top-full mt-1.5 w-60 rounded-xl shadow-xl border p-1.5 z-50 animate-fade-in"
                 style={{
-                  border: isUpdate ? 'none' : '1px solid var(--border)',
-                  background: isUpdate ? 'var(--status-warn)' : 'var(--card)'
+                  backgroundColor: 'var(--menu-bg, var(--bg-deep))',
+                  borderColor: 'var(--menu-border, var(--border))',
+                  boxShadow: 'var(--menu-shadow, 0 12px 28px rgba(0,0,0,0.25))',
+                  backdropFilter: 'blur(16px)',
                 }}
               >
-                {/* 主按鈕 */}
-                <button
-                  onClick={() => handleDownload(key)}
-                  className={`px-2.5 py-1 text-xs font-semibold flex items-center justify-center gap-1.5 transition select-none whitespace-nowrap ${isUpdate
-                    ? 'text-white hover:brightness-110 active:brightness-95'
-                    : 'text-[var(--fg-2)] hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
-                    }`}
-                  title={isUpdate ? t("立即更新至最新版") : (isPhp ? (phpRedisInfo?.supported ? t("重裝 PHP (含 Redis)") : t("重裝 PHP")) : t("重裝此依賴"))}
-                >
-                  {btnIcon}
-                  <span>{btnText}</span>
-                </button>
+                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] select-none">
+                  {localVer === '' ? t("依賴來源與操作") : t("服務維護與配置")}
+                </div>
 
-                {/* 垂直細緻分隔線 */}
-                <div
-                  className="w-[1px] self-stretch my-0.5"
-                  style={{ background: isUpdate ? 'rgba(255,255,255,0.3)' : 'var(--border)' }}
-                />
+                {/* 複製下載連結（Hover 懸停提示完整 URL，內附微縮網址預覽） */}
+                {spec?.url && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCopyUrl(spec.url, key);
+                    }}
+                    title={spec.url}
+                    className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition group"
+                  >
+                    {copiedKey === key ? (
+                      <Check size={13} className="shrink-0" style={{ color: 'var(--status-ok)' }} />
+                    ) : (
+                      <Copy size={13} className="shrink-0" style={{ color: 'var(--status-info)' }} />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium flex items-center justify-between">
+                        <span>{copiedKey === key ? t("已複製下載連結") : t("複製下載連結")}</span>
+                      </div>
+                      <div className="text-[10px] text-[var(--muted)] truncate max-w-[195px]" style={{ fontFamily: 'var(--font-mono)' }}>
+                        {spec.url}
+                      </div>
+                    </div>
+                  </button>
+                )}
 
-                {/* 下拉箭頭按鈕：精緻緊湊點擊區 */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveDropdown(prev => prev === key ? null : key);
-                  }}
-                  className={`w-6 shrink-0 flex items-center justify-center transition select-none ${isUpdate
-                    ? 'text-white hover:brightness-110 active:brightness-95'
-                    : 'hover:bg-[var(--surface-hover)] hover:text-[var(--fg)] active:bg-[var(--surface-active)]'
-                    }`}
-                  style={{ color: isUpdate ? '#fff' : 'var(--fg-2)' }}
-                  title={t("更多操作")}
-                >
-                  <ChevronDown size={13} className={`shrink-0 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
-              </div>
-
-              {/* 下拉選單 Popover */}
-              {isDropdownOpen && (
-                <div
-                  className="absolute right-0 top-full mt-1.5 w-56 rounded-xl shadow-xl border p-1.5 z-50 animate-fade-in"
-                  style={{
-                    backgroundColor: 'var(--menu-bg, var(--bg-deep))',
-                    borderColor: 'var(--menu-border, var(--border))',
-                    boxShadow: 'var(--menu-shadow, 0 12px 28px rgba(0,0,0,0.25))',
-                    backdropFilter: 'blur(16px)',
-                  }}
-                >
-                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] select-none">
-                    {t("服務維護與配置")}
-                  </div>
-
+                {/* 主動作（重裝 / 更新 / 下載） */}
+                {localVer !== '' ? (
                   <button
                     onClick={() => { setActiveDropdown(null); handleDownload(key); }}
                     className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
                   >
-                    <RotateCw size={13} style={{ color: 'var(--status-info)' }} />
+                    <RotateCw size={13} className="shrink-0" style={{ color: 'var(--status-info)' }} />
                     <span>
                       {isPhp
                         ? (phpRedisInfo?.supported ? t("重裝 PHP (含 Redis)") : t("重裝 PHP"))
-                        : t("重裝此依賴")}
+                        : (isUpdate ? t("立即更新") : t("重裝此依賴"))}
                     </span>
                   </button>
+                ) : (
+                  <button
+                    onClick={() => { setActiveDropdown(null); handleDownload(key); }}
+                    className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                  >
+                    <Download size={13} className="shrink-0" style={{ color: 'var(--status-info)' }} />
+                    <span>{t("下載安裝此依賴")}</span>
+                  </button>
+                )}
 
-                  {isPhp && phpRedisInfo?.supported && (
-                    <button
-                      onClick={() => handleInstallRedisExt(key)}
-                      className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
-                    >
-                      <Zap size={13} style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--status-warn)' }} />
-                      <span>{phpRedisInfo?.installed ? t("單獨重裝 Redis 擴充") : t("單獨安裝 Redis 擴充")}</span>
-                    </button>
-                  )}
+                {/* PHP 相關額外動作 */}
+                {isPhp && phpRedisInfo?.supported && (
+                  <button
+                    onClick={() => handleInstallRedisExt(key)}
+                    className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                  >
+                    <Zap size={13} className="shrink-0" style={{ color: phpRedisInfo?.installed ? 'var(--status-ok)' : 'var(--status-warn)' }} />
+                    <span>{phpRedisInfo?.installed ? t("單獨重裝 Redis 擴充") : t("單獨安裝 Redis 擴充")}</span>
+                  </button>
+                )}
 
-                  {isPhp && phpRedisInfo?.installed && !phpRedisInfo?.iniEnabled && (
-                    <button
-                      onClick={handleEnablePHPRedis}
-                      className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
-                    >
-                      <Zap size={13} style={{ color: 'var(--status-warn)' }} />
-                      <span>{t("一鍵啟用 php.ini Redis 擴充")}</span>
-                    </button>
-                  )}
+                {isPhp && phpRedisInfo?.installed && !phpRedisInfo?.iniEnabled && (
+                  <button
+                    onClick={handleEnablePHPRedis}
+                    className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                  >
+                    <Zap size={13} className="shrink-0" style={{ color: 'var(--status-warn)' }} />
+                    <span>{t("一鍵啟用 php.ini Redis 擴充")}</span>
+                  </button>
+                )}
 
+                {/* 開啟安裝目錄（僅已安裝項目顯示） */}
+                {localVer !== '' && (
                   <button
                     onClick={() => handleOpenFolder(key)}
                     className="dropdown-menu-item w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
                   >
-                    <FolderOpen size={13} style={{ color: 'var(--status-info)' }} />
+                    <FolderOpen size={13} className="shrink-0" style={{ color: 'var(--status-info)' }} />
                     <span>{t("開啟安裝目錄")}</span>
                   </button>
+                )}
 
-                  <div className="my-1 border-t border-[var(--border-soft)]" />
-
-                  <button
-                    onClick={() => handleUninstall(key, label)}
-                    className="dropdown-menu-item dropdown-menu-item-danger w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--status-error-bg)] text-[var(--status-error)] transition"
-                  >
-                    <Trash2 size={13} />
-                    <span>{isPhp ? t("移除此版本") : t("移除依賴")}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          )
+                {/* 移除依賴（僅已安裝項目顯示） */}
+                {localVer !== '' && (
+                  <>
+                    <div className="my-1 border-t border-[var(--border-soft)]" />
+                    <button
+                      onClick={() => handleUninstall(key, label)}
+                      className="dropdown-menu-item dropdown-menu-item-danger w-full text-left px-2.5 py-2 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--status-error-bg)] text-[var(--status-error)] transition"
+                    >
+                      <Trash2 size={13} className="shrink-0" />
+                      <span>{isPhp ? t("移除此版本") : t("移除依賴")}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
     );
