@@ -13,11 +13,34 @@ import { t, useLanguage } from '../i18n';
 
 let logsAutoExpanded = false;
 
+// 模組層級快取：保留最新狀態，避免切換 Tab 時重新掛載造成按鈕閃爍與狀態丟失
+let cachedServicesStatus: Record<string, boolean> | null = null;
+let cachedScanResult: scanner.ScanResult | null = null;
+let cachedConfig: any = null;
+let isInitialLoaded = false;
+
+function ServiceButtonSkeleton() {
+  return (
+    <div
+      className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 select-none pointer-events-none animate-pulse"
+      style={{
+        background: 'var(--surface-active, var(--surface))',
+        border: '1px solid var(--border-soft)',
+        color: 'transparent',
+      }}
+    >
+      <Square size={12} className="opacity-0" />
+      <span className="opacity-0">WinCMP</span>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   useLanguage();
-  const [config, setConfig] = useState<any>(null);
-  const [scanResult, setScanResult] = useState<scanner.ScanResult | null>(null);
-  const [servicesStatus, setServicesStatus] = useState<Record<string, boolean>>({});
+  const [config, setConfig] = useState<any>(() => cachedConfig);
+  const [scanResult, setScanResult] = useState<scanner.ScanResult | null>(() => cachedScanResult);
+  const [servicesStatus, setServicesStatus] = useState<Record<string, boolean>>(() => cachedServicesStatus || {});
+  const [isStatusReady, setIsStatusReady] = useState(isInitialLoaded);
   const [loadingServices, setLoadingServices] = useState<Record<string, boolean>>({});
   const [isScanning, setIsScanning] = useState(false);
   const [showDepManager, setShowDepManager] = useState(false);
@@ -72,14 +95,26 @@ export default function Dashboard() {
   useEffect(() => {
     async function initData() {
       try {
-        const cfg = await GetConfig();
+        // 並行請求以大幅降低延遲，避免各 RPC 串行等待
+        const [cfg, scan, status, missing] = await Promise.all([
+          GetConfig(),
+          GetScanResult(),
+          GetServicesStatus(),
+          CheckMissingCoreDependencies(),
+        ]);
+        cachedConfig = cfg;
+        cachedScanResult = scan;
+        cachedServicesStatus = status;
+        isInitialLoaded = true;
+
         setConfig(cfg);
-        const scan = await GetScanResult();
         setScanResult(scan);
-        await updateStatus();
-        const missing = await CheckMissingCoreDependencies();
+        setServicesStatus(status);
+        setIsStatusReady(true);
         setMissingCore({ caddy: !!missing?.caddy });
-      } catch (err) { console.error("初始化資料失敗:", err); }
+      } catch (err) {
+        console.error("初始化資料失敗:", err);
+      }
     }
     initData();
   }, []);
@@ -90,7 +125,15 @@ export default function Dashboard() {
   }, [scanResult]);
 
   const updateStatus = async () => {
-    try { setServicesStatus(await GetServicesStatus()); } catch (err) { console.error("更新服務狀態失敗:", err); }
+    try {
+      const status = await GetServicesStatus();
+      cachedServicesStatus = status;
+      setServicesStatus(status);
+      setIsStatusReady(true);
+      isInitialLoaded = true;
+    } catch (err) {
+      console.error("更新服務狀態失敗:", err);
+    }
   };
 
   const handleScan = async () => {
@@ -98,6 +141,7 @@ export default function Dashboard() {
     const startTime = Date.now();
     try {
       const res = await ScanServices();
+      cachedScanResult = res;
       setScanResult(res);
       await updateStatus();
       const missing = await CheckMissingCoreDependencies();
@@ -125,6 +169,7 @@ export default function Dashboard() {
   const handleServiceAction = async (serviceName: string, action: 'start' | 'stop' | 'reload', extraInfo?: any) => {
     const key = `${serviceName}-${action}`;
     setLoadingServices(prev => ({ ...prev, [key]: true }));
+    const startTime = Date.now();
     try {
       if (serviceName === 'caddy') {
         if (action === 'start') { await StartCaddy(extraInfo.Version, extraInfo.ExePath); triggerAutoExpandLogs(); }
@@ -152,6 +197,14 @@ export default function Dashboard() {
         else if (action === 'stop') await StopPHP(version);
       }
       await updateStatus();
+
+      // 重載（reload）保證至少 500ms 視覺過渡，避免操作瞬時完成造成使用者無感
+      if (action === 'reload') {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 500) {
+          await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+        }
+      }
     } catch (err: any) { (window as any).customAlert(`${t("操作失敗")}: ${err}`); }
     finally { setLoadingServices(prev => ({ ...prev, [key]: false })); }
   };
@@ -308,14 +361,20 @@ export default function Dashboard() {
                       </div>
                       <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>Caddy</h4>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] shrink-0">
-                      <span className="relative flex" style={{ width: '7px', height: '7px' }}>
-                        {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                        <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                      </span>
-                      <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                        {running ? t("運行中") : t("已停止")}
-                      </span>
+                    <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
+                      {!isStatusReady ? (
+                        <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
+                      ) : (
+                        <>
+                          <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+                            {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                            <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                          </span>
+                          <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                            {running ? t("運行中") : t("已停止")}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -327,7 +386,9 @@ export default function Dashboard() {
                 </div>
 
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
-                  {!running ? (
+                  {!isStatusReady ? (
+                    <ServiceButtonSkeleton />
+                  ) : !running ? (
                     <button onClick={() => handleServiceAction('caddy', 'start', caddy)} disabled={loadingStart || !caddy} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !caddy ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
@@ -337,7 +398,7 @@ export default function Dashboard() {
                         <Square size={12} /> {loadingStop ? t("停止中...") : t("停止")}
                       </button>
                       <button onClick={() => handleServiceAction('caddy', 'reload', caddy)} disabled={loadingReload} className="btn-custom-hover flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
-                        <RefreshCw size={12} /> {loadingReload ? t("重載中...") : t("重載")}
+                        <RefreshCw size={12} className={loadingReload ? 'animate-spin' : ''} /> {loadingReload ? t("重載中...") : t("重載")}
                       </button>
                     </>
                   )}
@@ -365,14 +426,20 @@ export default function Dashboard() {
                       </div>
                       <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>MariaDB</h4>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] shrink-0">
-                      <span className="relative flex" style={{ width: '7px', height: '7px' }}>
-                        {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                        <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                      </span>
-                      <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                        {running ? t("運行中") : t("已停止")}
-                      </span>
+                    <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
+                      {!isStatusReady ? (
+                        <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
+                      ) : (
+                        <>
+                          <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+                            {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                            <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                          </span>
+                          <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                            {running ? t("運行中") : t("已停止")}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -384,7 +451,9 @@ export default function Dashboard() {
                 </div>
 
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
-                  {!running ? (
+                  {!isStatusReady ? (
+                    <ServiceButtonSkeleton />
+                  ) : !running ? (
                     <button onClick={() => handleServiceAction(serviceKey, 'start', mariadb)} disabled={loadingStart || !mariadb} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !mariadb ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
@@ -417,14 +486,20 @@ export default function Dashboard() {
                       </div>
                       <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>Mailpit</h4>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] shrink-0">
-                      <span className="relative flex" style={{ width: '7px', height: '7px' }}>
-                        {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                        <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                      </span>
-                      <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                        {running ? t("運行中") : t("已停止")}
-                      </span>
+                    <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
+                      {!isStatusReady ? (
+                        <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
+                      ) : (
+                        <>
+                          <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+                            {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                            <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                          </span>
+                          <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                            {running ? t("運行中") : t("已停止")}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -436,7 +511,9 @@ export default function Dashboard() {
                 </div>
 
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
-                  {!running ? (
+                  {!isStatusReady ? (
+                    <ServiceButtonSkeleton />
+                  ) : !running ? (
                     <button onClick={() => handleServiceAction('mailpit', 'start', mailpit)} disabled={loadingStart || !mailpit} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !mailpit ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
@@ -468,14 +545,20 @@ export default function Dashboard() {
                       </div>
                       <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>Redis</h4>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] shrink-0">
-                      <span className="relative flex" style={{ width: '7px', height: '7px' }}>
-                        {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                        <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                      </span>
-                      <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                        {running ? t("運行中") : t("已停止")}
-                      </span>
+                    <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
+                      {!isStatusReady ? (
+                        <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
+                      ) : (
+                        <>
+                          <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+                            {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                            <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                          </span>
+                          <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                            {running ? t("運行中") : t("已停止")}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -487,7 +570,9 @@ export default function Dashboard() {
                 </div>
 
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
-                  {!running ? (
+                  {!isStatusReady ? (
+                    <ServiceButtonSkeleton />
+                  ) : !running ? (
                     <button onClick={() => handleServiceAction('redis', 'start', redis)} disabled={loadingStart || !redis} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !redis ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
                     </button>
@@ -497,7 +582,7 @@ export default function Dashboard() {
                         <Square size={12} /> {loadingStop ? t("停止中...") : t("停止")}
                       </button>
                       <button onClick={() => handleServiceAction('redis', 'reload', redis)} disabled={loadingReload} className="btn-custom-hover flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--fg-2)' }}>
-                        <RefreshCw size={12} /> {loadingReload ? t("重載中...") : t("重載")}
+                        <RefreshCw size={12} className={loadingReload ? 'animate-spin' : ''} /> {loadingReload ? t("重載中...") : t("重載")}
                       </button>
                     </>
                   )}
@@ -537,14 +622,20 @@ export default function Dashboard() {
                         </div>
                         <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>PHP {php.Version}</h4>
                       </div>
-                      <div className="flex items-center gap-1.5 text-[11px] shrink-0">
-                        <span className="relative flex" style={{ width: '7px', height: '7px' }}>
-                          {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                          <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                        </span>
-                        <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                          {running ? t("運行中") : t("已停止")}
-                        </span>
+                      <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
+                        {!isStatusReady ? (
+                          <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
+                        ) : (
+                          <>
+                            <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+                              {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+                              <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+                            </span>
+                            <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+                              {running ? t("運行中") : t("已停止")}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -597,7 +688,9 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex gap-2">
-                      {!running ? (
+                      {!isStatusReady ? (
+                        <ServiceButtonSkeleton />
+                      ) : !running ? (
                         <button onClick={() => handleServiceAction(serviceKey, 'start', php)} disabled={loadingStart} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff' }}>
                           <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動 PHP")}
                         </button>
