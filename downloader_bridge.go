@@ -154,14 +154,24 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 		destDir = filepath.Join(binDir, key, key+"-"+item.Version)
 	}
 
+	// 取得當前依賴設定來源 URL
+	depURL := config.DefaultDependencyURL
+	if a.appCfg != nil && a.appCfg.Global.DependencyURL != "" {
+		depURL = a.appCfg.Global.DependencyURL
+	}
+
 	// 1.5 安全性預檢：驗證下載網址合法性、HTTPS 協議、官方白名單與 SHA-256 必填規則
 	if err := downloader.ValidateSecurity(item.URL, item.SHA256); err != nil {
-		a.handleErrorLog("system", i18n.Tfmt("安全性檢查失敗：%s", name), err)
-		a.emitProgress(key, "error", 0, 0, 0, err.Error())
+		diagErr := fmt.Errorf(
+			"%s\n\n建議指引與診斷資訊：\n1. 遠端配置來源 (DependencyURL)：%s\n2. 可能原因：遠端建議設定檔尚未發布該項目版本、SHA-256 遺漏或本地配置缺少雜湊值。\n3. 請嘗試在依賴管理面板點擊「獲取最新」同步設定；若為自訂/測試環境，請確認倉庫分支或本地 dependencies.json 是否已填入正確的 sha256。",
+			err.Error(), depURL,
+		)
+		a.handleErrorLog("system", i18n.Tfmt("安全性檢查失敗：%s", name), diagErr)
+		a.emitProgress(key, "error", 0, 0, 0, diagErr.Error())
 		return
 	}
 
-	a.handleLog("system", i18n.Tfmt("🚀 開始下載核心依賴: %s...", name))
+	a.handleLog("system", i18n.Tfmt("開始下載核心依賴: %s...", name))
 	a.emitProgress(key, "downloading", 0, 0, 0, "")
 
 	// 2. 下載檔案並透過 callback 發送進度事件
@@ -177,7 +187,7 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 		_ = os.Remove(destZip)
 		failErr := fmt.Errorf(
 			"%s",
-			i18n.Tfmt("依賴下載失敗：%v\n\n建議指引：\n1. 請檢查您的網路連線或代理設定後重試。\n2. 若持續失敗，可手動下載：%s\n3. 並解壓放置於以下 bin 目錄位置：%s", err, item.URL, destDir),
+			i18n.Tfmt("依賴下載失敗：%v\n\n建議指引與診斷資訊：\n1. 遠端配置來源：%s\n2. 請檢查您的網路連線或代理設定後重試。\n3. 若持續失敗，可手動下載：%s\n4. 並解壓放置於以下 bin 目錄位置：%s", err, depURL, item.URL, destDir),
 		)
 		a.handleErrorLog("system", i18n.Tfmt("下載 %s 失敗", name), failErr)
 		a.emitProgress(key, "error", 0, 0, 0, failErr.Error())
@@ -196,7 +206,7 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 	if !strings.EqualFold(shaVal, item.SHA256) {
 		mismatchErr := fmt.Errorf(
 			"%s",
-			i18n.Tfmt("SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。\n\n建議指引：\n1. 請先嘗試在依賴管理面板點擊「獲取最新」，然後重試下載。\n2. 若問題持續，請手動下載：%s\n3. 並解壓放置於以下 bin 目錄位置：%s", item.URL, destDir),
+			i18n.Tfmt("SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。\n\n建議指引與診斷資訊：\n1. 遠端配置來源 (DependencyURL)：%s\n2. 請先嘗試在依賴管理面板點擊「獲取最新」，然後重試下載。\n3. 若問題持續，請手動下載：%s\n4. 並解壓放置於以下 bin 目錄位置：%s", depURL, item.URL, destDir),
 		)
 		a.handleErrorLog("system", i18n.Tfmt("%s 的完整性校驗失敗", name), mismatchErr)
 		a.emitProgress(key, "error", 0, 0, 0, mismatchErr.Error())

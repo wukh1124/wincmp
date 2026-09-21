@@ -1721,7 +1721,7 @@ func (a *App) CheckNewVersion() (*updater.ReleaseInfo, error) {
 
 // StartAutoUpdate 啟動自動下載並更新覆蓋
 func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
-	a.handleLog("system", i18n.Tfmt("🚀 開始下載新版本：%s (類型: %s)...", downloadURL, assetType))
+	a.handleLog("system", i18n.Tfmt("開始下載新版本：%s (類型: %s)...", downloadURL, assetType))
 
 	// 取得當前緩存 Release 資訊中的預期 SHA-256（若有）
 	expectedSHA := updater.GetExpectedSHA256(downloadURL)

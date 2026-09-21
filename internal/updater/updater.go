@@ -48,7 +48,7 @@ const OfficialReleaseURLPrefix = "https://github.com/wukh1124/wincmp/releases/do
 func ValidateReleaseURL(targetURL string) error {
 	trimmed := strings.TrimSpace(targetURL)
 	if !strings.HasPrefix(trimmed, OfficialReleaseURLPrefix) {
-		return fmt.Errorf("更新下載網址非官方指定來源，基於安全考量拒絕下載")
+		return fmt.Errorf("更新下載網址非官方指定來源 (%s)，基於安全考量拒絕下載。\n\n建議指引與診斷資訊：\n1. 官方發布來源前綴：%s\n2. 請確認是否透過官方管道獲取更新，或檢查網路環境是否遭劫持篡改", targetURL, OfficialReleaseURLPrefix)
 	}
 	return nil
 }
@@ -151,7 +151,10 @@ func CheckNewVersionOpt(currentVersion string, force bool) (*ReleaseInfo, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub 回應狀態碼錯誤: %d", resp.StatusCode)
+		if resp.StatusCode == http.StatusForbidden {
+			return nil, fmt.Errorf("GitHub API 回應 403 Forbidden（可能已達匿名請求上限，請稍候重試或至官方 Releases 手動查看：%s）", "https://github.com/wukh1124/wincmp/releases/latest")
+		}
+		return nil, fmt.Errorf("GitHub API 回應狀態碼異常: %d（目標位址: %s）", resp.StatusCode, url)
 	}
 
 	var release GitHubRelease

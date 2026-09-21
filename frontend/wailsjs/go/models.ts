@@ -576,6 +576,7 @@ export namespace updater {
 	    published_at: string;
 	    download_url: string;
 	    asset_type: string;
+	    expected_sha256: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ReleaseInfo(source);
@@ -591,6 +592,7 @@ export namespace updater {
 	        this.published_at = source["published_at"];
 	        this.download_url = source["download_url"];
 	        this.asset_type = source["asset_type"];
+	        this.expected_sha256 = source["expected_sha256"];
 	    }
 	}
 
