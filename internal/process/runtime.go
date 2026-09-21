@@ -649,6 +649,9 @@ func (m *Manager) StopRuntime(project config.ProjectConfig) error {
 			if killErr := proc.Kill(); killErr == nil {
 				m.log("runtime", "%s", i18n.Tfmt("⏹️ [%s] 已透過 Go TerminateProcess 停止進程 (PID: %d)", project.Name, pid))
 				continue
+			} else if isProcessFinished(killErr) {
+				// 程序本就已退出（如已被 Job Object 終止），無需再呼叫 taskkill
+				continue
 			}
 		}
 
@@ -656,6 +659,10 @@ func (m *Manager) StopRuntime(project config.ProjectConfig) error {
 		killCmd := exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(pid))
 		killCmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000}
 		if out, err := killCmd.CombinedOutput(); err != nil {
+			// Windows taskkill exit code 128 (ERROR_PROC_NOT_FOUND) 表示程序已不存在，視為已成功清理
+			if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 128 {
+				continue
+			}
 			m.log("runtime", "%s", i18n.Tfmt("⚠️ [%s] taskkill PID %d 失敗: %v (輸出: %s)", project.Name, pid, err, strings.TrimSpace(string(out))))
 		} else {
 			m.log("runtime", "%s", i18n.Tfmt("⏹️ [%s] 已透過 taskkill 停止 Runtime 進程樹 (PID: %d)", project.Name, pid))

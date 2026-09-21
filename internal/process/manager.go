@@ -10,6 +10,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"strings"
 
 	"golang.org/x/sys/windows"
 )
@@ -393,13 +394,18 @@ func isProcessFinished(err error) bool {
 	if errors.Is(err, os.ErrProcessDone) {
 		return true
 	}
-	// 回相容：檢查是否為 "syscall: Wait..." 或各種已完成程序錯誤
+	// Windows 特性：TerminateProcess 在進程已結束時會回傳 ERROR_ACCESS_DENIED (5) 或 ERROR_INVALID_PARAMETER (87)
 	var sysErr syscall.Errno
 	if errors.As(err, &sysErr) {
-		return false // syscall 錯誤通常不是「程序已完成」
+		if sysErr == windows.ERROR_ACCESS_DENIED || sysErr == windows.ERROR_INVALID_PARAMETER {
+			return true
+		}
+		return false
 	}
-	// 最終回退：字串比對（只對未型別化的錯誤）
+	// 最終回退：字串比對（包含 Windows TerminateProcess 的文字錯誤）
 	msg := err.Error()
 	return msg == "os: process already finished" ||
-		msg == "os: process already released"
+		msg == "os: process already released" ||
+		strings.Contains(msg, "Access is denied") ||
+		strings.Contains(msg, "process already")
 }
