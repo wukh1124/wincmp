@@ -1,0 +1,26 @@
+(common_dev) {
+	header {
+		-Server
+		X-Dev-Server "WinCMP"
+	}
+	log {
+		output file ./logs/access.log {
+			roll_size 10mb
+			roll_keep 30
+			roll_local_time
+		}
+	}
+}
+
+(static_site) {
+	encode zstd gzip
+	file_server
+}
+
+# IP 白名單
+(common-ip-allow) {
+	@blockedIps not remote_ip 127.0.0.1
+	handle @blockedIps {
+		respond "Forbidden" 403
+	}
+}

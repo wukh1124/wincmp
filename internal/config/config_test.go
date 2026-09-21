@@ -177,6 +177,19 @@ func TestRestoreDefaultConf(t *testing.T) {
 		t.Errorf("Caddyfile 釋放失敗: %v", err)
 	}
 
+	commonCaddyPath := filepath.Join(tempDir, "conf", "snippets", "common.caddy")
+	commonCaddyData, err := os.ReadFile(commonCaddyPath)
+	if err != nil {
+		t.Errorf("snippets/common.caddy 釋放失敗: %v", err)
+	} else if !strings.Contains(string(commonCaddyData), "(common_dev)") {
+		t.Errorf("snippets/common.caddy 內容缺少 (common_dev) 片段")
+	}
+
+	upstreamCaddyPath := filepath.Join(tempDir, "conf", "snippets", "php-upstream.caddy")
+	if _, err := os.Stat(upstreamCaddyPath); err != nil {
+		t.Errorf("snippets/php-upstream.caddy 釋放失敗: %v", err)
+	}
+
 	gitkeepPath := filepath.Join(tempDir, "conf", "sites", ".gitkeep")
 	if _, err := os.Stat(gitkeepPath); err == nil {
 		t.Error(".gitkeep 檔案不應該被釋放建立，但它居然存在了！")
@@ -186,6 +199,11 @@ func TestRestoreDefaultConf(t *testing.T) {
 	originalContent := "custom caddyfile configuration"
 	if err := os.WriteFile(caddyfilePath, []byte(originalContent), 0644); err != nil {
 		t.Fatalf("寫入自訂 Caddyfile 失敗: %v", err)
+	}
+
+	customCommonContent := "# custom common snippet"
+	if err := os.WriteFile(commonCaddyPath, []byte(customCommonContent), 0644); err != nil {
+		t.Fatalf("寫入自訂 common.caddy 失敗: %v", err)
 	}
 
 	// 模擬舊版本 php.ini（無 OPcache）
@@ -206,6 +224,14 @@ func TestRestoreDefaultConf(t *testing.T) {
 
 	if string(data) != originalContent {
 		t.Errorf("防覆蓋機制失效，檔案被重新覆蓋！預期為 %q, 實際為 %q", originalContent, string(data))
+	}
+
+	commonData, err := os.ReadFile(commonCaddyPath)
+	if err != nil {
+		t.Fatalf("讀取 common.caddy 失敗: %v", err)
+	}
+	if string(commonData) != customCommonContent {
+		t.Errorf("common.caddy 防覆蓋機制失效！預期為 %q, 實際為 %q", customCommonContent, string(commonData))
 	}
 
 	// 驗證 RestoreDefaultConf 是否確實觸發了 EnsurePHPIniOptimizations
