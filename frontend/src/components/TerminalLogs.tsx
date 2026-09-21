@@ -382,6 +382,17 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
         ? t('暫無運行專案')
         : t('日誌檔案不存在')));
 
+  const getTabCount = (tabId: string): number => {
+    if (tabId === 'runtime') {
+      if (activeRuntimeProject && logs.runtime[activeRuntimeProject]) {
+        return logs.runtime[activeRuntimeProject].length;
+      }
+      return Object.values(logs.runtime).reduce((acc, lines) => acc + (lines?.length || 0), 0);
+    }
+    const list = (logs as any)[tabId];
+    return Array.isArray(list) ? list.length : 0;
+  };
+
   return (
     <div
       className="flex flex-col h-full overflow-hidden select-none relative"
@@ -395,6 +406,11 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
         <div className="flex overflow-x-auto scrollbar-none">
           {CATEGORIES.map(tab => {
             const isActive = activeTab === tab.id;
+            const count = getTabCount(tab.id);
+            const tooltip = tab.id === 'runtime' && activeRuntimeProject
+              ? `${t(tab.label)} (${activeRuntimeProject}) - ${t('共 %d 行', count)}`
+              : `${t(tab.label)} - ${t('共 %d 行', count)}`;
+
             return (
               <button
                 key={tab.id}
@@ -402,6 +418,7 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
                   setActiveTab(tab.id);
                   setUnreadTabs(prev => ({ ...prev, [tab.id]: false }));
                 }}
+                title={tooltip}
                 className={`log-tab-btn font-bold shrink-0 flex items-center gap-1.5 ${
                   isActive ? 'active' : ''
                 }`}
@@ -462,8 +479,12 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
               </button>
               {runtimeDropdownOpen && (
                 <div
-                  className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-h-56 overflow-y-auto rounded-lg border py-1 shadow-lg"
-                  style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)' }}
+                  className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-h-56 overflow-y-auto rounded-lg border py-1 shadow-xl backdrop-blur-sm"
+                  style={{
+                    backgroundColor: 'var(--menu-bg, var(--bg-deep))',
+                    borderColor: 'var(--menu-border, var(--border))',
+                    boxShadow: 'var(--menu-shadow, var(--shadow-lg))',
+                  }}
                 >
                   {runtimeProjects.length > 0 ? (
                     runtimeProjects.map((proj) => (
@@ -569,8 +590,14 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
       {contextMenu && (
         <div
           ref={menuRef}
-          className="fixed z-[100] min-w-[160px] rounded-lg border py-1 shadow-lg"
-          style={{ left: contextMenu.x, top: contextMenu.y, backgroundColor: 'var(--card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)' }}
+          className="fixed z-[100] min-w-[160px] rounded-lg border py-1 shadow-xl backdrop-blur-sm"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+            backgroundColor: 'var(--menu-bg, var(--bg-deep))',
+            borderColor: 'var(--menu-border, var(--border))',
+            boxShadow: 'var(--menu-shadow, var(--shadow-lg))',
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           <button

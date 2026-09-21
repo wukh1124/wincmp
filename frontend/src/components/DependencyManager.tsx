@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X, RefreshCw, Download, ArrowUpCircle, CheckCircle2,
   Loader2, AlertTriangle, Cpu, Database, Settings as SettingsIcon,
@@ -25,8 +25,52 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
   const [isFetchingRemote, setIsFetchingRemote] = useState(false);
   const [progressMap, setProgressMap] = useState<Record<string, ProgressData>>({});
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const lastAutoFetchRef = useRef<number>(0);
 
-  useEffect(() => { if (isOpen) loadData(); }, [isOpen]);
+  const loadData = async () => {
+    setIsLoadingConfig(true);
+    try { setDepConfig(await GetDependencyConfig()); setScanResult(await GetScanResult()); }
+    catch (err) { console.error("載入依賴資訊失敗:", err); }
+    finally { setIsLoadingConfig(false); }
+  };
+
+  const refreshLocalScan = async () => {
+    try { setScanResult(await ScanServices()); } catch (err) { console.error("刷新服務掃描失敗:", err); }
+  };
+
+  const fetchRemoteConfig = async (silent = false) => {
+    setIsFetchingRemote(true);
+    try {
+      setDepConfig(await FetchRemoteDependencies());
+      // 除遠端建議版本外，同步刷新本機掃描環境（例如手動安裝的 php_redis）
+      await refreshLocalScan();
+      if (onInstalled) onInstalled();
+      lastAutoFetchRef.current = Date.now();
+      if (!silent) {
+        (window as any).customAlert(t("成功從遠端獲取最新的建議依賴配置！已同步刷新本機環境。"));
+      }
+    } catch (err) {
+      console.error("獲取遠端依賴配置失敗:", err);
+      if (!silent) {
+        (window as any).customAlert(`${t("獲取遠端依賴配置失敗")}: ${err}`);
+      }
+    } finally {
+      setIsFetchingRemote(false);
+    }
+  };
+
+  const handleFetchRemote = () => fetchRemoteConfig(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadData();
+      const now = Date.now();
+      // 首次進入或距上次更新超過 3 分鐘時自動觸發靜默檢查
+      if (now - lastAutoFetchRef.current > 3 * 60 * 1000) {
+        fetchRemoteConfig(true);
+      }
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
@@ -63,30 +107,6 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     const unsubscribe = EventsOn('dependency_progress', handleProgress);
     return () => { unsubscribe(); };
   }, [onInstalled]);
-
-  const loadData = async () => {
-    setIsLoadingConfig(true);
-    try { setDepConfig(await GetDependencyConfig()); setScanResult(await GetScanResult()); }
-    catch (err) { console.error("載入依賴資訊失敗:", err); }
-    finally { setIsLoadingConfig(false); }
-  };
-
-  const refreshLocalScan = async () => {
-    try { setScanResult(await ScanServices()); } catch (err) { console.error("刷新服務掃描失敗:", err); }
-  };
-
-  const handleFetchRemote = async () => {
-    setIsFetchingRemote(true);
-    try {
-      setDepConfig(await FetchRemoteDependencies());
-      // 除遠端建議版本外，同步刷新本機掃描環境（例如手動安裝的 php_redis）
-      await refreshLocalScan();
-      if (onInstalled) onInstalled();
-      (window as any).customAlert(t("成功從遠端獲取最新的建議依賴配置！已同步刷新本機環境。"));
-    }
-    catch (err) { (window as any).customAlert(`${t("獲取遠端依賴配置失敗")}: ${err}`); }
-    finally { setIsFetchingRemote(false); }
-  };
 
   const handleDownload = async (key: string) => {
     setActiveDropdown(null);
@@ -412,8 +432,13 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
               {/* 下拉選單 Popover */}
               {isDropdownOpen && (
                 <div
-                  className="absolute right-0 top-full mt-1.5 w-56 rounded-xl shadow-xl border border-[var(--border)] p-1.5 z-50 animate-fade-in"
-                  style={{ background: 'var(--card)', backdropFilter: 'blur(16px)', boxShadow: '0 12px 28px rgba(0,0,0,0.25)' }}
+                  className="absolute right-0 top-full mt-1.5 w-56 rounded-xl shadow-xl border p-1.5 z-50 animate-fade-in"
+                  style={{
+                    backgroundColor: 'var(--menu-bg, var(--bg-deep))',
+                    borderColor: 'var(--menu-border, var(--border))',
+                    boxShadow: 'var(--menu-shadow, 0 12px 28px rgba(0,0,0,0.25))',
+                    backdropFilter: 'blur(16px)',
+                  }}
                 >
                   <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] select-none">
                     {t("服務維護與配置")}

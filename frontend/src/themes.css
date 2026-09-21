@@ -122,6 +122,11 @@
   --guide-border: rgba(255, 255, 255, 0.2);
   --guide-fg: #ffffff;
   --guide-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+
+  /* Menu / Popover */
+  --menu-bg: #262930;
+  --menu-border: rgba(255, 255, 255, 0.15);
+  --menu-shadow: 0 14px 32px -4px rgba(0, 0, 0, 0.7), 0 8px 12px -6px rgba(0, 0, 0, 0.6);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -203,6 +208,11 @@
   --guide-border: #cdc6ba;
   --guide-fg: #1a1916;
   --guide-shadow: 0 10px 25px -5px rgba(26, 25, 22, 0.15), 0 8px 10px -6px rgba(26, 25, 22, 0.15);
+
+  /* Menu / Popover */
+  --menu-bg: #ffffff;
+  --menu-border: #e5e0d8;
+  --menu-shadow: 0 12px 28px -4px rgba(26, 25, 22, 0.15), 0 8px 10px -6px rgba(26, 25, 22, 0.1);
 }
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -303,6 +313,11 @@
   --guide-border: var(--sticky-border);
   --guide-fg: var(--sticky-fg);
   --guide-shadow: 3px 3px 0 var(--border-strong);
+
+  /* Menu / Popover */
+  --menu-bg: #fffef8;
+  --menu-border: #c8c0b0;
+  --menu-shadow: 3px 3px 0px var(--border-strong);
 }
 
 /* ─── Sketch theme: graph paper background ─────────────────────

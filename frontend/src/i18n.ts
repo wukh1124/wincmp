@@ -611,6 +611,7 @@ export const enTranslations: Record<string, string> = {
   "確定要刪除此鍵嗎？此操作不可還原！": "Delete this key? This cannot be undone!",
   "刪除鍵值失敗": "Failed to delete key",
   "成功從遠端獲取最新的建議依賴配置！已同步刷新本機環境。": "Fetched latest remote dependency config. Local environment has been rescanned.",
+  "共 %d 行": "%d lines in total",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

@@ -416,6 +416,7 @@ export default function DBExplorer() {
   // Redis 狀態
   const [isRedisRunning, setIsRedisRunning] = useState(false);
   const [redisPort, setRedisPort] = useState<number>(6379);
+  const [mariaDBPort, setMariaDBPort] = useState<number>(3306);
   const [redisDBList, setRedisDBList] = useState<RedisDBInfo[]>([]);
   const [selectedDB, setSelectedDB] = useState<number>(0);
   const [redisKeys, setRedisKeys] = useState<RedisKeyItem[]>([]);
@@ -433,21 +434,26 @@ export default function DBExplorer() {
   const keyTree = useMemo(() => buildKeyTree(redisKeys), [redisKeys]);
   const valueView = useMemo(() => (keyDetail ? formatRedisValue(keyDetail.value) : null), [keyDetail]);
 
-  const loadRedisPort = useCallback(async () => {
+  const loadPorts = useCallback(async () => {
     try {
       const cfg = await GetConfig();
-      const raw = cfg?.global?.redis_port;
-      const port = typeof raw === 'string' ? parseInt(raw, 10) : Number(raw);
-      setRedisPort(Number.isFinite(port) && port > 0 ? port : 6379);
+      const rawRedis = cfg?.global?.redis_port;
+      const rPort = typeof rawRedis === 'string' ? parseInt(rawRedis, 10) : Number(rawRedis);
+      setRedisPort(Number.isFinite(rPort) && rPort > 0 ? rPort : 6379);
+
+      const rawMaria = cfg?.global?.mariadb_port;
+      const mPort = typeof rawMaria === 'string' ? parseInt(rawMaria, 10) : Number(rawMaria);
+      setMariaDBPort(Number.isFinite(mPort) && mPort > 0 ? mPort : 3306);
     } catch (err) {
-      console.error('讀取 redis_port 失敗:', err);
+      console.error('讀取資料庫與快取端口失敗:', err);
       setRedisPort(6379);
+      setMariaDBPort(3306);
     }
   }, []);
 
   useEffect(() => {
     checkMariaDBStatus();
-    loadRedisPort().then(() => checkRedisStatus());
+    loadPorts().then(() => checkRedisStatus());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -636,117 +642,39 @@ export default function DBExplorer() {
 
   return (
     <div className="p-6 h-full flex flex-col space-y-4">
-      {/* 標題列：固定結構，避免切換分頁時高度跳動 */}
-      <div className="flex flex-col gap-3 select-none">
+      {/* 標題列：標題與分頁切換器同行，節省縱向空間 */}
+      <div className="flex items-center justify-between gap-3 min-w-0 select-none">
         <div className="flex items-baseline gap-3 min-w-0">
           <h1 className="text-xl font-bold tracking-tight shrink-0" style={{ color: 'var(--fg)' }}>{t('資料庫瀏覽器')}</h1>
           <p className="text-xs truncate min-w-0" style={{ color: 'var(--muted)' }}>{t('內建極簡 Schema / 資料表結構速覽，或一鍵透過外部工具管理')}</p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 min-w-0 flex-wrap">
-          <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            <div className="flex items-center gap-1 p-1 rounded-xl border shrink-0" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
-              <button
-                onClick={() => setActiveTab('mariadb')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${activeTab === 'mariadb' ? 'shadow-sm' : ''}`}
-                style={{
-                  backgroundColor: activeTab === 'mariadb' ? 'var(--accent)' : 'transparent',
-                  color: activeTab === 'mariadb' ? 'var(--accent-on)' : 'var(--muted)',
-                }}
-              >
-                <Database size={13} /> {t('MariaDB (MySQL)')}
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab('redis');
-                  loadRedisPort().then(() => checkRedisStatus());
-                }}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${activeTab === 'redis' ? 'shadow-sm' : ''}`}
-                style={{
-                  backgroundColor: activeTab === 'redis' ? 'var(--accent)' : 'transparent',
-                  color: activeTab === 'redis' ? 'var(--accent-on)' : 'var(--muted)',
-                }}
-              >
-                <Zap size={13} /> {t('Redis (NoSQL)')}
-              </button>
-            </div>
-
-            {/* Redis 連線與 DB 選擇：緊鄰分頁 */}
-            {activeTab === 'redis' && (
-              <div className="flex items-center gap-2 min-w-0">
-                <div
-                  className="flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg select-none shrink-0"
-                  title={redisAddrDisplay}
-                  style={{
-                    backgroundColor: isRedisRunning ? 'var(--status-ok-bg)' : 'var(--surface-warm)',
-                    color: isRedisRunning ? 'var(--status-ok)' : 'var(--muted)',
-                    border: `1px solid ${isRedisRunning ? 'var(--status-ok)' : 'var(--border)'}`,
-                  }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: isRedisRunning ? 'var(--status-ok)' : 'var(--meta)' }} />
-                  <span className="truncate max-w-[120px]">{redisAddrDisplay}</span>
-                </div>
-                <div className="flex items-center gap-1 text-[11px] shrink-0">
-                  <span className="font-semibold" style={{ color: 'var(--muted)' }}>DB</span>
-                  <select
-                    value={selectedDB}
-                    onChange={(e) => handleDBChange(parseInt(e.target.value))}
-                    disabled={!isRedisRunning}
-                    className="rounded-lg px-2 py-1 text-[11px] font-semibold outline-none disabled:opacity-50"
-                    style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg)' }}
-                  >
-                    {Array.from({ length: 16 }).map((_, i) => {
-                      const dbInfo = redisDBList.find(d => d.db === i);
-                      const count = dbInfo ? dbInfo.keys : 0;
-                      return (
-                        <option key={i} value={i}>
-                          {i} ({count})
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Redis 頁隱藏 HeidiSQL；MariaDB 頁順序為 HeidiSQL → 重新整理 */}
-            {activeTab === 'mariadb' && (
-              <button
-                onClick={handleOpenHeidiSQL}
-                disabled={!isMariaDBRunning}
-                title={t('Open in HeidiSQL')}
-                className="px-2.5 py-1.5 disabled:opacity-40 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200"
-                style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-on)' }}
-              >
-                <ExternalLink size={13} /> {t('Open in HeidiSQL')}
-              </button>
-            )}
-            <button
-              onClick={() => {
-                if (activeTab === 'mariadb') {
-                  checkMariaDBStatus();
-                } else {
-                  loadRedisPort().then(() => checkRedisStatus());
-                }
-              }}
-              disabled={activeTab === 'mariadb' ? isLoadingMariaDB : (isLoadingRedis && isRedisRunning)}
-              title={t('重新整理')}
-              className="btn-custom-hover px-2.5 py-1.5 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition duration-200"
-              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)', color: 'var(--fg-2)' }}
-            >
-              <RefreshCw
-                size={13}
-                className={
-                  (activeTab === 'mariadb' && isLoadingMariaDB) || (activeTab === 'redis' && isLoadingRedis && isRedisRunning)
-                    ? 'animate-spin'
-                    : ''
-                }
-              />
-              {t('重新整理')}
-            </button>
-          </div>
+        <div className="flex items-center gap-1 p-1 rounded-xl border shrink-0" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+          <button
+            onClick={() => setActiveTab('mariadb')}
+            title={isMariaDBRunning ? `127.0.0.1:${mariaDBPort} (${t('運行中')})` : `127.0.0.1:${mariaDBPort} (${t('未啟動')})`}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${activeTab === 'mariadb' ? 'shadow-sm' : ''}`}
+            style={{
+              backgroundColor: activeTab === 'mariadb' ? 'var(--accent)' : 'transparent',
+              color: activeTab === 'mariadb' ? 'var(--accent-on)' : 'var(--muted)',
+            }}
+          >
+            <Database size={13} /> {t('MariaDB (MySQL)')}
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('redis');
+              checkRedisStatus();
+            }}
+            title={isRedisRunning ? `127.0.0.1:${redisPort} (${t('運行中')})` : `127.0.0.1:${redisPort} (${t('未啟動')})`}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${activeTab === 'redis' ? 'shadow-sm' : ''}`}
+            style={{
+              backgroundColor: activeTab === 'redis' ? 'var(--accent)' : 'transparent',
+              color: activeTab === 'redis' ? 'var(--accent-on)' : 'var(--muted)',
+            }}
+          >
+            <Zap size={13} /> {t('Redis (NoSQL)')}
+          </button>
         </div>
       </div>
 
@@ -768,8 +696,21 @@ export default function DBExplorer() {
           ) : (
             <div className="flex-1 border rounded-xl flex overflow-hidden min-h-[400px]" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>
               <div className="w-1/3 border-r flex flex-col select-none" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-deep)' }}>
-                <div className="px-5 py-3.5 border-b font-bold text-[10px] tracking-wider uppercase" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-deep)', color: 'var(--meta)' }}>
-                  Databases ({databases.length})
+                <div
+                  className="px-4 border-b font-bold text-[10px] tracking-wider uppercase flex items-center justify-between shrink-0"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-deep)', color: 'var(--meta)', height: 48, boxSizing: 'border-box' }}
+                >
+                  <span>Databases ({databases.length})</span>
+                  <button
+                    onClick={checkMariaDBStatus}
+                    disabled={isLoadingMariaDB}
+                    title={t('重新整理')}
+                    className="btn-custom-hover px-2 py-1 rounded-md text-[11px] font-semibold border flex items-center gap-1 transition duration-200 shrink-0"
+                    style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)', color: 'var(--fg-2)' }}
+                  >
+                    <RefreshCw size={11} className={isLoadingMariaDB ? 'animate-spin' : ''} />
+                    <span>{t('重新整理')}</span>
+                  </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2.5 space-y-0.5">
                   {databases.map(db => (
@@ -787,8 +728,20 @@ export default function DBExplorer() {
               </div>
 
               <div className="w-2/3 flex flex-col" style={{ backgroundColor: 'var(--surface)' }}>
-                <div className="px-5 py-3.5 border-b font-bold text-[10px] tracking-wider uppercase select-none" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-deep)', color: 'var(--meta)' }}>
-                  Tables {selectedSchema ? `(in ${selectedSchema})` : ''}
+                <div
+                  className="px-4 border-b font-bold text-[10px] tracking-wider uppercase select-none flex items-center justify-between shrink-0"
+                  style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-deep)', color: 'var(--meta)', height: 48, boxSizing: 'border-box' }}
+                >
+                  <span className="truncate">Tables {selectedSchema ? `(in ${selectedSchema})` : ''}</span>
+                  <button
+                    onClick={handleOpenHeidiSQL}
+                    disabled={!isMariaDBRunning}
+                    title={t('Open in HeidiSQL')}
+                    className="px-2 py-1 disabled:opacity-40 rounded-md text-[11px] font-semibold flex items-center gap-1 transition duration-200 shrink-0"
+                    style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-on)' }}
+                  >
+                    <ExternalLink size={11} /> {t('Open in HeidiSQL')}
+                  </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-5 font-mono text-xs">
@@ -858,7 +811,7 @@ export default function DBExplorer() {
             <div className="flex-1 border rounded-xl flex overflow-hidden min-h-[400px]" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>
               <div className="w-1/3 border-r flex flex-col min-h-0" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-deep)' }}>
                 <div
-                  className="px-4 border-b font-bold text-[10px] tracking-wider uppercase flex items-center gap-2 select-none shrink-0"
+                  className="px-4 border-b font-bold text-[10px] tracking-wider uppercase flex items-center justify-between select-none shrink-0"
                   style={{
                     borderColor: 'var(--border)',
                     backgroundColor: 'var(--bg-deep)',
@@ -868,13 +821,39 @@ export default function DBExplorer() {
                   }}
                 >
                   <span className="shrink-0">Keys ({redisKeys.length})</span>
-                  <form onSubmit={handleSearchSubmit} className="relative flex items-center flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {redisCursor !== 0 && (
+                      <button
+                        onClick={() => scanRedisKeys(selectedDB, redisCursor, searchMatch, false)}
+                        disabled={isLoadingRedis}
+                        className="text-[10px] px-1.5 py-0.5 rounded border transition hover:opacity-80 shrink-0"
+                        style={{ borderColor: 'var(--border)', color: 'var(--accent)' }}
+                      >
+                        {t('載入更多')}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => checkRedisStatus()}
+                      disabled={isLoadingRedis && isRedisRunning}
+                      title={t('重新整理')}
+                      className="btn-custom-hover px-2 py-1 rounded-md text-[11px] font-semibold border flex items-center gap-1 transition duration-200"
+                      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--card)', color: 'var(--fg-2)' }}
+                    >
+                      <RefreshCw size={11} className={isLoadingRedis && isRedisRunning ? 'animate-spin' : ''} />
+                      <span>{t('重新整理')}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 搜尋鍵名：移至 KEYS 下方內容區最上方 */}
+                <div className="p-2 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
+                  <form onSubmit={handleSearchSubmit} className="relative flex items-center w-full">
                     <input
                       type="text"
                       placeholder={t('搜尋鍵名')}
                       value={searchMatch}
                       onChange={(e) => setSearchMatch(e.target.value)}
-                      className="pl-7 pr-2 rounded-md text-[11px] outline-none w-full min-w-0 font-mono"
+                      className="pl-7 pr-2 rounded-md text-[11px] outline-none w-full font-mono"
                       style={{
                         backgroundColor: 'var(--input-bg)',
                         border: '1px solid var(--border)',
@@ -886,16 +865,6 @@ export default function DBExplorer() {
                     />
                     <Search size={12} className="absolute left-2 pointer-events-none" style={{ color: 'var(--muted)' }} />
                   </form>
-                  {redisCursor !== 0 && (
-                    <button
-                      onClick={() => scanRedisKeys(selectedDB, redisCursor, searchMatch, false)}
-                      disabled={isLoadingRedis}
-                      className="text-[10px] px-1.5 py-0.5 rounded border transition hover:opacity-80 shrink-0"
-                      style={{ borderColor: 'var(--border)', color: 'var(--accent)' }}
-                    >
-                      {t('載入更多')}
-                    </button>
-                  )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
@@ -931,15 +900,37 @@ export default function DBExplorer() {
                     boxSizing: 'border-box',
                   }}
                 >
-                  <span>{t('鍵值內容')}</span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-1 text-[11px] font-normal shrink-0">
+                      <span className="font-bold text-[10px]" style={{ color: 'var(--meta)' }}>DB</span>
+                      <select
+                        value={selectedDB}
+                        onChange={(e) => handleDBChange(parseInt(e.target.value))}
+                        disabled={!isRedisRunning}
+                        className="rounded-md px-1.5 py-0.5 text-[11px] font-semibold outline-none disabled:opacity-50 cursor-pointer"
+                        style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg)' }}
+                      >
+                        {Array.from({ length: 16 }).map((_, i) => {
+                          const dbInfo = redisDBList.find(d => d.db === i);
+                          const count = dbInfo ? dbInfo.keys : 0;
+                          return (
+                            <option key={i} value={i}>
+                              {i} ({count})
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    <span className="border-l pl-2.5" style={{ borderColor: 'var(--border)' }}>{t('鍵值內容')}</span>
+                  </div>
                   {keyDetail && (
                     <button
                       onClick={handleCopyValue}
-                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded flex items-center gap-0.5 transition shrink-0"
+                      className="text-[10px] font-semibold px-2 py-1 rounded flex items-center gap-1 transition shrink-0"
                       style={{ color: copied ? 'var(--status-ok)' : 'var(--fg-2)', backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}
                       title={t('複製內容')}
                     >
-                      {copied ? <Check size={10} /> : <Copy size={10} />}
+                      {copied ? <Check size={11} /> : <Copy size={11} />}
                       {copied ? t('已複製') : t('複製')}
                     </button>
                   )}
