@@ -177,6 +177,12 @@ func TestRestoreDefaultConf(t *testing.T) {
 		t.Errorf("Caddyfile 釋放失敗: %v", err)
 	}
 
+	for _, checkFile := range []string{"conf/wincmp.json", "conf/dependencies.json", "conf/my.ini"} {
+		if _, err := os.Stat(filepath.Join(tempDir, checkFile)); err != nil {
+			t.Errorf("%s 釋放失敗: %v", checkFile, err)
+		}
+	}
+
 	commonCaddyPath := filepath.Join(tempDir, "conf", "snippets", "common.caddy")
 	commonCaddyData, err := os.ReadFile(commonCaddyPath)
 	if err != nil {
@@ -346,3 +352,4 @@ func TestEnsurePHPIniOptimizations(t *testing.T) {
 		t.Errorf("已有 opcache 設定時不應再次修改檔案")
 	}
 }
+

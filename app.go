@@ -77,14 +77,6 @@ func (a *App) startup(ctx context.Context) {
 		a.baseDir = filepath.Dir(execPath)
 	}
 
-	// 開發模式：如果 bin/ 目錄不在執行檔目錄下，嘗試用當前工作目錄
-	if _, err := os.Stat(filepath.Join(a.baseDir, "bin")); os.IsNotExist(err) {
-		cwd, _ := os.Getwd()
-		if _, err := os.Stat(filepath.Join(cwd, "bin")); err == nil {
-			a.baseDir = cwd
-		}
-	}
-
 	// 啟動時清理殘留的舊版本檔案及臨時目錄
 	updater.CleanupOldVersion(a.baseDir)
 

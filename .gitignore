@@ -51,30 +51,26 @@ vendor/
 !/www/.gitkeep
 
 # --- Configuration & Sensitive Data ---
-# 忽略用戶本機產生的 UI 設定檔 (包含路徑、偏好設定等)
-/conf/wincmp.json
-
-# 如果未來有動態生成的憑證或密鑰
+# 動態生成的憑證或密鑰與暫存檔
 *.bak
 *.key
 *.pem
 *.cer
 *.crt
 *.csr
-*.bak
 *.7z
 *.zip
+
 *.caddy
-!/packaging/**/*.caddy
-!/internal/config/default_conf/**/*.caddy
+!/conf/Caddyfile
+!/conf/snippets/**/*.caddy
 
 /conf/certs/
 /conf/ssl/*
 !/conf/ssl/.gitkeep
+/conf/sites/*
+!/conf/sites/.gitkeep
 
-/conf/wincmp.json
-/conf/my.ini
-/conf/Caddyfile
 .sisyphus/
 .memory-bank/
 

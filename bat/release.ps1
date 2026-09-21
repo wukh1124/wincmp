@@ -65,13 +65,22 @@ if (Test-Path $TargetDir) {
 }
 New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
 
-# 4. Copy template files
-Write-Host "[4] Copying release template..." -ForegroundColor Gray
+# 4. Copy template files and official conf
+Write-Host "[4] Copying release template and official configuration..." -ForegroundColor Gray
 $TemplateDir = Join-Path $ProjectRoot "packaging\wincmp"
 if (-not (Test-Path $TemplateDir)) {
     Write-Error "Template directory packaging\wincmp not found!"
 }
 Copy-Item -Path "$TemplateDir\*" -Destination $TargetDir -Recurse -Force
+
+# Copy official conf directly from project root conf/
+$ConfSource = Join-Path $ProjectRoot "conf"
+$ConfTarget = Join-Path $TargetDir "conf"
+Copy-Item -Path $ConfSource -Destination $TargetDir -Recurse -Force
+$EmbeddedGo = Join-Path $ConfTarget "embedded.go"
+if (Test-Path $EmbeddedGo) {
+    Remove-Item -Path $EmbeddedGo -Force
+}
 
 # 5. Copy and rename executable
 Write-Host "[5] Copying and renaming executable..." -ForegroundColor Gray

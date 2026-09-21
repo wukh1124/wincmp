@@ -1,28 +1,19 @@
 package config
 
 import (
-	"embed"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"wincmp/conf"
 )
 
-// DefaultConfFS 嵌入 default_conf 目錄下的所有設定檔與子目錄
-//go:embed all:default_conf/*
-var DefaultConfFS embed.FS
-
-// RestoreDefaultConf 遞迴將 embedded 內的 default_conf 釋放到 baseDir/conf 中。
+// RestoreDefaultConf 遞迴將 embedded 內的預設設定檔釋放到 baseDir/conf 中。
 // 採用安全機制：若檔案已存在則不覆蓋，保留已自訂的設定。
 func RestoreDefaultConf(baseDir string) error {
-	// embed.FS 會保留前綴 "default_conf"，使用 Sub 取得無前綴的子檔案系統
-	subFS, err := fs.Sub(DefaultConfFS, "default_conf")
-	if err != nil {
-		return fmt.Errorf("無法取得子檔案系統 default_conf: %w", err)
-	}
-
-	err = fs.WalkDir(subFS, ".", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(conf.DefaultConfFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -50,7 +41,7 @@ func RestoreDefaultConf(baseDir string) error {
 		}
 
 		// 讀取嵌入的內容
-		data, err := fs.ReadFile(subFS, path)
+		data, err := fs.ReadFile(conf.DefaultConfFS, path)
 		if err != nil {
 			return fmt.Errorf("無法讀取嵌入檔案 %s: %w", path, err)
 		}

@@ -165,7 +165,7 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 		diagErr := fmt.Errorf(
 			"%s",
 			i18n.Tfmt(
-				"%s\n\n建議指引與診斷資訊：\n1. 遠端配置來源 (DependencyURL)：%s\n2. 可能原因：遠端建議設定檔尚未發布該項目版本、SHA-256 遺漏或本地配置缺少雜湊值。\n3. 請嘗試在依賴管理面板點擊「獲取最新」同步設定；若為自訂/測試環境，請確認倉庫分支或本地 dependencies.json 是否已填入正確的 sha256。",
+				"%s\n\n建議排查指引：\n1. 依賴目錄來源：%s\n2. 可能原因：官方目錄尚未發布該版本，或本地設定檔缺少安全雜湊值。\n3. 建議操作：請嘗試在右上角點擊「檢查更新」同步最新設定；若為開發測試環境，請確認 conf/dependencies.json 是否已填入正確的 sha256。",
 				i18n.T(err.Error()), depURL,
 			),
 		)
@@ -190,7 +190,7 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 		_ = os.Remove(destZip)
 		failErr := fmt.Errorf(
 			"%s",
-			i18n.Tfmt("依賴下載失敗：%v\n\n建議指引與診斷資訊：\n1. 遠端配置來源：%s\n2. 請檢查您的網路連線或代理設定後重試。\n3. 若持續失敗，可手動下載：%s\n4. 並解壓放置於以下 bin 目錄位置：%s", err, depURL, item.URL, destDir),
+			i18n.Tfmt("依賴下載失敗：%v\n\n建議指引與診斷資訊：\n1. 依賴目錄來源：%s\n2. 請檢查您的網路連線或代理設定後重試。\n3. 若持續失敗，可手動下載：%s\n4. 並解壓放置於以下 bin 目錄位置：%s", err, depURL, item.URL, destDir),
 		)
 		a.handleErrorLog("system", i18n.Tfmt("下載 %s 失敗", name), failErr)
 		a.emitProgress(key, "error", 0, 0, 0, failErr.Error())
@@ -209,7 +209,7 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 	if !strings.EqualFold(shaVal, item.SHA256) {
 		mismatchErr := fmt.Errorf(
 			"%s",
-			i18n.Tfmt("SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。\n\n建議指引與診斷資訊：\n1. 遠端配置來源 (DependencyURL)：%s\n2. 請先嘗試在依賴管理面板點擊「獲取最新」，然後重試下載。\n3. 若問題持續，請手動下載：%s\n4. 並解壓放置於以下 bin 目錄位置：%s", depURL, item.URL, destDir),
+			i18n.Tfmt("SHA-256 完整性校驗失敗！下載的檔案可能損毀、不完整或遭受中間人篡改。\n\n建議指引與診斷資訊：\n1. 依賴目錄來源：%s\n2. 請先嘗試在右上角點擊「檢查更新」取得最新校驗資訊，然後重試下載。\n3. 若問題持續，可手動下載：%s\n4. 並解壓放置於以下 bin 目錄位置：%s", depURL, item.URL, destDir),
 		)
 		a.handleErrorLog("system", i18n.Tfmt("%s 的完整性校驗失敗", name), mismatchErr)
 		a.emitProgress(key, "error", 0, 0, 0, mismatchErr.Error())
@@ -410,14 +410,32 @@ func (a *App) installPHPRedisExtension(key string, item config.DependencyItem, p
 		_ = os.RemoveAll(tempExtractDir)
 	}()
 
-	// 1. 下載 redis 擴充 zip
+	// 1. 安全性預檢：驗證 URL 合法性、HTTPS 協議、白名單與 SHA-256 必填規則
+	if err := downloader.ValidateSecurity(item.URL, item.SHA256); err != nil {
+		a.handleErrorLog("system", i18n.Tfmt("自動配置 Redis 擴充安全性檢查失敗: %s", key), err)
+		return
+	}
+
+	// 2. 下載 redis 擴充 zip
 	err := downloader.DownloadFile(item.URL, tempZip, nil)
 	if err != nil {
 		a.handleErrorLog("system", i18n.Tfmt("自動下載 Redis 擴充失敗: %s", key), err)
 		return
 	}
 
-	// 2. 解壓縮
+	// 2.5 進行 SHA-256 完整性校驗
+	shaVal, shaErr := downloader.CalculateSHA256(tempZip)
+	if shaErr != nil {
+		a.handleErrorLog("system", i18n.Tfmt("計算 Redis 擴充 (%s) SHA-256 失敗", key), shaErr)
+		return
+	}
+	if !strings.EqualFold(shaVal, item.SHA256) {
+		mismatchErr := fmt.Errorf("SHA-256 完整性校驗失敗！預期 %s, 實際 %s", item.SHA256, shaVal)
+		a.handleErrorLog("system", i18n.Tfmt("Redis 擴充 (%s) 完整性校驗失敗", key), mismatchErr)
+		return
+	}
+
+	// 3. 解壓縮
 	err = downloader.Unzip(tempZip, tempExtractDir)
 	if err != nil {
 		a.handleErrorLog("system", i18n.Tfmt("自動解壓 Redis 擴充失敗: %s", key), err)
