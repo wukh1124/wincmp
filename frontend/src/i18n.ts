@@ -537,6 +537,13 @@ export const enTranslations: Record<string, string> = {
   "Caddyfile": "Caddyfile",
   "common.caddy": "common.caddy",
   "系統運作與自動化行為": "System & Automation Behaviors",
+  "記憶服務運行狀態": "Restore Service State",
+  "啟動時自動恢復上次關閉前運行的服務": "Automatically resume previously running services on startup",
+  "自動更新 Hosts 網域": "Auto-update Hosts",
+  "建立或修改專案網址時，自動同步本機 Hosts 檔案": "Sync local Hosts file automatically when project domains change",
+  "關閉視窗縮小至系統匣": "Minimize to Tray on Close",
+  "點擊關閉按鈕時縮小至通知區域，維持背景運行": "Keep running in notification tray when closing window",
+  "自動檢查版本更新": "Check for Updates",
   "啟動 Redis 失敗: %w": "Failed to start Redis: %w",
 
   // Dependency Manager Menu & Buttons

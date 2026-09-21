@@ -186,45 +186,54 @@ export default function Settings() {
             {/* 系統開關組 */}
             <div className="space-y-3 pt-2 select-none">
               <div className="flex items-center justify-between">
-                <span className="font-semibold" style={{ color: 'var(--fg-2)' }}>{t("恢復上次關閉時的服務狀態")}</span>
+                <div>
+                  <span className="font-semibold block" style={{ color: 'var(--fg-2)' }}>{t("記憶服務運行狀態")}</span>
+                  <span className="text-[10px] block mt-0.5" style={{ color: 'var(--meta)' }}>{t("啟動時自動恢復上次關閉前運行的服務")}</span>
+                </div>
                 <input
                   type="checkbox"
                   checked={config.global.restore_last_state}
                   onChange={(e) => handleGlobalFieldChange('restore_last_state', e.target.checked)}
-                  className="w-3.5 h-3.5 rounded cursor-pointer"
-                  style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)', accentColor: 'var(--accent)' }}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="font-semibold" style={{ color: 'var(--fg-2)' }}>{t("自動向 Windows Hosts 檔更新域名")}</span>
-                <input
-                  type="checkbox"
-                  checked={config.global.auto_update_hosts}
-                  onChange={(e) => handleGlobalFieldChange('auto_update_hosts', e.target.checked)}
-                  className="w-3.5 h-3.5 rounded cursor-pointer"
-                  style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)', accentColor: 'var(--accent)' }}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="font-semibold" style={{ color: 'var(--fg-2)' }}>{t("點擊關閉視窗時縮小至系統托盤 (Minimize to Tray)")}</span>
-                <input
-                  type="checkbox"
-                  checked={config.global.minimize_to_tray}
-                  onChange={(e) => handleGlobalFieldChange('minimize_to_tray', e.target.checked)}
-                  className="w-3.5 h-3.5 rounded cursor-pointer"
+                  className="w-3.5 h-3.5 rounded cursor-pointer shrink-0 ml-3"
                   style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)', accentColor: 'var(--accent)' }}
                 />
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="font-semibold block" style={{ color: 'var(--fg-2)' }}>{t("自動檢查版本更新(Github)")}</span>
+                  <span className="font-semibold block" style={{ color: 'var(--fg-2)' }}>{t("自動更新 Hosts 網域")}</span>
+                  <span className="text-[10px] block mt-0.5" style={{ color: 'var(--meta)' }}>{t("建立或修改專案網址時，自動同步本機 Hosts 檔案")}</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={config.global.auto_update_hosts}
+                  onChange={(e) => handleGlobalFieldChange('auto_update_hosts', e.target.checked)}
+                  className="w-3.5 h-3.5 rounded cursor-pointer shrink-0 ml-3"
+                  style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)', accentColor: 'var(--accent)' }}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold block" style={{ color: 'var(--fg-2)' }}>{t("關閉視窗縮小至系統匣")}</span>
+                  <span className="text-[10px] block mt-0.5" style={{ color: 'var(--meta)' }}>{t("點擊關閉按鈕時縮小至通知區域，維持背景運行")}</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={config.global.minimize_to_tray}
+                  onChange={(e) => handleGlobalFieldChange('minimize_to_tray', e.target.checked)}
+                  className="w-3.5 h-3.5 rounded cursor-pointer shrink-0 ml-3"
+                  style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)', accentColor: 'var(--accent)' }}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-semibold block" style={{ color: 'var(--fg-2)' }}>{t("自動檢查版本更新")}</span>
                   <span className="text-[10px] block mt-0.5" style={{ color: 'var(--meta)' }}>{t("每 6 小時自動檢查，啟動時也會檢查一次")}</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={config.global.auto_check_update}
                   onChange={(e) => handleGlobalFieldChange('auto_check_update', e.target.checked)}
-                  className="w-3.5 h-3.5 rounded cursor-pointer"
+                  className="w-3.5 h-3.5 rounded cursor-pointer shrink-0 ml-3"
                   style={{ backgroundColor: 'var(--input-bg)', borderColor: 'var(--input-border)', accentColor: 'var(--accent)' }}
                 />
               </div>
