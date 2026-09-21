@@ -87,15 +87,42 @@ PHP 7.3 → `37300+`；PHP 8.2 → `38200+`。每版預設 3 個進程，可調�
 
 ### 指令
 
-```cmd
+#### 1. 建置與執行
+
+```bash
+# 啟動本機開發熱重載
 wails dev
 
+# 建置發行檔（清理並優化）
 go mod tidy
 cd frontend && npm install && cd ..
-wails build -clean
 wails build -clean -ldflags "-s -w"
-wails build -ldflags "-X main.AppVersion=v2.1.0"
 
+# 帶有版本號建置（動態讀取 VERSION 檔案）
+# PowerShell:
+$ver = (Get-Content VERSION).Trim(); wails build -clean -ldflags "-s -w -X main.AppVersion=v$ver"
+
+# 自動化發布打包（於 ../wincmp-release-only/ 產生 zip 與 exe 乾淨發行包）
+.\release.bat
+```
+
+#### 2. 自動化截圖 (Playwright)
+
+```bash
+# 執行截圖並自動備份上一版舊圖（需先在另一視窗執行 `wails dev`）
+node scripts/capture.js
+
+# 截圖並直接同步至官網目錄
+node scripts/capture.js --sync-website
+```
+
+#### 3. 官網本地預覽與資源同步
+
+```bash
+# 一鍵同步 icon、截圖並產出 website/release.json 供本地官網測試
+node scripts/sync-website.js
+
+# 或僅重新產生 website/release.json（CI 部署自動執行）
 node scripts/generate-release-json.js
 ```
 

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "screenshot": "node scripts/capture.cjs"
+    "screenshot": "node ../scripts/capture.js",
+    "screenshot:core": "node scripts/capture.cjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

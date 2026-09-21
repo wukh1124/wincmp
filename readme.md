@@ -87,16 +87,42 @@ PHP 7.3 → `37300+`; PHP 8.2 → `38200+`. Default process count is 3 per versi
 
 ### Commands
 
-```cmd
+#### 1. Build & Run
+
+```bash
+# Start local development with hot reload
 wails dev
 
+# Build (clean & optimized)
 go mod tidy
 cd frontend && npm install && cd ..
-wails build -clean
 wails build -clean -ldflags "-s -w"
-wails build -ldflags "-X main.AppVersion=v2.1.4"
 
-# Generate website/release.json (for local website preview; automatically run in CI)
+# Build with version tag (read dynamically from VERSION file)
+# PowerShell:
+$ver = (Get-Content VERSION).Trim(); wails build -clean -ldflags "-s -w -X main.AppVersion=v$ver"
+
+# Automated release packaging (creates zip & exe with checksums in ../wincmp-release-only/)
+.\release.bat
+```
+
+#### 2. Screenshots (Headless Playwright)
+
+```bash
+# Capture screenshots with auto backup of previous version (requires `wails dev` running)
+node scripts/capture.js
+
+# Capture screenshots and automatically sync to website folder
+node scripts/capture.js --sync-website
+```
+
+#### 3. Website Local Preview & Sync
+
+```bash
+# Sync icon, screenshots, and generate website/release.json for local website testing
+node scripts/sync-website.js
+
+# Or generate website/release.json only (automatically run in CI)
 node scripts/generate-release-json.js
 ```
 

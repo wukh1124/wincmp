@@ -21,7 +21,7 @@ wails dev
 
 ### 建置編譯
 
-```powershell
+```bash
 go mod tidy
 cd frontend; npm install; cd ..
 
@@ -31,8 +31,28 @@ wails build -debug
 # 正式發布（無主控台，產出 wincmp.exe）
 wails build -clean
 
-# 壓縮並移除 symbols
-wails build -clean -ldflags "-s -w"
+# 壓縮並移除 symbols（動態讀取 VERSION，禁止寫死版號）
+# PowerShell:
+$ver = (Get-Content VERSION).Trim(); wails build -clean -ldflags "-s -w -X main.AppVersion=v$ver"
+
+# 自動化完整發布打包（產生 zip 與獨立 exe 於 ../wincmp-release-only/）
+.\release.bat
+```
+
+### 常用維護指令（統一採用 Node.js）
+
+```bash
+# 自動化截圖（需先執行 wails dev；自動備份舊圖至 screenshot/backup/）
+node scripts/capture.js
+
+# 截圖並直接同步至官網目錄
+node scripts/capture.js --sync-website
+
+# 本地官網資源同步（複製 icon、screenshot 並生成 website/release.json）
+node scripts/sync-website.js
+
+# 發行前驗證器
+node .agents/skills/wincmp-release/scripts/validate_release.js
 ```
 
 ### 測試
@@ -53,6 +73,9 @@ wincmp/
 ├── downloader_bridge.go    # 下載管理器 Binding
 ├── conf/                   # 系統配置 (Caddyfile, wincmp.json, php/, my.ini 等)
 ├── bin/                    # 二進位套件 (Caddy, MariaDB, PHP-CGI, Mailpit, Node 等)
+├── scripts/                # 專案工具腳本（統一使用 Node.js，如 capture.js, sync-website.js）
+├── bat/                    # 發布批次檔 (release.ps1, release.bat) 與歷史舊腳本
+├── website/                # 介紹官網（GitHub Pages 靜態網站）
 ├── internal/               # Go 後端核心（不含 GUI 邏輯）
 │   ├── config/             # wincmp.json 讀寫、依賴設定、php.ini 優化
 │   ├── crypto/             # DPAPI 等加密封裝
@@ -196,6 +219,15 @@ return (
 * 只調整「Laravel 判定分數或版本解析」→ 改 `internal/detect`。
 * `detect.DetectResult` **不含** Runtime/Port，欄位為：`IsLaravel`、`Confidence`、`Reasons`、`Version`、`Type`。
 
+### 4.7 腳本技術棧規範（全面採用 Node.js，嚴禁濫用 .ps1 / .bat）
+
+* **唯一指定技術棧**：專案輔助工具、發布校驗、資料處理、自動截圖等維護腳本，**一律優先使用 Node.js**（放置於 `scripts/*.js`）。
+* **禁止新增 .ps1 / .bat**：Windows PowerShell 容易受 `ExecutionPolicy`（腳本執行策略受限）阻礙，且終端編碼易生歧異；Node.js 跨平台相容性高、編碼預設 UTF-8。
+* **現有腳本清查與狀態盤點**：
+  * **已改為 Node.js**：自動化截圖全面由 `scripts/capture.js` 取代（`capture_release_screenshots.ps1` 僅保留作為相容轉發）；官網資源同步由 `scripts/sync-website.js` 負責。
+  * **真實流程使用中（保留穩定）**：發布打包 `bat/release.ps1` 與捷徑 `release.bat`（CI `release.yml` 亦調用之，核心建置與壓縮邏輯穩定運作）。
+  * **歷史閒置待觀察（列為待清理）**：`bat/start-*.bat`、`bat/stop-services.bat`、`bat/zip-wincmp.bat` 屬早期手動測試殘留，現行代碼與流程無任何引用，列為觀察名單，新開發嚴禁調用。
+
 ---
 
 ## 5. 套件深潛速查
@@ -246,6 +278,7 @@ redis               → "redis"
 ## 6. 注意事項與禁止行為
 
 * **嚴禁**提交編譯產物與執行時垃圾：`*.exe`、`frontend/dist/`、可忽略的 `*.log` 等（確認 `.gitignore`）。
+* **腳本規範**：盡量禁止使用或新增 `.ps1` / `.bat` 腳本，日常工具與維護腳本一律以 Node.js 實作。
 * **禁止**在非必要時順手修改其他無關程式碼的註解。
 * **避免過度工程**：Minimal Diff，不提前建置過度複雜的抽象層。
 * **代碼隔離**：`legacy_fyne/` 僅供參考，新 GUI 功能一律在 `frontend/` 以 React 實作。

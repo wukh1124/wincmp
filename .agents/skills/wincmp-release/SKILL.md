@@ -33,10 +33,10 @@ description: Release management, release_note validation, and release workflow a
 2. 更新 VERSION → 執行 pre-flight validator
    （validator 檢查 notes 日期行；不再檢查/寫入 release_info.json）
 3. 本機啟動 wails dev（http://localhost:34115）
-4. 執行 scripts/capture_release_screenshots.ps1
-   - 以 git tag「發布前舊版」備份 screenshot/{dark,sketch} → screenshot/backup/v{prev}/
-   - 重新擷取 16 張官網截圖
-5. 執行 ./bat/release.ps1（建置；校驗 notes 已存在與日期行）
+4. 執行 node scripts/capture.js
+   - 以 git tag「發布前舊版」自動備份 screenshot/{dark,sketch} → screenshot/backup/v{prev}/
+   - 重新擷取 16 張官網截圖（可選附加 `--sync-website` 直接同步至 website/）
+5. 執行 ./bat/release.ps1（或 .\release.bat 建置；校驗 notes 已存在與日期行）
 6. Git 發行（由開發者審核執行，見 §7）：
    - 在發行分支 commit（VERSION + release_note 等）
    - **線性進入 main**（rebase 後 fast-forward；禁止 merge commit）
@@ -188,20 +188,32 @@ go test ./...
 
 ## 5. 截圖自動化（Release 必做）
 
-```powershell
+```bash
 # 前置：另一個終端機已執行 wails dev；請在專案根目錄執行
-# （腳本會自動檢測並於需要時安裝 frontend playwright 與 chromium 核心）
-powershell -ExecutionPolicy Bypass -File .\scripts\capture_release_screenshots.ps1
+node scripts/capture.js
+
+# 若希望截圖後直接自動同步至官網資料夾：
+node scripts/capture.js --sync-website
 ```
 
 腳本行為：
 1. 讀取 `VERSION` 目標版
-2. 從 **git tag** 取得**發布前舊版**版號（不使用 release_info.json）
-3. 將現有 `screenshot/dark`、`screenshot/sketch` 複製到 `screenshot/backup/v{舊版}/`
-4. 確認 `http://localhost:34115` 可連線（否則結束並提示啟動 `wails dev`）
-5. 執行 `frontend/scripts/capture.cjs` 產出新圖
+2. 從 **git tag** 取得**發布前舊版**版號（自動備份至 `screenshot/backup/v{舊版}/`）
+3. 確認 `http://localhost:34115` 可連線（若未開啟會提示啟動 `wails dev`）
+4. 自動檢查並按需安裝 Playwright Chromium
+5. 執行 16 張多主題（carbon/sketch）頁面自動化擷圖
+6. （可選）附加 `--sync-website` 時，自動同步圖檔與 `release.json` 至 `website/` 目錄
 
 `screenshot/backup/` 已在 `.gitignore`，不會進倉庫；目前使用的 `screenshot/{dark,sketch}/` 需隨發布流程提交，官網部署時會複製到 `website/screenshot/`。
+
+### 5.1 本地官網預覽與資源同步 (Local Website Testing)
+
+若需在本地預覽/測試靜態官網 `website/index.html`，可一鍵補齊所有靜態資源與 release 資訊：
+
+```bash
+node scripts/sync-website.js
+```
+此腳本會自動將 `icon.svg` 複製為 `website/favicon.svg`、同步 `screenshot/` 目錄，並產生最新的 `website/release.json`。
 
 ---
 
