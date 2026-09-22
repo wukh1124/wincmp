@@ -1,86 +1,137 @@
 {
   "cacert": {
     "version": "2026.08.13",
+    "license": "MPL-2.0",
+    "homepage": "https://curl.se/ca/",
+    "source_url": "https://github.com/curl/curl",
     "url": "https://curl.se/ca/cacert.pem",
     "sha256": "f66dff1bdf8f96060b8177976f8b7d9254bc89bc4db933d769f7384d28480bc9"
   },
   "caddy": {
     "version": "2.11.4",
+    "license": "Apache-2.0",
+    "homepage": "https://caddyserver.com",
+    "source_url": "https://github.com/caddyserver/caddy",
     "url": "https://github.com/caddyserver/caddy/releases/download/v2.11.4/caddy_2.11.4_windows_amd64.zip",
     "sha256": "1708333f79e274c7697285afe6d592ab39314e0b131e9ec6bea08ad27df62ebf"
   },
   "composer": {
     "version": "2.10.3",
+    "license": "MIT",
+    "homepage": "https://getcomposer.org",
+    "source_url": "https://github.com/composer/composer",
     "url": "https://github.com/composer/composer/releases/download/2.10.3/composer.phar",
     "sha256": "7a2d379d5b8ffdaa028580ef26494c36d2feef4b178d3dd1473a4dbc5e17c8d6"
   },
   "heidisql": {
     "version": "12.21",
+    "license": "GPL-3.0-or-later",
+    "homepage": "https://www.heidisql.com",
+    "source_url": "https://github.com/HeidiSQL/HeidiSQL",
     "url": "https://github.com/HeidiSQL/HeidiSQL/releases/download/v12.21/HeidiSQL_12.21_64_Portable.zip",
     "sha256": "fecb76a69e29a53ea05b1d57fc2f7b7aaed5b8f889556c6eca545e2a800df1ab"
   },
   "mailpit": {
     "version": "1.31.1",
+    "license": "MIT",
+    "homepage": "https://mailpit.axllent.org",
+    "source_url": "https://github.com/axllent/mailpit",
     "url": "https://github.com/axllent/mailpit/releases/download/v1.31.1/mailpit-windows-amd64.zip",
     "sha256": "73ff05204741bd89cc96e6074573c4b22e1edfadf1b3427536233ff20c751604"
   },
   "mariadb": {
     "version": "11.4.10",
+    "license": "GPL-2.0-only",
+    "homepage": "https://mariadb.org",
+    "source_url": "https://github.com/MariaDB/server",
     "url": "https://archive.mariadb.org/mariadb-11.4.10/winx64-packages/mariadb-11.4.10-winx64.zip",
     "sha256": "fb7c76f0804321ee373daa49145f2056d2d88f321b614130adeb05a1644ea003"
   },
   "node": {
     "version": "24.21.0",
+    "license": "MIT",
+    "homepage": "https://nodejs.org",
+    "source_url": "https://github.com/nodejs/node",
     "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-win-x64.zip",
     "sha256": "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541"
   },
   "php73": {
     "version": "7.3.33",
+    "license": "PHP-3.01",
+    "homepage": "https://www.php.net",
+    "source_url": "https://github.com/php/php-src",
     "url": "https://windows.php.net/downloads/releases/archives/php-7.3.33-nts-Win32-VC15-x64.zip",
     "sha256": "5eaf3cad80e678623f222a42c99bcefcc60eea359d407fb51e805afdb3b13e5e"
   },
   "php74": {
     "version": "7.4.33",
+    "license": "PHP-3.01",
+    "homepage": "https://www.php.net",
+    "source_url": "https://github.com/php/php-src",
     "url": "https://windows.php.net/downloads/releases/archives/php-7.4.33-nts-Win32-vc15-x64.zip",
     "sha256": "14ae3250d4447c8ccfc4c45a70d90adfbcd61e728d85f0be56a7ddf8f9c8aace"
   },
   "php82": {
     "version": "8.2.33",
+    "license": "PHP-3.01",
+    "homepage": "https://www.php.net",
+    "source_url": "https://github.com/php/php-src",
     "url": "https://windows.php.net/downloads/releases/php-8.2.33-nts-Win32-vs16-x64.zip",
     "sha256": "d0bd189522fa50255ee94ed4b340ed4330f5ae33a90a74205275b0f0b221d388"
   },
   "php83": {
     "version": "8.3.33",
+    "license": "PHP-3.01",
+    "homepage": "https://www.php.net",
+    "source_url": "https://github.com/php/php-src",
     "url": "https://windows.php.net/downloads/releases/php-8.3.33-nts-Win32-vs16-x64.zip",
     "sha256": "534399107056313246f424adbbb7937337e40fbbf6aa7bc26287ba9cfd2e4a2a"
   },
   "php84": {
     "version": "8.4.25",
+    "license": "PHP-3.01",
+    "homepage": "https://www.php.net",
+    "source_url": "https://github.com/php/php-src",
     "url": "https://windows.php.net/downloads/releases/php-8.4.25-nts-Win32-vs17-x64.zip",
     "sha256": "43a8f67ed2e5223fafb21293c85976361808855405278cef2cf3037c3ae2529c"
   },
   "php_redis_74": {
     "version": "5.3.7",
+    "license": "PHP-3.01",
+    "homepage": "https://pecl.php.net/package/redis",
+    "source_url": "https://github.com/phpredis/phpredis",
     "url": "https://downloads.php.net/~windows/pecl/releases/redis/5.3.7/php_redis-5.3.7-7.4-nts-vc15-x64.zip",
     "sha256": "dd846e3215740049d7ee5bfe11e10ebe1fce5c4db910065df3749b6a846cfbfc"
   },
   "php_redis_82": {
     "version": "6.3.0",
+    "license": "PHP-3.01",
+    "homepage": "https://pecl.php.net/package/redis",
+    "source_url": "https://github.com/phpredis/phpredis",
     "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.2-nts-vs16-x64.zip",
     "sha256": "b2b730b99b97352212b338c01f7dde577857e31c5f8e1d011ec2871e63f8f87c"
   },
   "php_redis_83": {
     "version": "6.3.0",
+    "license": "PHP-3.01",
+    "homepage": "https://pecl.php.net/package/redis",
+    "source_url": "https://github.com/phpredis/phpredis",
     "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.3-nts-vs16-x64.zip",
     "sha256": "519fc1bdf54323d3ab08443c66f77e783d314c13b532e27cc8b390def7f81b60"
   },
   "php_redis_84": {
     "version": "6.3.0",
+    "license": "PHP-3.01",
+    "homepage": "https://pecl.php.net/package/redis",
+    "source_url": "https://github.com/phpredis/phpredis",
     "url": "https://downloads.php.net/~windows/pecl/releases/redis/6.3.0/php_redis-6.3.0-8.4-nts-vs17-x64.zip",
     "sha256": "6db881ed172703962002d7e02dacc8ddb3f789904c648fee3e6ceec1319679cd"
   },
   "redis": {
     "version": "5.0.14.1",
+    "license": "BSD-3-Clause",
+    "homepage": "https://redis.io",
+    "source_url": "https://github.com/tporadowski/redis",
     "url": "https://github.com/tporadowski/redis/releases/download/v5.0.14.1/Redis-x64-5.0.14.1.zip",
     "sha256": "018ea18a35876383cbb5f4cd0258adfc87747cf9d619bce1cf73a2e36f720ccf"
   }

@@ -3,19 +3,30 @@ import {
   X, RefreshCw, Download, ArrowUpCircle, CheckCircle2,
   Loader2, AlertTriangle, Cpu, Database, Settings as SettingsIcon,
   HelpCircle, Server, Terminal, HardDrive, Zap, ChevronDown,
-  Trash2, RotateCw, FolderOpen, Copy, Check
+  Trash2, RotateCw, FolderOpen, Copy, Check, ExternalLink, Scale
 } from 'lucide-react';
 import {
   GetDependencyConfig, FetchRemoteDependencies, DownloadDependency,
   ScanServices, GetScanResult, UninstallDependency, OpenDependencyFolder
 } from '../../wailsjs/go/main/App';
-import { EventsOn } from '../../wailsjs/runtime/runtime';
+import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { t, useLanguage } from '../i18n';
 
-interface DependencyItem { version: string; url: string; }
+interface DependencyItem {
+  version: string;
+  url: string;
+  sha256?: string;
+  license?: string;
+  homepage?: string;
+  source_url?: string;
+}
 type DependencyConfig = Record<string, DependencyItem>;
 interface ProgressData { status: 'downloading' | 'extracting' | 'completed' | 'error' | 'preparing'; percent: number; currentMB: number; totalMB: number; error: string; }
 interface DependencyManagerProps { isOpen: boolean; onClose: () => void; onInstalled?: () => void; }
+
+// 模組級背景檢查更新冷卻時間（60 秒防抖，避免頻繁開關彈窗重複向遠端請求）
+let lastRemoteCheckTime = 0;
+const REMOTE_CHECK_COOLDOWN_MS = 60 * 1000;
 
 export default function DependencyManager({ isOpen, onClose, onInstalled }: DependencyManagerProps) {
   useLanguage();
@@ -23,6 +34,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
   const [scanResult, setScanResult] = useState<any>(null);
   const [isLoadingConfig, setIsLoadingConfig] = useState(false);
   const [isManualChecking, setIsManualChecking] = useState(false);
+  const [showNoticeModal, setShowNoticeModal] = useState(false);
   const [isContentUpdating, setIsContentUpdating] = useState(false);
   const [progressMap, setProgressMap] = useState<Record<string, ProgressData>>({});
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -95,7 +107,10 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     }
   };
 
-  const handleFetchRemote = () => fetchRemoteConfig(true);
+  const handleFetchRemote = () => {
+    lastRemoteCheckTime = Date.now();
+    fetchRemoteConfig(true);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -110,8 +125,12 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
         }
         return next;
       });
-      // 每次開啟依賴庫管理時，自動在背景檢查更新一次（無按鈕動畫）
-      fetchRemoteConfig(false);
+      // 開啟依賴庫管理時，若距上次檢查超過 60 秒冷卻時間，才在背景檢查更新
+      const now = Date.now();
+      if (now - lastRemoteCheckTime >= REMOTE_CHECK_COOLDOWN_MS) {
+        lastRemoteCheckTime = now;
+        fetchRemoteConfig(false);
+      }
     }
   }, [isOpen]);
 
@@ -485,7 +504,22 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
         <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
           <span className="shrink-0" style={{ color: 'var(--muted)' }}>{icon}</span>
           <div className="min-w-0 flex-1">
-            <span className="text-sm font-semibold block truncate" style={{ color: 'var(--fg)' }}>{t(label)}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-semibold truncate" style={{ color: 'var(--fg)' }}>{t(label)}</span>
+              {spec?.license && (
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 select-none font-medium leading-none"
+                  style={{
+                    border: '1px solid var(--border-soft)',
+                    color: 'var(--muted)',
+                    background: 'var(--surface-warm)',
+                  }}
+                  title={`${t("授權協議")}: ${spec.license}`}
+                >
+                  {spec.license}
+                </span>
+              )}
+            </div>
             <span className="text-xs mt-0.5 block font-medium truncate" style={{ color: statusColor }}>{statusText}</span>
             {isPhp && localVer !== '' && (
               <div className="mt-1 flex items-center gap-1.5 text-[11px] truncate">
@@ -654,6 +688,35 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                   </button>
                 )}
 
+                {/* 開源授權與官方源碼管道 */}
+                {spec?.license && (
+                  <>
+                    <div className="my-1 border-t border-[var(--border-soft)]" />
+                    <div className="px-2.5 py-1.5 flex items-center justify-between text-[11px] select-none">
+                      <span className="flex items-center gap-1.5 text-[var(--muted)]">
+                        <Scale size={12} style={{ color: 'var(--muted)' }} />
+                        <span>{t("授權協議")}</span>
+                      </span>
+                      <span className="font-mono font-medium px-1.5 py-0.5 rounded text-[10px]" style={{ background: 'var(--surface)', color: 'var(--fg)', border: '1px solid var(--border-soft)' }}>
+                        {spec.license}
+                      </span>
+                    </div>
+                    {(spec.source_url || spec.homepage) && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveDropdown(null);
+                          BrowserOpenURL(spec.source_url || spec.homepage!);
+                        }}
+                        className="dropdown-menu-item w-full text-left px-2.5 py-1.5 text-xs rounded-lg flex items-center gap-2 hover:bg-[var(--surface-hover)] text-[var(--fg)] transition"
+                      >
+                        <ExternalLink size={13} className="shrink-0" style={{ color: 'var(--muted)' }} />
+                        <span>{t("官方原始碼")} ↗</span>
+                      </button>
+                    )}
+                  </>
+                )}
+
                 {/* 移除依賴（僅已安裝項目顯示） */}
                 {localVer !== '' && (
                   <>
@@ -755,11 +818,136 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 text-[11px] flex justify-between items-center select-none shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-deep)', color: 'var(--meta)' }}>
-          <span>{t("提示：安裝完成後系統會自動重新掃描環境。")}</span>
+        <div className="px-6 py-3.5 text-[11px] flex justify-between items-center select-none shrink-0" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-deep)', color: 'var(--meta)' }}>
+          <div className="flex items-center gap-2">
+            <span>{t("提示：安裝完成後系統會自動重新掃描環境。")}</span>
+            <span style={{ color: 'var(--border-soft)' }}>·</span>
+            <button
+              onClick={() => setShowNoticeModal(true)}
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium transition cursor-pointer select-none hover:bg-[var(--surface-hover)]"
+              style={{ color: 'var(--fg-2)' }}
+              title={t("第三方開源授權與商標聲明")}
+            >
+              <Scale size={12} className="shrink-0" style={{ color: 'var(--accent)' }} />
+              <span className="hover:text-[var(--fg)]">{t("開源授權與商標聲明")}</span>
+            </button>
+          </div>
           <span style={{ fontFamily: 'var(--font-mono)' }}>Downloader Pipeline</span>
         </div>
       </div>
+
+      {/* 第三方開源授權與商標聲明 Modal */}
+      {showNoticeModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/75 backdrop-blur-md"
+            onClick={() => setShowNoticeModal(false)}
+          />
+          <div
+            className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl shadow-2xl border overflow-hidden animate-fade-in"
+            style={{
+              backgroundColor: 'var(--bg-deep)',
+              borderColor: 'var(--border-strong, var(--border))',
+              color: 'var(--fg)',
+            }}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b flex justify-between items-center select-none shrink-0" style={{ borderColor: 'var(--border-soft)', background: 'var(--bg-deep)' }}>
+              <div className="flex items-center gap-2.5">
+                <Scale size={18} style={{ color: 'var(--accent)' }} />
+                <div>
+                  <h3 className="font-bold text-sm" style={{ color: 'var(--fg)' }}>{t("第三方開源授權與商標聲明")}</h3>
+                  <p className="text-[10px] mt-0.5 text-[var(--muted)]">Third-Party Notices, Licenses &amp; Trademark Disclaimer</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowNoticeModal(false)}
+                className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] text-[var(--muted)] hover:text-[var(--fg)] transition cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-5 text-xs leading-relaxed" style={{ color: 'var(--fg-2)', backgroundColor: 'var(--bg-deep)' }}>
+              {/* WinCMP & Architecture */}
+              <div className="p-3.5 rounded-xl border space-y-1.5" style={{ background: 'var(--surface-warm)', borderColor: 'var(--border-soft)' }}>
+                <div className="font-bold text-xs" style={{ color: 'var(--fg)' }}>WinCMP (MIT License)</div>
+                <p className="text-[11px] text-[var(--muted)]">
+                  {t("WinCMP 核心主程式採用 MIT 授權發行。官方發行包未捆綁分發任何外部服務二進位檔；各項執行環境（如 MariaDB, Redis, PHP, Caddy, Node.js 等）由使用者透過依賴下載器自各官方伺服器直接取得。WinCMP 僅扮演調度器與進程管理器。")}
+                </p>
+              </div>
+
+              {/* Trademark Disclaimer */}
+              <div className="space-y-1.5">
+                <h4 className="font-bold text-xs flex items-center gap-1.5" style={{ color: 'var(--fg)' }}>
+                  <span>{t("商標與免責聲明")}</span>
+                </h4>
+                <p className="text-[11px] text-[var(--muted)]">
+                  {t("WinCMP 是一個獨立的開源開發工具。軟體介面與文檔提及之 Caddy, MariaDB, Redis, PHP, Node.js, Composer, HeidiSQL, Mailpit, Bun 等產品名稱與商標均屬其各自商標權利人所有。WinCMP 與上述專案團隊無任何官方附屬、贊助或背書關係。")}
+                </p>
+              </div>
+
+              {/* Managed Runtimes Table */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-xs" style={{ color: 'var(--fg)' }}>{t("受控外部執行環境")}</h4>
+                <div className="border rounded-xl overflow-hidden" style={{ borderColor: 'var(--border-soft)', backgroundColor: 'var(--bg-deep)' }}>
+                  <table className="w-full text-left text-[11px]">
+                    <thead style={{ background: 'var(--surface-warm)', borderBottom: '1px solid var(--border-soft)' }}>
+                      <tr>
+                        <th className="py-2 px-3 font-semibold text-[var(--muted)]">{t("組件")}</th>
+                        <th className="py-2 px-3 font-semibold text-[var(--muted)]">{t("許可證")}</th>
+                        <th className="py-2 px-3 font-semibold text-[var(--muted)]">{t("官方原始碼")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-soft)]">
+                      {[
+                        { name: 'Caddy', license: 'Apache-2.0', url: 'https://github.com/caddyserver/caddy' },
+                        { name: 'MariaDB', license: 'GPL-2.0-only', url: 'https://github.com/MariaDB/server' },
+                        { name: 'Redis (Win Port)', license: 'BSD-3-Clause', url: 'https://github.com/tporadowski/redis' },
+                        { name: 'PHP', license: 'PHP-3.01', url: 'https://github.com/php/php-src' },
+                        { name: 'Node.js', license: 'MIT', url: 'https://github.com/nodejs/node' },
+                        { name: 'Composer', license: 'MIT', url: 'https://github.com/composer/composer' },
+                        { name: 'HeidiSQL', license: 'GPL-3.0-or-later', url: 'https://github.com/HeidiSQL/HeidiSQL' },
+                        { name: 'Mailpit', license: 'MIT', url: 'https://github.com/axllent/mailpit' },
+                      ].map((item) => (
+                        <tr key={item.name} className="hover:bg-[var(--surface-hover)] transition">
+                          <td className="py-2 px-3 font-medium text-[var(--fg)]">{item.name}</td>
+                          <td className="py-2 px-3 font-mono text-[10px] text-[var(--accent)]">{item.license}</td>
+                          <td className="py-2 px-3">
+                            <button
+                              onClick={() => BrowserOpenURL(item.url)}
+                              className="inline-flex items-center gap-1 hover:underline text-[10px] cursor-pointer"
+                              style={{ color: 'var(--status-info)' }}
+                            >
+                              <span>GitHub</span>
+                              <ExternalLink size={10} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t flex justify-end items-center gap-2 select-none shrink-0" style={{ borderColor: 'var(--border-soft)', background: 'var(--bg-deep)' }}>
+              <button
+                onClick={() => setShowNoticeModal(false)}
+                className="px-4 py-1.5 rounded-lg text-xs font-semibold transition hover:opacity-90 active:scale-95 cursor-pointer shadow-sm"
+                style={{
+                  background: 'var(--accent)',
+                  color: 'var(--accent-on)',
+                }}
+              >
+                {t("關閉")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

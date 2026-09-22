@@ -9,11 +9,14 @@ import (
 	"wincmp/conf"
 )
 
-// DependencyItem 定義單一依賴項目的版本與下載網址
+// DependencyItem 定義單一依賴項目的版本、下載網址、校驗碼與授權資訊
 type DependencyItem struct {
-	Version string `json:"version"`
-	URL     string `json:"url"`
-	SHA256  string `json:"sha256,omitempty"`
+	Version   string `json:"version"`
+	URL       string `json:"url"`
+	SHA256    string `json:"sha256,omitempty"`
+	License   string `json:"license,omitempty"`
+	Homepage  string `json:"homepage,omitempty"`
+	SourceURL string `json:"source_url,omitempty"`
 }
 
 // DependencyConfig 對應 dependencies.json 的結構，儲存所有依賴項

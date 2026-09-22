@@ -9,22 +9,22 @@ WinCMP 依賴的二進位檔案目錄定義於 [`conf/dependencies.json`](../con
 
 下列版本以目前 `conf/dependencies.json` 為準；更新目錄後請同步調整該 JSON。
 
-| Key | 元件 | 目前版本 | 安裝位置（相對於 `bin/`） |
-|-----|------|----------|---------------------------|
-| `caddy` | Caddy | 2.11.4 | `caddy/caddy-2.11.4/caddy.exe` |
-| `mariadb` | MariaDB | 11.4.10 | `mariadb/mariadb-11.4.10/bin/mariadbd.exe` |
-| `php73` | PHP 7.3 | 7.3.33 | `php/php-<zip 資料夾名>/php-cgi.exe` |
-| `php74` | PHP 7.4 | 7.4.33 | 同上（例如 `php/php-7.4.33-nts-Win32-vc15-x64/`） |
-| `php82` | PHP 8.2 | 8.2.33 | 同上（例如 `php/php-8.2.33-nts-Win32-vs16-x64/`） |
-| `php83` | PHP 8.3 | 8.3.33 | 同上 |
-| `php84` | PHP 8.4 | 8.4.25 | 同上（vs17） |
-| `php_redis_*` | PHP Redis 擴充 | 5.3.7 (7.4) / 6.3.0 (8.x) | 解壓後的 `php_redis.dll` → `php/php-*/ext/` |
-| `redis` | Redis | 5.0.14.1 | `redis/redis-5.0.14.1/redis-server.exe` |
-| `mailpit` | Mailpit | 1.31.1 | `mailpit/mailpit-1.31.1/mailpit.exe` |
-| `node` | Node.js | 24.21.0 | `node/node-24.21.0/npm.cmd` |
-| `composer` | Composer | 2.10.3 | `composer/composer-2.10.3/composer.phar`（並產生 `composer.bat`） |
-| `heidisql` | HeidiSQL | 12.21 | `heidisql/heidisql-12.21/heidisql.exe` |
-| `cacert` | CA 憑證包 | 2026.08.13 | 由下載流程使用（非 `bin/` 服務） |
+| Key | 元件 | 目前版本 | 授權協議 (SPDX) | 官方原始碼 / 首頁 | 安裝位置（相對於 `bin/`） |
+|-----|------|----------|-----------------|-------------------|---------------------------|
+| `caddy` | Caddy | 2.11.4 | Apache-2.0 | [GitHub](https://github.com/caddyserver/caddy) | `caddy/caddy-2.11.4/caddy.exe` |
+| `mariadb` | MariaDB | 11.4.10 | GPL-2.0-only | [GitHub](https://github.com/MariaDB/server) | `mariadb/mariadb-11.4.10/bin/mariadbd.exe` |
+| `php73` | PHP 7.3 | 7.3.33 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-<zip 資料夾名>/php-cgi.exe` |
+| `php74` | PHP 7.4 | 7.4.33 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | 同上（例如 `php/php-7.4.33-nts-Win32-vc15-x64/`） |
+| `php82` | PHP 8.2 | 8.2.33 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | 同上（例如 `php/php-8.2.33-nts-Win32-vs16-x64/`） |
+| `php83` | PHP 8.3 | 8.3.33 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | 同上 |
+| `php84` | PHP 8.4 | 8.4.25 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | 同上（vs17） |
+| `php_redis_*` | PHP Redis 擴充 | 5.3.7 / 6.3.0 | PHP-3.01 | [GitHub](https://github.com/phpredis/phpredis) | 解壓後的 `php_redis.dll` → `php/php-*/ext/` |
+| `redis` | Redis | 5.0.14.1 | BSD-3-Clause | [GitHub](https://github.com/tporadowski/redis) | `redis/redis-5.0.14.1/redis-server.exe` |
+| `mailpit` | Mailpit | 1.31.1 | MIT | [GitHub](https://github.com/axllent/mailpit) | `mailpit/mailpit-1.31.1/mailpit.exe` |
+| `node` | Node.js | 24.21.0 | MIT | [GitHub](https://github.com/nodejs/node) | `node/node-24.21.0/npm.cmd` |
+| `composer` | Composer | 2.10.3 | MIT | [GitHub](https://github.com/composer/composer) | `composer/composer-2.10.3/composer.phar`（並產生 `composer.bat`） |
+| `heidisql` | HeidiSQL | 12.21 | GPL-3.0-or-later | [GitHub](https://github.com/HeidiSQL/HeidiSQL) | `heidisql/heidisql-12.21/heidisql.exe` |
+| `cacert` | CA 憑證包 | 2026.08.13 | MPL-2.0 | [curl.se](https://curl.se/ca/) | 由下載流程使用（非 `bin/` 服務） |
 
 ### 目錄範例
 
@@ -89,6 +89,7 @@ wincmp/bin/
 ---
 
 ## 相關文件
-
+ 
 - 使用者安裝說明：[`packaging/wincmp/readme_zh.md`](../packaging/wincmp/readme_zh.md)
 - Composer 指令細節：[`docs/composer_command.md`](composer_command.md)
+- 第三方授權與商標聲明：[`THIRD-PARTY-NOTICES.md`](../THIRD-PARTY-NOTICES.md)

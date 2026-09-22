@@ -154,6 +154,9 @@ End-user install docs live in [`packaging/wincmp/readme.md`](packaging/wincmp/re
 - Managed stacks: Caddy, MariaDB, PHP, Mailpit, Redis
 - Theme inspiration: [Open Design](https://github.com/nexu-io/open-design)
 
-## License
+## License & Trademark Disclaimer
 
-[MIT](LICENSE)
+- **Core Application**: [MIT License](LICENSE)
+- **Third-Party Notices**: See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for licenses and notices of integrated and managed components.
+- **Trademarks**: WinCMP is an independent open-source project. All product names, logos, and brands (such as Caddy, MariaDB, Redis, PHP, Node.js, Composer, HeidiSQL, Mailpit) are property of their respective owners. WinCMP is not affiliated with, endorsed by, or sponsored by them.
+

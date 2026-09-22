@@ -667,5 +667,17 @@ var enTranslations = map[string]string{
 	"檢查 WinCMP 最新版本":                                "Check for latest WinCMP version",
 	"您目前使用的是開發預覽版本":                             "You are using a development preview version",
 	"當前本機版本為 %s，高於官方最新發布版本 (%s，發布時間為 %s)":     "Current local version is %s, which is ahead of official release (%s, released on %s)",
+	"第三方開源授權與商標聲明":                                  "Third-Party Notices & Trademarks",
+	"開源授權與商標聲明":                                     "Open Source Licenses & Trademarks",
+	"開源授權聲明":                                        "Open Source Licenses",
+	"授權協議":                                          "License",
+	"官方原始碼":                                         "Source Code",
+	"官方網站":                                          "Official Website",
+	"WinCMP 核心主程式採用 MIT 授權發行。官方發行包未捆綁分發任何外部服務二進位檔；各項執行環境（如 MariaDB, Redis, PHP, Caddy, Node.js 等）由使用者透過依賴下載器自各官方伺服器直接取得。WinCMP 僅扮演調度器與進程管理器。": "WinCMP core is distributed under the MIT License. Official release packages do not bundle external service binaries; all runtimes (e.g. MariaDB, Redis, PHP, Caddy, Node.js) are downloaded directly from official servers by the user via the dependency manager. WinCMP serves solely as an orchestrator and process supervisor.",
+	"商標與免責聲明":                                       "Trademarks & Non-Endorsement Disclaimer",
+	"WinCMP 是一個獨立的開源開發工具。軟體介面與文檔提及之 Caddy, MariaDB, Redis, PHP, Node.js, Composer, HeidiSQL, Mailpit, Bun 等產品名稱與商標均屬其各自商標權利人所有。WinCMP 與上述專案團隊無任何官方附屬、贊助或背書關係。": "WinCMP is an independent open-source tool. Product names, logos, and brands (such as Caddy, MariaDB, Redis, PHP, Node.js, Composer, HeidiSQL, Mailpit, Bun) mentioned in the interface and documentation are property of their respective trademark holders. WinCMP is not affiliated with, endorsed by, or sponsored by them.",
+	"受控外部執行環境":                                      "Managed Runtimes & Services",
+	"組件":                                            "Component",
+	"許可證":                                           "License",
 }
 

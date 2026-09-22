@@ -666,6 +666,18 @@ export const enTranslations: Record<string, string> = {
   "已成功復原原版本程式，您可以繼續正常使用。": "Successfully restored previous version, you can continue using the application normally.",
   "新版本啟動失敗（可能受防毒軟體或權限攔截），已自動為您復原原版本。\n\n建議指引：\n請前往官方 Releases 頁面手動下載更新包：\n%s": "Failed to launch new version (possibly blocked by antivirus or permissions), previous version has been restored.\n\nGuidance:\nPlease download update package manually from official Releases:\n%s",
   "自動復原原版本失敗": "Failed to restore previous version",
+  "第三方開源授權與商標聲明": "Third-Party Notices & Trademarks",
+  "開源授權與商標聲明": "Open Source Licenses & Trademarks",
+  "開源授權聲明": "Open Source Licenses",
+  "授權協議": "License",
+  "官方原始碼": "Source Code",
+  "官方網站": "Official Website",
+  "WinCMP 核心主程式採用 MIT 授權發行。官方發行包未捆綁分發任何外部服務二進位檔；各項執行環境（如 MariaDB, Redis, PHP, Caddy, Node.js 等）由使用者透過依賴下載器自各官方伺服器直接取得。WinCMP 僅扮演調度器與進程管理器。": "WinCMP core is distributed under the MIT License. Official release packages do not bundle external service binaries; all runtimes (e.g. MariaDB, Redis, PHP, Caddy, Node.js) are downloaded directly from official servers by the user via the dependency manager. WinCMP serves solely as an orchestrator and process supervisor.",
+  "商標與免責聲明": "Trademarks & Non-Endorsement Disclaimer",
+  "WinCMP 是一個獨立的開源開發工具。軟體介面與文檔提及之 Caddy, MariaDB, Redis, PHP, Node.js, Composer, HeidiSQL, Mailpit, Bun 等產品名稱與商標均屬其各自商標權利人所有。WinCMP 與上述專案團隊無任何官方附屬、贊助或背書關係。": "WinCMP is an independent open-source tool. Product names, logos, and brands (such as Caddy, MariaDB, Redis, PHP, Node.js, Composer, HeidiSQL, Mailpit, Bun) mentioned in the interface and documentation are property of their respective trademark holders. WinCMP is not affiliated with, endorsed by, or sponsored by them.",
+  "受控外部執行環境": "Managed Runtimes & Services",
+  "組件": "Component",
+  "許可證": "License",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

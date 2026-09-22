@@ -105,6 +105,9 @@ func (a *App) startup(ctx context.Context) {
 		a.handleErrorLog("system", i18n.T("釋放預設設定檔失敗"), err)
 	}
 
+	// 確保基礎合規與說明文檔存在（特別是獨立 exe 首次執行展開時）
+	EnsureBaseDocumentation(a.baseDir)
+
 	// 2. 載入設定檔以套用語言與全域設定
 	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
 	a.appCfg, err = config.Load(cfgPath)

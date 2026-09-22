@@ -117,6 +117,9 @@ Python/Go 請確認 PATH 可執行（`python -V`、`go version`）。Node/Bun �
 - [Redis](https://redis.io/)
 - [Node.js](https://nodejs.org/) / [Bun](https://bun.sh/)
 
-## 授權
+## 授權與商標聲明
 
-[MIT](LICENSE)
+- **主程式授權**：[MIT License](LICENSE)
+- **第三方組件與授權宣告**：詳見 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。
+- **商標免責聲明**：WinCMP 為獨立開源工具。文中提及之 Caddy、MariaDB、Redis、PHP、Node.js、Composer、HeidiSQL、Mailpit 等產品名稱與商標均屬其各自權利人所有，無直接附屬、贊助或背書關係。
+

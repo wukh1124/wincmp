@@ -132,9 +132,15 @@ if (Test-Path $DataPath) {
     Write-Host "    -> Cleared data/ subdirectory contents" -ForegroundColor DarkGray
 }
 
+# Copy THIRD-PARTY-NOTICES.md
+$NoticeSource = Join-Path $ProjectRoot "THIRD-PARTY-NOTICES.md"
+if (Test-Path $NoticeSource) {
+    Copy-Item -Path $NoticeSource -Destination $TargetDir -Force
+}
+
 # 7. Verify required release files
 Write-Host "[7] Verifying required documentation..." -ForegroundColor Gray
-$RequiredFiles = @("readme.md", "LICENSE")
+$RequiredFiles = @("readme.md", "LICENSE", "THIRD-PARTY-NOTICES.md")
 $MissingFiles = @()
 
 foreach ($file in $RequiredFiles) {

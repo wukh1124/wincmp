@@ -127,5 +127,49 @@ func TestOpenFolderAndShowInExplorerValidation(t *testing.T) {
 	}
 }
 
+func TestEnsureBaseDocumentation(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "wincmp_doc_test_*")
+	if err != nil {
+		t.Fatalf("無法建立臨時目錄: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
 
+	// 1. 首次呼叫：應自動生成 4 個核心文件
+	EnsureBaseDocumentation(tempDir)
 
+	expectedFiles := []string{
+		"LICENSE",
+		"THIRD-PARTY-NOTICES.md",
+		"readme_zh.md",
+		"readme.md",
+	}
+
+	for _, name := range expectedFiles {
+		p := filepath.Join(tempDir, name)
+		fi, statErr := os.Stat(p)
+		if statErr != nil {
+			t.Errorf("預期應生成文件 %s，但未找到: %v", name, statErr)
+			continue
+		}
+		if fi.Size() == 0 {
+			t.Errorf("生成的文件 %s 內容不應為空", name)
+		}
+	}
+
+	// 2. 測試冪等性：修改其中一個檔案，再次呼叫不應被覆蓋
+	customNotice := filepath.Join(tempDir, "THIRD-PARTY-NOTICES.md")
+	customContent := []byte("custom user notice")
+	if err := os.WriteFile(customNotice, customContent, 0644); err != nil {
+		t.Fatalf("無法寫入自訂內容: %v", err)
+	}
+
+	EnsureBaseDocumentation(tempDir)
+
+	readBack, err := os.ReadFile(customNotice)
+	if err != nil {
+		t.Fatalf("無法讀取自訂檔案: %v", err)
+	}
+	if string(readBack) != "custom user notice" {
+		t.Errorf("EnsureBaseDocumentation 不應覆蓋已存在的使用者檔案")
+	}
+}

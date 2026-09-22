@@ -16,9 +16,12 @@ import (
 
 // DependencyItem 定義單一依賴項目結構
 type DependencyItem struct {
-	Version string `json:"version"`
-	URL     string `json:"url"`
-	SHA256  string `json:"sha256,omitempty"`
+	Version   string `json:"version"`
+	URL       string `json:"url"`
+	SHA256    string `json:"sha256,omitempty"`
+	License   string `json:"license,omitempty"`
+	Homepage  string `json:"homepage,omitempty"`
+	SourceURL string `json:"source_url,omitempty"`
 }
 
 // DependencyConfig 對應 dependencies.json 的結構

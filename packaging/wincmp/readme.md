@@ -117,6 +117,9 @@ Copy the whole folder, or at least `conf/` + `bin/` + `data/`.
 - [Redis](https://redis.io/)
 - [Node.js](https://nodejs.org/) / [Bun](https://bun.sh/)
 
-## License
+## License & Trademark Disclaimer
 
-[MIT](LICENSE)
+- **Core Application**: [MIT License](LICENSE)
+- **Third-Party Notices**: See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for licenses and notices of integrated and managed components.
+- **Trademarks**: WinCMP is an independent open-source project. All product names, logos, and brands (such as Caddy, MariaDB, Redis, PHP, Node.js, Composer, HeidiSQL, Mailpit) are property of their respective owners. WinCMP is not affiliated with, endorsed by, or sponsored by them.
+
