@@ -811,8 +811,31 @@ func (a *App) triggerHostsUpdate() {
 
 // OpenFolder 用系統預設檔案瀏覽器開啟指定的本機資料夾
 func (a *App) OpenFolder(path string) error {
-	cmd := exec.Command("explorer", filepath.Clean(path))
-	return cmd.Start()
+	cleaned := strings.TrimSpace(path)
+	if cleaned == "" {
+		return fmt.Errorf("%s", i18n.T("路徑為空"))
+	}
+	absPath, err := filepath.Abs(cleaned)
+	if err != nil {
+		absPath = filepath.Clean(cleaned)
+	}
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return fmt.Errorf("%s: %s", i18n.T("找不到路徑"), absPath)
+	}
+	if !info.IsDir() {
+		absPath = filepath.Dir(absPath)
+	}
+
+	verbPtr, err := windows.UTF16PtrFromString("open")
+	if err != nil {
+		return err
+	}
+	dirPtr, err := windows.UTF16PtrFromString(absPath)
+	if err != nil {
+		return err
+	}
+	return windows.ShellExecute(0, verbPtr, dirPtr, nil, nil, windows.SW_SHOWNORMAL)
 }
 
 // ShowInExplorer 在檔案總管中開啟所在資料夾並反白選中該檔案；若為資料夾則直接開啟
@@ -821,15 +844,32 @@ func (a *App) ShowInExplorer(path string) error {
 	if cleaned == "" {
 		return fmt.Errorf("%s", i18n.T("路徑為空"))
 	}
-	cleaned = filepath.Clean(cleaned)
-	info, err := os.Stat(cleaned)
-	if err == nil && info.IsDir() {
-		return a.OpenFolder(cleaned)
+	absPath, err := filepath.Abs(cleaned)
+	if err != nil {
+		absPath = filepath.Clean(cleaned)
 	}
-	// Windows explorer /select, 語法直接選中檔案
-	cmd := exec.Command("explorer", fmt.Sprintf("/select,%s", cleaned))
+	info, err := os.Stat(absPath)
+	if err != nil {
+		// 若目標檔案尚不存在，降級開啟其所在的父資料夾，避免傳入無效檔案致 Explorer 退回「文件」
+		parentDir := filepath.Dir(absPath)
+		if pInfo, pErr := os.Stat(parentDir); pErr == nil && pInfo.IsDir() {
+			return a.OpenFolder(parentDir)
+		}
+		return fmt.Errorf("%s: %s", i18n.T("找不到路徑"), absPath)
+	}
+	if info.IsDir() {
+		return a.OpenFolder(absPath)
+	}
+
+	// 檔案存在時，使用 Windows 原生 explorer.exe /select,"<絕對路徑>" 選中檔案
+	// 透過 SysProcAttr.CmdLine 傳遞原始命令列，防止 Go EscapeArg 將 /select, 包裹於雙引號內導致 Explorer 退回打開文件資料夾
+	cmd := exec.Command("explorer.exe")
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CmdLine: fmt.Sprintf(`explorer.exe /select,"%s"`, absPath),
+	}
 	return cmd.Start()
 }
+
 
 // openFileWithFallback 使用 Windows 原生 ShellExecute 開啟檔案（零 cmd 黑視窗），若無關聯程式則自動以記事本開啟
 func openFileWithFallback(path string) error {
@@ -1623,14 +1663,23 @@ func (a *App) OpenCategoryLogFolder(category string, subCategory string) error {
 	if err != nil {
 		return err
 	}
-	if info.Exists {
+	if info != nil && info.Exists {
 		return a.ShowInExplorer(info.Path)
 	}
-	// 日誌檔若尚不存在，直接打開 logs 目錄
-	logsDir := filepath.Join(a.baseDir, "logs")
+	// 日誌檔若尚不存在，直接打開 logs 目錄（以 baseDir 作絕對路徑定位）
+	base := strings.TrimSpace(a.baseDir)
+	if base == "" {
+		if execPath, err := os.Executable(); err == nil {
+			base = filepath.Dir(execPath)
+		} else {
+			base, _ = os.Getwd()
+		}
+	}
+	logsDir := filepath.Join(base, "logs")
 	_ = os.MkdirAll(logsDir, 0755)
 	return a.OpenFolder(logsDir)
 }
+
 
 // GetCategoryLogs 獲取指定分類的當天日誌歷史紀錄
 // 支援 system, caddy, mariadb, mailpit, php, runtime 等分類

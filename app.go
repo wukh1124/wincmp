@@ -59,11 +59,17 @@ type App struct {
 
 // NewApp 建立一個新的 App 實例
 func NewApp() *App {
+	baseDir, _ := os.Getwd()
+	if execPath, err := os.Executable(); err == nil {
+		baseDir = filepath.Dir(execPath)
+	}
 	return &App{
+		baseDir:           baseDir,
 		runtimeLogWriters: make(map[string]*lumberjack.Logger),
 		windowHidden:      true, // 預設隱藏啟動
 	}
 }
+
 
 // startup 在應用程式啟動時由 Wails 自動呼叫，保存 context 並初始化後端模組
 func (a *App) startup(ctx context.Context) {

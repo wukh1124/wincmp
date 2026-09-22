@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+
 	"gopkg.in/natefinch/lumberjack.v2"
 	"wincmp/internal/config"
 )
@@ -84,3 +85,47 @@ func TestCleanExpiredLogs(t *testing.T) {
 		}
 	}
 }
+
+func TestNewAppBaseDir(t *testing.T) {
+	app := NewApp()
+	if app.baseDir == "" {
+		t.Errorf("NewApp() 的 baseDir 不應為空")
+	}
+}
+
+func TestOpenFolderAndShowInExplorerValidation(t *testing.T) {
+	app := NewApp()
+
+	// 1. 測試空路徑
+	if err := app.OpenFolder(""); err == nil {
+		t.Errorf("OpenFolder(\"\") 應該要報錯")
+	}
+	if err := app.ShowInExplorer(""); err == nil {
+		t.Errorf("ShowInExplorer(\"\") 應該要報錯")
+	}
+
+	// 2. 測試完全不存在的路徑
+	nonExistent := filepath.Join(os.TempDir(), "non_existent_dir_123456789", "file.log")
+	if err := app.OpenFolder(nonExistent); err == nil {
+		t.Errorf("OpenFolder 不存在的目錄應該報錯")
+	}
+	if err := app.ShowInExplorer(nonExistent); err == nil {
+		t.Errorf("ShowInExplorer 不存在的父目錄檔案應該報錯")
+	}
+
+	// 3. 測試目標檔案不存在但父目錄存在時，ShowInExplorer 能否安全降級到父目錄
+	tempDir, err := os.MkdirTemp("", "wincmp_show_test_*")
+	if err != nil {
+		t.Fatalf("無法建立臨時目錄: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	nonExistentFileInValidDir := filepath.Join(tempDir, "missing.log")
+	// 該檔案不存在，但父目錄存在，ShowInExplorer 應能降級開啟父目錄（透過 ShellExecute 不報錯）
+	if err := app.ShowInExplorer(nonExistentFileInValidDir); err != nil {
+		t.Errorf("ShowInExplorer 對於父目錄存在的缺失檔案應安全降級，但回傳錯誤: %v", err)
+	}
+}
+
+
+
