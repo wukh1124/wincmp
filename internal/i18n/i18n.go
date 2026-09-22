@@ -664,5 +664,8 @@ var enTranslations = map[string]string{
 	"自動復原原版本失敗":                                      "Failed to restore previous version",
 	"共 %d 行":                                          "%d lines in total",
 	"未讀 %d 行":                                         "%d unread",
+	"檢查 WinCMP 最新版本":                                "Check for latest WinCMP version",
+	"您目前使用的是開發預覽版本":                             "You are using a development preview version",
+	"當前本機版本為 %s，高於官方最新發布版本 (%s，發布時間為 %s)":     "Current local version is %s, which is ahead of official release (%s, released on %s)",
 }
 

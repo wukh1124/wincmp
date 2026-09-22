@@ -1736,9 +1736,9 @@ func (a *App) GetCategoryLogs(category string, subCategory string) ([]LogEntry, 
 	return entries, nil
 }
 
-// CheckNewVersion 檢查是否有新版本可用；若偵測到新版本會同步設定檔與前端通知
-func (a *App) CheckNewVersion() (*updater.ReleaseInfo, error) {
-	info, err := updater.CheckNewVersion(AppVersion)
+// CheckNewVersion 檢查是否有新版本可用；支援 force 參數強制穿透快取連線檢查
+func (a *App) CheckNewVersion(force bool) (*updater.ReleaseInfo, error) {
+	info, err := updater.CheckNewVersionOpt(AppVersion, force)
 	if err != nil {
 		return info, err
 	}
@@ -1843,6 +1843,9 @@ func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
 			}
 			return // 終止流程，絕不退出，讓用戶能繼續使用原版本！
 		}
+
+		// 啟動新版本成功，在退出前重置 update 標記，避免新版本啟動時因讀取舊設定檔而誤亮紅點
+		a.persistUpdateCheckResult(false, "")
 
 		// 啟動成功，稍微延遲後退出舊進程
 		time.Sleep(1 * time.Second)

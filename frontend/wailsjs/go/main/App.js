@@ -6,8 +6,8 @@ export function CheckMissingCoreDependencies() {
   return window['go']['main']['App']['CheckMissingCoreDependencies']();
 }
 
-export function CheckNewVersion() {
-  return window['go']['main']['App']['CheckNewVersion']();
+export function CheckNewVersion(arg1) {
+  return window['go']['main']['App']['CheckNewVersion'](arg1);
 }
 
 export function CheckPortConflicts() {

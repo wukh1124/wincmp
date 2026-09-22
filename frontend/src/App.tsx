@@ -137,10 +137,8 @@ export default function App() {
           setShowSidebarGuide(true);
         }
 
-        // 版本更新紅點：優先讀設定檔持久化狀態
-        if (cfg.global.has_update_available) {
-          setHasUpdate(true);
-        }
+        // 版本更新紅點：預設先不顯示，待啟動自動檢查完成後由事件決定是否顯示，杜絕啟動閃爍問題
+        // 當背景檢查或版本更新頁面確認有新版本時，會透過 update_status / update_available 事件點亮紅點
       }
     }).catch((err: any) => {
       console.error("獲取語系、主題與字型大小失敗:", err);

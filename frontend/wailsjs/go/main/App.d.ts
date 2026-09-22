@@ -10,7 +10,7 @@ import {redisexplorer} from '../models';
 
 export function CheckMissingCoreDependencies():Promise<Record<string, boolean>>;
 
-export function CheckNewVersion():Promise<updater.ReleaseInfo>;
+export function CheckNewVersion(arg1:boolean):Promise<updater.ReleaseInfo>;
 
 export function CheckPortConflicts():Promise<Record<string, boolean>>;
 

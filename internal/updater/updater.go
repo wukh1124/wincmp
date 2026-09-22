@@ -126,10 +126,9 @@ func CheckNewVersion(currentVersion string) (*ReleaseInfo, error) {
 	return CheckNewVersionOpt(currentVersion, false)
 }
 
-// CheckNewVersionOpt 檢查是否有新版本，支援強制刷新選項
 func CheckNewVersionOpt(currentVersion string, force bool) (*ReleaseInfo, error) {
 	cacheMu.Lock()
-	if !force && cachedRelease != nil {
+	if !force && cachedRelease != nil && time.Since(lastCheckTime) < 10*time.Minute {
 		res := *cachedRelease
 		cacheMu.Unlock()
 		return &res, nil
@@ -162,7 +161,7 @@ func CheckNewVersionOpt(currentVersion string, force bool) (*ReleaseInfo, error)
 		return nil, fmt.Errorf("解析 GitHub Release 失敗: %w", err)
 	}
 
-	hasUpdate := compareVersions(release.TagName, currentVersion) > 0
+	hasUpdate := CompareVersions(release.TagName, currentVersion) > 0
 
 	var downloadURL string
 	var assetType string
@@ -509,8 +508,8 @@ func CleanupOldVersion(baseDir string) {
 	_ = os.RemoveAll(tempDir)
 }
 
-// compareVersions 比較兩個版本號字串大小 (v1 < v2 回傳 -1，v1 > v2 回傳 1，相等回傳 0)
-func compareVersions(v1, v2 string) int {
+// CompareVersions 比較兩個版本號字串大小 (v1 < v2 回傳 -1，v1 > v2 回傳 1，相等回傳 0)
+func CompareVersions(v1, v2 string) int {
 	clean := func(v string) string {
 		v = strings.TrimPrefix(v, "v")
 		v = strings.Split(v, "-")[0]

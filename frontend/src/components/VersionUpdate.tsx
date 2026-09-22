@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowUpCircle, Info, ShieldAlert, Check, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowUpCircle, Info, ShieldAlert, Check, RefreshCw, Sparkles } from 'lucide-react';
 import { CheckNewVersion, StartAutoUpdate, GetConfig, GetAppVersion } from '../../wailsjs/go/main/App';
 import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { t, useLanguage } from '../i18n';
@@ -60,6 +60,35 @@ function renderMarkdown(md: string): string {
   return htmlLines.join('');
 }
 
+// 版本比較工具 (v1 < v2 回傳 -1，v1 > v2 回傳 1，相等回傳 0)
+function compareVersions(v1: string, v2: string): number {
+  const clean = (v: string) => (v || '').replace(/^v/, '').split('-')[0];
+  const p1 = clean(v1).split('.');
+  const p2 = clean(v2).split('.');
+  for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+    const n1 = parseInt(p1[i] || '0', 10);
+    const n2 = parseInt(p2[i] || '0', 10);
+    if (n1 < n2) return -1;
+    if (n1 > n2) return 1;
+  }
+  return 0;
+}
+
+// 格式化發布時間為使用者本地時區日期 (YYYY-MM-DD)，消除 UTC 時間差
+function formatLocalDate(dateStr: string): string {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr.substring(0, 10);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  } catch {
+    return dateStr.substring(0, 10);
+  }
+}
+
 export default function VersionUpdate() {
   const lang = useLanguage(); // 訂閱語系變更並取得當前語言
 
@@ -73,7 +102,42 @@ export default function VersionUpdate() {
   const [downloadProgress, setDownloadProgress] = useState({ percent: 0, currentMB: 0, totalMB: 0 });
   const [errorMessage, setErrorMessage] = useState('');
 
-  // 1. 初始化讀取設定與版本
+  const [isManualChecking, setIsManualChecking] = useState(false);
+  const lastAutoCheckRef = useRef<number>(0);
+
+  // 判斷當前版本是否高於官方最新 Release（開發預覽 / 測試模式）
+  const isDevHigher = releaseInfo ? compareVersions(currentVersion, releaseInfo.latest_version) > 0 : false;
+
+  // 檢查最新版本（支援強制穿透快取與手動動畫平滑過渡）
+  const fetchVersion = async (force = false, isManual = false) => {
+    if (isManual) {
+      setIsManualChecking(true);
+    }
+    const startTime = Date.now();
+    try {
+      const info = await CheckNewVersion(force);
+      setReleaseInfo(info as ReleaseInfo);
+      // 同步側邊欄紅點狀態
+      window.dispatchEvent(new CustomEvent('wincmp_has_update', { detail: !!(info as any)?.has_update }));
+      lastAutoCheckRef.current = Date.now();
+    } catch (err) {
+      console.error("檢查最新版本失敗:", err);
+      if (isManual) {
+        (window as any).customAlert(`${t("檢查更新失敗")}: ${err}`);
+      }
+    } finally {
+      setIsLoading(false);
+      if (isManual) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 500) {
+          await new Promise(resolve => setTimeout(resolve, 500 - elapsed));
+        }
+        setIsManualChecking(false);
+      }
+    }
+  };
+
+  // 1. 初始化讀取設定與版本，並執行自動檢查（具備 60 秒冷卻防抖）
   useEffect(() => {
     async function init() {
       try {
@@ -83,14 +147,12 @@ export default function VersionUpdate() {
         const cfg = await GetConfig();
         setConfig(cfg);
 
-        // 初始化時靜默獲取最新版本 (後端已加載快取會瞬間返回)
-        const info = await CheckNewVersion();
-        setReleaseInfo(info as ReleaseInfo);
-        // 同步側邊欄紅點狀態
-        window.dispatchEvent(new CustomEvent('wincmp_has_update', { detail: !!(info as any)?.has_update }));
+        // 進入頁面時：若距上次檢查超過 60 秒，自動聯網檢查最新版本；否則讀取快取
+        const now = Date.now();
+        const shouldForce = (now - lastAutoCheckRef.current) > 60 * 1000;
+        await fetchVersion(shouldForce, false);
       } catch (err) {
         console.error("初始化版本更新頁面失敗:", err);
-      } finally {
         setIsLoading(false);
       }
     }
@@ -159,6 +221,18 @@ export default function VersionUpdate() {
           <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>{t("版本更新")}</h1>
           <p className="text-xs" style={{ color: 'var(--muted)' }}>{t("檢查 WinCMP 最新發布版本，並進行一鍵自動替換升級")}</p>
         </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => fetchVersion(true, true)}
+            disabled={isManualChecking || updateStatus === 'downloading'}
+            className="p-2 rounded-lg transition flex items-center gap-1.5 text-xs font-semibold"
+            style={{ color: 'var(--fg-2)', opacity: isManualChecking ? 0.7 : 1 }}
+            title={t("檢查 WinCMP 最新版本")}
+          >
+            <RefreshCw size={14} className={isManualChecking ? 'animate-spin' : ''} />
+            <span>{isManualChecking ? t('檢查中...') : t('檢查更新')}</span>
+          </button>
+        </div>
       </div>
 
       {/* 內容區：單一卡片置中優雅版面 */}
@@ -169,18 +243,33 @@ export default function VersionUpdate() {
           {!isLoading && releaseInfo && (
             <>
               {!releaseInfo.has_update ? (
-                // 已是最新版本狀態
-                <div className="rounded-xl p-5 flex items-center gap-3.5" style={{ background: 'color-mix(in srgb, var(--status-ok) 5%, var(--card))', border: '1px solid color-mix(in srgb, var(--status-ok) 20%, transparent)' }}>
-                  <div className="p-2.5 rounded-lg shrink-0" style={{ background: 'color-mix(in srgb, var(--status-ok) 20%, transparent)', color: 'var(--status-ok)' }}>
-                    <Check size={20} />
+                isDevHigher ? (
+                  // 開發預覽版本狀態 (本機版號高於官方最新 Release)
+                  <div className="rounded-xl p-5 flex items-center gap-3.5" style={{ background: 'color-mix(in srgb, var(--accent) 8%, var(--card))', border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)' }}>
+                    <div className="p-2.5 rounded-lg shrink-0" style={{ background: 'color-mix(in srgb, var(--accent) 20%, transparent)', color: 'var(--accent)' }}>
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm" style={{ color: 'var(--accent)' }}>{t("您目前使用的是開發預覽版本")}</h4>
+                      <p className="text-[10px] mt-1" style={{ color: 'var(--meta)' }}>
+                        {t("當前本機版本為 %s，高於官方最新發布版本 (%s，發布時間為 %s)", currentVersion, releaseInfo.latest_version, formatLocalDate(releaseInfo.published_at))}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-sm" style={{ color: 'var(--status-ok)' }}>{t("恭喜！您目前使用的是最新版本")}</h4>
-                    <p className="text-[10px] mt-1" style={{ color: 'var(--meta)' }}>
-                      {t("最新發布版本為 %s，發布時間為 %s", releaseInfo.latest_version, releaseInfo.published_at.substring(0, 10))}
-                    </p>
+                ) : (
+                  // 已是最新版本狀態
+                  <div className="rounded-xl p-5 flex items-center gap-3.5" style={{ background: 'color-mix(in srgb, var(--status-ok) 5%, var(--card))', border: '1px solid color-mix(in srgb, var(--status-ok) 20%, transparent)' }}>
+                    <div className="p-2.5 rounded-lg shrink-0" style={{ background: 'color-mix(in srgb, var(--status-ok) 20%, transparent)', color: 'var(--status-ok)' }}>
+                      <Check size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm" style={{ color: 'var(--status-ok)' }}>{t("恭喜！您目前使用的是最新版本")}</h4>
+                      <p className="text-[10px] mt-1" style={{ color: 'var(--meta)' }}>
+                        {t("最新發布版本為 %s，發布時間為 %s", releaseInfo.latest_version, formatLocalDate(releaseInfo.published_at))}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )
               ) : (
                 // 偵測到新版本狀態
                 <div className="rounded-xl p-5 flex items-center justify-between gap-4" style={{ background: 'color-mix(in srgb, var(--status-info) 5%, var(--card))', border: '1px solid color-mix(in srgb, var(--status-info) 20%, transparent)' }}>
@@ -190,7 +279,7 @@ export default function VersionUpdate() {
                     </div>
                     <div>
                       <h4 className="font-bold text-sm" style={{ color: 'var(--status-info)' }}>{t("偵測到新版本 %s", releaseInfo.latest_version)}</h4>
-                      <p className="text-[10px] mt-1" style={{ color: 'var(--meta)' }}>{t("發布時間")}: {releaseInfo.published_at.substring(0, 10)}</p>
+                      <p className="text-[10px] mt-1" style={{ color: 'var(--meta)' }}>{t("發布時間")}: {formatLocalDate(releaseInfo.published_at)}</p>
                     </div>
                   </div>
 

@@ -123,6 +123,15 @@ func (a *App) startup(ctx context.Context) {
 	}
 	i18n.SetLanguage(a.appCfg.Global.Language)
 
+	// 校驗設定檔中的歷史更新標記：若目前運行版本已大於等於標記版本，自動清理紅點標記
+	if a.appCfg.Global.HasUpdateAvailable && a.appCfg.Global.LatestUpdateVersion != "" {
+		if updater.CompareVersions(a.appCfg.Global.LatestUpdateVersion, AppVersion) <= 0 {
+			a.appCfg.Global.HasUpdateAvailable = false
+			a.appCfg.Global.LatestUpdateVersion = ""
+			_ = a.appCfg.Save(cfgPath)
+		}
+	}
+
 	// 3. 初始化 Lumberjack 檔案日誌寫入器
 	a.initLogWriters()
 
