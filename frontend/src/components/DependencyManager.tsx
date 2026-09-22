@@ -22,11 +22,16 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
   const [depConfig, setDepConfig] = useState<DependencyConfig | null>(null);
   const [scanResult, setScanResult] = useState<any>(null);
   const [isLoadingConfig, setIsLoadingConfig] = useState(false);
-  const [isFetchingRemote, setIsFetchingRemote] = useState(false);
+  const [isManualChecking, setIsManualChecking] = useState(false);
+  const [isContentUpdating, setIsContentUpdating] = useState(false);
   const [progressMap, setProgressMap] = useState<Record<string, ProgressData>>({});
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const lastAutoFetchRef = useRef<number>(0);
+  const depConfigRef = useRef<DependencyConfig | null>(null);
+
+  useEffect(() => {
+    depConfigRef.current = depConfig;
+  }, [depConfig]);
 
   const loadData = async () => {
     setIsLoadingConfig(true);
@@ -39,28 +44,58 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
     try { setScanResult(await ScanServices()); } catch (err) { console.error("刷新服務掃描失敗:", err); }
   };
 
-  const fetchRemoteConfig = async (silent = false) => {
-    setIsFetchingRemote(true);
+  const isConfigDifferent = (oldCfg: DependencyConfig | null, newCfg: DependencyConfig | null): boolean => {
+    if (!oldCfg || !newCfg) return false;
+    const oldKeys = Object.keys(oldCfg).sort();
+    const newKeys = Object.keys(newCfg).sort();
+    if (oldKeys.length !== newKeys.length) return true;
+    for (let i = 0; i < oldKeys.length; i++) {
+      if (oldKeys[i] !== newKeys[i]) return true;
+      if (oldCfg[oldKeys[i]]?.version !== newCfg[newKeys[i]]?.version) return true;
+      if (oldCfg[oldKeys[i]]?.url !== newCfg[newKeys[i]]?.url) return true;
+    }
+    return false;
+  };
+
+  const fetchRemoteConfig = async (isManual = false) => {
+    if (isManual) {
+      setIsManualChecking(true);
+    }
+    const startTime = Date.now();
     try {
-      setDepConfig(await FetchRemoteDependencies());
-      // 除遠端建議版本外，同步刷新本機掃描環境（例如手動安裝的 php_redis）
+      const newConfig = await FetchRemoteDependencies();
+      const oldConfig = depConfigRef.current;
+      const hasChanges = isConfigDifferent(oldConfig, newConfig);
+
+      if (hasChanges && oldConfig) {
+        setIsContentUpdating(true);
+        await new Promise(r => setTimeout(r, 150));
+        setDepConfig(newConfig);
+        await new Promise(r => setTimeout(r, 50));
+        setIsContentUpdating(false);
+      } else {
+        setDepConfig(newConfig);
+      }
+
       await refreshLocalScan();
       if (onInstalled) onInstalled();
-      lastAutoFetchRef.current = Date.now();
-      if (!silent) {
-        (window as any).customAlert(t("成功從遠端獲取最新的建議依賴配置！已同步刷新本機環境。"));
-      }
     } catch (err) {
       console.error("獲取遠端依賴配置失敗:", err);
-      if (!silent) {
+      if (isManual) {
         (window as any).customAlert(`${t("獲取遠端依賴配置失敗")}: ${err}`);
       }
     } finally {
-      setIsFetchingRemote(false);
+      if (isManual) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 500) {
+          await new Promise(resolve => setTimeout(resolve, 500 - elapsed));
+        }
+        setIsManualChecking(false);
+      }
     }
   };
 
-  const handleFetchRemote = () => fetchRemoteConfig(false);
+  const handleFetchRemote = () => fetchRemoteConfig(true);
 
   useEffect(() => {
     if (isOpen) {
@@ -75,11 +110,8 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
         }
         return next;
       });
-      const now = Date.now();
-      // 首次進入或距上次更新超過 3 分鐘時自動觸發靜默檢查
-      if (now - lastAutoFetchRef.current > 3 * 60 * 1000) {
-        fetchRemoteConfig(true);
-      }
+      // 每次開啟依賴庫管理時，自動在背景檢查更新一次（無按鈕動畫）
+      fetchRemoteConfig(false);
     }
   }, [isOpen]);
 
@@ -656,16 +688,26 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={handleFetchRemote} disabled={isFetchingRemote} className="p-2 rounded-lg transition flex items-center gap-1 text-xs font-semibold" style={{ color: 'var(--fg-2)' }} title={t("從遠端檢查依賴版本")}>
-              <RefreshCw size={14} className={isFetchingRemote ? 'animate-spin' : ''} />
-              <span>{isFetchingRemote ? t('檢查中...') : t('檢查更新')}</span>
+            <button
+              onClick={handleFetchRemote}
+              disabled={isManualChecking}
+              className="p-2 rounded-lg transition flex items-center gap-1 text-xs font-semibold"
+              style={{ color: 'var(--fg-2)', opacity: isManualChecking ? 0.7 : 1 }}
+              title={t("從遠端檢查依賴版本")}
+            >
+              <RefreshCw size={14} className={isManualChecking ? 'animate-spin' : ''} />
+              <span>{isManualChecking ? t('檢查中...') : t('檢查更新')}</span>
             </button>
             <button id="btn-close-dep-manager" onClick={onClose} className="p-1.5 rounded-lg transition" style={{ color: 'var(--muted)' }}><X size={18} /></button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 dependency-manager-content">
+        <div
+          className={`flex-1 overflow-y-auto p-6 space-y-6 dependency-manager-content transition-opacity duration-300 ease-in-out ${
+            isContentUpdating ? 'opacity-40 pointer-events-none' : 'opacity-100'
+          }`}
+        >
           {isLoadingConfig ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3" style={{ color: 'var(--muted)' }}>
               <Loader2 size={32} className="animate-spin" style={{ color: 'var(--status-info)' }} />

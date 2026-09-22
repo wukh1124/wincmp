@@ -662,4 +662,7 @@ var enTranslations = map[string]string{
 	"已成功復原原版本程式，您可以繼續正常使用。":                        "Successfully restored previous version, you can continue using the application normally.",
 	"新版本啟動失敗（可能受防毒軟體或權限攔截），已自動為您復原原版本。\n\n建議指引：\n請前往官方 Releases 頁面手動下載更新包：\n%s": "Failed to launch new version (possibly blocked by antivirus or permissions), previous version has been restored.\n\nGuidance:\nPlease download update package manually from official Releases:\n%s",
 	"自動復原原版本失敗":                                      "Failed to restore previous version",
+	"共 %d 行":                                          "%d lines in total",
+	"未讀 %d 行":                                         "%d unread",
 }
+

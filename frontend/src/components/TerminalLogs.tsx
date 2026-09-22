@@ -42,7 +42,9 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
     return localStorage.getItem('wincmp_auto_switch_tab') === 'true'; // 預設為 false，避免搶焦點
   });
   const [unreadTabs, setUnreadTabs] = useState<Record<string, boolean>>({});
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [unreadProjects, setUnreadProjects] = useState<Record<string, boolean>>({});
+  const [unreadProjectCounts, setUnreadProjectCounts] = useState<Record<string, number>>({});
   const [runtimeDropdownOpen, setRuntimeDropdownOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<LogContextMenu | null>(null);
   const [copiedFlag, setCopiedFlag] = useState<'selection' | 'line' | null>(null);
@@ -108,6 +110,7 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
       if (!autoSwitchTabRef.current) {
         if (category !== activeTabRef.current) {
           setUnreadTabs(prev => ({ ...prev, [category]: true }));
+          setUnreadCounts(prev => ({ ...prev, [category]: (prev[category] || 0) + 1 }));
         }
         if (
           category === 'runtime' &&
@@ -115,6 +118,7 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
           !(activeTabRef.current === 'runtime' && projName === activeRuntimeProjectRef.current)
         ) {
           setUnreadProjects(prev => ({ ...prev, [projName]: true }));
+          setUnreadProjectCounts(prev => ({ ...prev, [projName]: (prev[projName] || 0) + 1 }));
         }
         return;
       }
@@ -131,10 +135,12 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
           if (needsTabSwitch) {
             setActiveTab(category);
             setUnreadTabs(prev => ({ ...prev, [category]: false }));
+            setUnreadCounts(prev => ({ ...prev, [category]: 0 }));
           }
           if (category === 'runtime' && projName) {
             setActiveRuntimeProject(projName);
             setUnreadProjects(prev => ({ ...prev, [projName]: false }));
+            setUnreadProjectCounts(prev => ({ ...prev, [projName]: 0 }));
           }
         }, 500);
       }
@@ -167,12 +173,14 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
         if (runtimeProjects.length > 0) {
           setActiveRuntimeProject(runtimeProjects[0]);
           setUnreadProjects(prev => ({ ...prev, [runtimeProjects[0]]: false }));
+          setUnreadProjectCounts(prev => ({ ...prev, [runtimeProjects[0]]: 0 }));
         } else {
           setActiveRuntimeProject('');
         }
       } else {
         // 已在檢視的專案清除未讀
         setUnreadProjects(prev => (prev[activeRuntimeProject] ? { ...prev, [activeRuntimeProject]: false } : prev));
+        setUnreadProjectCounts(prev => (prev[activeRuntimeProject] ? { ...prev, [activeRuntimeProject]: 0 } : prev));
       }
     }
   }, [activeTab, runtimeProjects, activeRuntimeProject]);
@@ -225,6 +233,7 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
   const selectRuntimeProject = (proj: string) => {
     setActiveRuntimeProject(proj);
     setUnreadProjects(prev => ({ ...prev, [proj]: false }));
+    setUnreadProjectCounts(prev => ({ ...prev, [proj]: 0 }));
     setRuntimeDropdownOpen(false);
   };
 
@@ -407,9 +416,11 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
           {CATEGORIES.map(tab => {
             const isActive = activeTab === tab.id;
             const count = getTabCount(tab.id);
+            const unread = unreadCounts[tab.id] || 0;
+            const unreadSuffix = unread > 0 ? ` (${t('未讀 %d 行', unread)})` : '';
             const tooltip = tab.id === 'runtime' && activeRuntimeProject
-              ? `${t(tab.label)} (${activeRuntimeProject}) - ${t('共 %d 行', count)}`
-              : `${t(tab.label)} - ${t('共 %d 行', count)}`;
+              ? `${t(tab.label)} (${activeRuntimeProject}) - ${t('共 %d 行', count)}${unreadSuffix}`
+              : `${t(tab.label)} - ${t('共 %d 行', count)}${unreadSuffix}`;
 
             return (
               <button
@@ -417,6 +428,7 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
                 onClick={() => {
                   setActiveTab(tab.id);
                   setUnreadTabs(prev => ({ ...prev, [tab.id]: false }));
+                  setUnreadCounts(prev => ({ ...prev, [tab.id]: 0 }));
                 }}
                 title={tooltip}
                 className={`log-tab-btn font-bold shrink-0 flex items-center gap-1.5 ${
@@ -487,23 +499,28 @@ export default function TerminalLogs({ onCollapse }: TerminalLogsProps) {
                   }}
                 >
                   {runtimeProjects.length > 0 ? (
-                    runtimeProjects.map((proj) => (
-                      <button
-                        key={proj}
-                        type="button"
-                        onClick={() => selectRuntimeProject(proj)}
-                        className="w-full text-left px-3 py-2 text-xs flex items-center justify-between gap-2 transition hover:bg-[var(--card-hover)]"
-                        style={{
-                          color: proj === activeRuntimeProject ? 'var(--accent)' : 'var(--fg-2)',
-                          backgroundColor: proj === activeRuntimeProject ? 'var(--surface-warm)' : 'transparent',
-                        }}
-                      >
-                        <span className="truncate flex-1">{proj}</span>
-                        {unreadProjects[proj] && proj !== activeRuntimeProject && (
-                          <span className="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={{ backgroundColor: 'var(--status-warn)' }} />
-                        )}
-                      </button>
-                    ))
+                    runtimeProjects.map((proj) => {
+                      const pUnread = unreadProjectCounts[proj] || 0;
+                      const pTitle = pUnread > 0 ? `${proj} (${t('未讀 %d 行', pUnread)})` : proj;
+                      return (
+                        <button
+                          key={proj}
+                          type="button"
+                          onClick={() => selectRuntimeProject(proj)}
+                          title={pTitle}
+                          className="w-full text-left px-3 py-2 text-xs flex items-center justify-between gap-2 transition hover:bg-[var(--card-hover)]"
+                          style={{
+                            color: proj === activeRuntimeProject ? 'var(--accent)' : 'var(--fg-2)',
+                            backgroundColor: proj === activeRuntimeProject ? 'var(--surface-warm)' : 'transparent',
+                          }}
+                        >
+                          <span className="truncate flex-1">{proj}</span>
+                          {unreadProjects[proj] && proj !== activeRuntimeProject && (
+                            <span className="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={{ backgroundColor: 'var(--status-warn)' }} />
+                          )}
+                        </button>
+                      );
+                    })
                   ) : (
                     <div className="px-3 py-2 text-xs" style={{ color: 'var(--meta)' }}>{t("暫無運行專案")}</div>
                   )}
