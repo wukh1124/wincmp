@@ -506,19 +506,6 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-sm font-semibold truncate" style={{ color: 'var(--fg)' }}>{t(label)}</span>
-              {spec?.license && (
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 select-none font-medium leading-none"
-                  style={{
-                    border: '1px solid var(--border-soft)',
-                    color: 'var(--muted)',
-                    background: 'var(--surface-warm)',
-                  }}
-                  title={`${t("授權協議")}: ${spec.license}`}
-                >
-                  {spec.license}
-                </span>
-              )}
             </div>
             <span className="text-xs mt-0.5 block font-medium truncate" style={{ color: statusColor }}>{statusText}</span>
             {isPhp && localVer !== '' && (

@@ -136,8 +136,10 @@ export default function Dashboard() {
     }
   };
 
-  const handleScan = async () => {
-    setIsScanning(true);
+  const handleScan = async (isManual = false) => {
+    if (isManual) {
+      setIsScanning(true);
+    }
     const startTime = Date.now();
     try {
       const res = await ScanServices();
@@ -147,15 +149,19 @@ export default function Dashboard() {
       const missing = await CheckMissingCoreDependencies();
       setMissingCore({ caddy: !!missing?.caddy });
 
-      // 保證至少 500ms 視覺過渡，避免本機掃描過快造成無感瞬閃
-      const elapsed = Date.now() - startTime;
-      if (elapsed < 500) {
-        await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+      if (isManual) {
+        // 保證至少 500ms 視覺過渡，避免本機掃描過快造成無感瞬閃
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 500) {
+          await new Promise((resolve) => setTimeout(resolve, 500 - elapsed));
+        }
       }
     } catch (err) {
       console.error("掃描二進位服務失敗:", err);
     } finally {
-      setIsScanning(false);
+      if (isManual) {
+        setIsScanning(false);
+      }
     }
   };
 
@@ -316,7 +322,7 @@ export default function Dashboard() {
             )}
           </div>
           <button
-            onClick={handleScan}
+            onClick={() => handleScan(true)}
             disabled={isScanning}
             className="btn-custom-hover px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition duration-200 cursor-pointer"
             style={{
@@ -713,7 +719,7 @@ export default function Dashboard() {
       </div>
 
 
-      <DependencyManager isOpen={showDepManager} onClose={() => setShowDepManager(false)} onInstalled={handleScan} />
+      <DependencyManager isOpen={showDepManager} onClose={() => setShowDepManager(false)} onInstalled={() => handleScan(false)} />
     </div>
   );
 }
