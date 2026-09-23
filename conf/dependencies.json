@@ -76,7 +76,7 @@
     "license": "PHP-3.01",
     "homepage": "https://www.php.net",
     "source_url": "https://github.com/php/php-src",
-    "url": "https://windows.php.net/downloads/releases/php-8.2.33-nts-Win32-vs16-x64.zip",
+    "url": "https://windows.php.net/downloads/releases/archives/php-8.2.33-nts-Win32-vs16-x64.zip",
     "sha256": "d0bd189522fa50255ee94ed4b340ed4330f5ae33a90a74205275b0f0b221d388"
   },
   "php83": {
@@ -84,7 +84,7 @@
     "license": "PHP-3.01",
     "homepage": "https://www.php.net",
     "source_url": "https://github.com/php/php-src",
-    "url": "https://windows.php.net/downloads/releases/php-8.3.33-nts-Win32-vs16-x64.zip",
+    "url": "https://windows.php.net/downloads/releases/archives/php-8.3.33-nts-Win32-vs16-x64.zip",
     "sha256": "534399107056313246f424adbbb7937337e40fbbf6aa7bc26287ba9cfd2e4a2a"
   },
   "php84": {
@@ -92,7 +92,7 @@
     "license": "PHP-3.01",
     "homepage": "https://www.php.net",
     "source_url": "https://github.com/php/php-src",
-    "url": "https://windows.php.net/downloads/releases/php-8.4.25-nts-Win32-vs17-x64.zip",
+    "url": "https://windows.php.net/downloads/releases/archives/php-8.4.25-nts-Win32-vs17-x64.zip",
     "sha256": "43a8f67ed2e5223fafb21293c85976361808855405278cef2cf3037c3ae2529c"
   },
   "php_redis_74": {

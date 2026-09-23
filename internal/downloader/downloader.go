@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // WriteCounter 用於監聽下載進度
@@ -28,44 +29,71 @@ func (wc *WriteCounter) Write(p []byte) (int, error) {
 	return n, nil
 }
 
-// DownloadFile 下載檔案並回報進度
-func DownloadFile(url, destPath string, progressCb func(current, total int64)) error {
+// DownloadFile 下載檔案並回報進度，若遇 PHP 官方版本歸檔 (404) 自動嘗試 archives 降級備援
+func DownloadFile(downloadURL, destPath string, progressCb func(current, total int64)) error {
 	// 確保父目錄存在
 	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 		return fmt.Errorf("無法建立目錄: %w", err)
 	}
 
-	// 建立檔案
-	out, err := os.Create(destPath)
-	if err != nil {
-		return fmt.Errorf("無法建立檔案: %w", err)
-	}
-	defer out.Close()
-
-	// 發送 GET 請求
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("下載請求失敗: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("伺服器回應錯誤: %s", resp.Status)
+	urlsToTry := []string{downloadURL}
+	// 若為 PHP 官方 release 連結且未包含 archives，遇 404 時嘗試自動降級至 archives 備援
+	if strings.Contains(downloadURL, "windows.php.net/downloads/releases/") && !strings.Contains(downloadURL, "/archives/") {
+		urlsToTry = append(urlsToTry, strings.Replace(downloadURL, "/downloads/releases/", "/downloads/releases/archives/", 1))
 	}
 
-	// 使用 WriteCounter 包裝寫入
-	counter := &WriteCounter{
-		Total:      resp.ContentLength,
-		OnProgress: progressCb,
+	var lastErr error
+	for i, u := range urlsToTry {
+		out, err := os.Create(destPath)
+		if err != nil {
+			return fmt.Errorf("無法建立檔案: %w", err)
+		}
+
+		req, err := http.NewRequest("GET", u, nil)
+		if err != nil {
+			out.Close()
+			lastErr = fmt.Errorf("建立下載請求失敗: %w", err)
+			continue
+		}
+		req.Header.Set("User-Agent", "WinCMP-Downloader/2.0")
+
+		client := &http.Client{Timeout: 600 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			out.Close()
+			lastErr = fmt.Errorf("下載請求失敗: %w", err)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			out.Close()
+			lastErr = fmt.Errorf("伺服器回應錯誤: %s", resp.Status)
+			// 若非 404 或已經是最後一個嘗試，中斷後續嘗試
+			if resp.StatusCode != http.StatusNotFound && i == len(urlsToTry)-1 {
+				break
+			}
+			continue
+		}
+
+		counter := &WriteCounter{
+			Total:      resp.ContentLength,
+			OnProgress: progressCb,
+		}
+
+		_, err = io.Copy(out, io.TeeReader(resp.Body, counter))
+		resp.Body.Close()
+		out.Close()
+
+		if err != nil {
+			lastErr = fmt.Errorf("寫入檔案失敗: %w", err)
+			continue
+		}
+
+		return nil
 	}
 
-	// io.Copy 進行下載寫入
-	_, err = io.Copy(out, io.TeeReader(resp.Body, counter))
-	if err != nil {
-		return fmt.Errorf("寫入檔案失敗: %w", err)
-	}
-
-	return nil
+	return lastErr
 }
 
 // Unzip 解壓 zip 檔案到指定目錄
