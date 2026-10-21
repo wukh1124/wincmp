@@ -68,7 +68,7 @@ wincmp/
 ## 架構重點
 
 **PHP Port** — `3<主版本><次版本><序號>`：
-PHP 7.3 → `37300+`；PHP 8.2 → `38200+`。每版預設 3 個進程，可調整。
+PHP 7.3 → `37300+`；PHP 8.2 → `38200+`；PHP 8.5 → `38500+`。每版預設 3 個進程，可調整。
 
 **設定生效** — UI 更新 `conf/wincmp.json` → 重寫 `conf/sites/{project}.caddy` → `caddy reload`。
 
