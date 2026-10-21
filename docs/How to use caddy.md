@@ -11,11 +11,11 @@ scoop install caddy
 ## 2. 手動運行 PHP-CGI
 `wincmp` 預設使用多端口運行 PHP 以模擬並發。調試時可手動啟動特定版本的 PHP：
 
-**路徑範例 (PHP 8.2):** `C:\wincmp\bin\php\php-8.2.30-Win32-vs16-x64`
+**路徑範例 (PHP 8.5):** `C:\wincmp\bin\php\php-8.5.12`
 
 ### 手動啟動指令：
 ```powershell
-cd /d "C:\wincmp\bin\php\php-8.2.30-Win32-vs16-x64"
+cd /d "C:\wincmp\bin\php\php-8.5.12"
 .\php-cgi.exe -b 127.0.0.1:9821
 .\php-cgi.exe -b 127.0.0.1:9822
 .\php-cgi.exe -b 127.0.0.1:9823
@@ -24,7 +24,7 @@ cd /d "C:\wincmp\bin\php\php-8.2.30-Win32-vs16-x64"
 ### 批量啟動腳本 (batch):
 ```batch
 @echo off
-set PHP_PATH="C:\wincmp\bin\php\php-8.2.30-Win32-vs16-x64"
+set PHP_PATH="C:\wincmp\bin\php\php-8.5.12"
 start /b "" %PHP_PATH%\php-cgi.exe -b 127.0.0.1:9821
 start /b "" %PHP_PATH%\php-cgi.exe -b 127.0.0.1:9822
 start /b "" %PHP_PATH%\php-cgi.exe -b 127.0.0.1:9823
