@@ -593,6 +593,7 @@ var enTranslations = map[string]string{
 	"安裝 php_redis.dll 至 %s 失敗":    "Failed to install php_redis.dll to %s",
 	"ℹ️ 尚未檢測到 PHP %s 的安裝目錄，已保留暫存擴充檔案於 %s": "ℹ️ PHP %s installation directory not detected, temporary extension files kept in %s",
 	"解壓縮目錄未找到 php_redis.dll: %s":          "php_redis.dll not found in extracted directory: %s",
+	"無法辨識 %s 的 PHP 版本後綴，已跳過 php_redis.dll 安裝": "Cannot determine PHP version suffix for %s; php_redis.dll installation skipped",
 	"未知的設定檔類型: %s":                        "Unknown config file type: %s",
 	"正在為 %s 自動配置 Redis 擴充套件 (%s)...":      "Auto-configuring Redis extension (%s) for %s...",
 	"自動下載 Redis 擴充失敗: %s":                 "Failed to auto-download Redis extension: %s",

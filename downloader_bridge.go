@@ -291,22 +291,19 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 		if strings.HasPrefix(key, "php_redis") {
 			dllSource := filepath.Join(destDir, "php_redis.dll")
 			if _, err := os.Stat(dllSource); err == nil {
+				// 由 key 後綴（如 "85"）通用推導「主.次」版本，避免每新增一個 PHP 分支就得改一次白名單。
+				// 無法辨識時必須跳過搬移：空字串前綴會命中所有 PHP 目錄，把 ABI 不符的 DLL 灌進去。
 				targetMajorMin := ""
-				if strings.HasSuffix(key, "_82") {
-					targetMajorMin = "8.2"
-				} else if strings.HasSuffix(key, "_83") {
-					targetMajorMin = "8.3"
-				} else if strings.HasSuffix(key, "_84") {
-					targetMajorMin = "8.4"
-				} else if strings.HasSuffix(key, "_73") {
-					targetMajorMin = "7.3"
-				} else if strings.HasSuffix(key, "_74") {
-					targetMajorMin = "7.4"
+				if suffix := strings.TrimPrefix(key, "php_redis_"); len(suffix) == 2 {
+					targetMajorMin = string(suffix[0]) + "." + string(suffix[1])
 				}
 
 				phpBaseDir := filepath.Join(binDir, "php")
 				copiedCount := 0
-				if entries, rErr := os.ReadDir(phpBaseDir); rErr == nil {
+				entries, rErr := os.ReadDir(phpBaseDir)
+				if targetMajorMin == "" {
+					a.handleErrorLog("system", i18n.Tfmt("無法辨識 %s 的 PHP 版本後綴，已跳過 php_redis.dll 安裝", key), nil)
+				} else if rErr == nil {
 					for _, entry := range entries {
 						if entry.IsDir() && strings.HasPrefix(entry.Name(), "php-"+targetMajorMin) {
 							extPath := filepath.Join(phpBaseDir, entry.Name(), "ext")
