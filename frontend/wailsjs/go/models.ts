@@ -316,6 +316,29 @@ export namespace main {
 
 }
 
+export namespace phpver {
+	
+	export class Branch {
+	    MajorMin: string;
+	    EOLDate: string;
+	    DaysLeft: number;
+	    State: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Branch(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.MajorMin = source["MajorMin"];
+	        this.EOLDate = source["EOLDate"];
+	        this.DaysLeft = source["DaysLeft"];
+	        this.State = source["State"];
+	    }
+	}
+
+}
+
 export namespace process {
 	
 	export class OccupiedProcessInfo {
@@ -521,6 +544,7 @@ export namespace scanner {
 	    BunList: ServiceInfo[];
 	    PHPList: PHPVersionInfo[];
 	    SkippedPHP: string[];
+	    PHPLifecycle: phpver.Branch[];
 	    has_global_node: boolean;
 	    has_global_bun: boolean;
 	
@@ -540,6 +564,7 @@ export namespace scanner {
 	        this.BunList = this.convertValues(source["BunList"], ServiceInfo);
 	        this.PHPList = this.convertValues(source["PHPList"], PHPVersionInfo);
 	        this.SkippedPHP = source["SkippedPHP"];
+	        this.PHPLifecycle = this.convertValues(source["PHPLifecycle"], phpver.Branch);
 	        this.has_global_node = source["has_global_node"];
 	        this.has_global_bun = source["has_global_bun"];
 	    }

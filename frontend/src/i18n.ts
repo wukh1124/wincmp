@@ -678,6 +678,17 @@ export const enTranslations: Record<string, string> = {
   "受控外部執行環境": "Managed Runtimes & Services",
   "組件": "Component",
   "許可證": "License",
+  "EOL": "EOL",
+  "即將停止支援": "Ending soon",
+  "已於 %s 停止支援，上游不再提供安全修補": "Support ended on %s; upstream no longer ships security fixes",
+  "將於 %s 停止支援（剩餘 %d 天）": "Support ends on %s (%d days left)",
+  "偵測到已被取代的舊版: %s": "Superseded version detected: %s",
+  "這些目錄已被同分支較新版本取代，目前未被使用": "These directories were superseded by a newer patch of the same branch and are not in use",
+  "刪除 bin/php/php-%s（不影響使用中的版本）": "Delete bin/php/php-%s (does not affect the version in use)",
+  "清理 v%s": "Clean up v%s",
+  "確定要刪除被取代的舊版 PHP v%s 嗎？\n\n路徑: bin/php/php-%s\n此目錄已由同分支較新版本取代，刪除不影響目前使用中的 PHP。": "Delete the superseded PHP v%s?\n\nPath: bin/php/php-%s\nA newer patch of the same branch already replaces it, so the PHP in use is not affected.",
+  "已清理舊版 PHP v%s": "Cleaned up old PHP v%s",
+  "清理舊版 PHP 失敗": "Failed to clean up old PHP",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

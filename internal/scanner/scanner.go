@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"wincmp/internal/config"
+	"wincmp/internal/phpver"
 )
 
 // scanCache 快取掃描結果與 TTL
@@ -44,18 +45,20 @@ type PHPVersionInfo struct {
 
 // ScanResult 掃描結果
 type ScanResult struct {
-	CaddyList     []ServiceInfo
-	ComposerList  []ServiceInfo
-	HeidiSQLList  []ServiceInfo
-	MariaDBList   []ServiceInfo
-	MailpitList   []ServiceInfo
-	RedisList     []ServiceInfo
-	NodeList      []ServiceInfo
-	BunList       []ServiceInfo
-	PHPList       []PHPVersionInfo
-	SkippedPHP    []string // 記錄被略過的舊 Patch 版本 (如 "8.2.28")
-	HasGlobalNode bool     `json:"has_global_node"`
-	HasGlobalBun  bool     `json:"has_global_bun"`
+	CaddyList    []ServiceInfo
+	ComposerList []ServiceInfo
+	HeidiSQLList []ServiceInfo
+	MariaDBList  []ServiceInfo
+	MailpitList  []ServiceInfo
+	RedisList    []ServiceInfo
+	NodeList     []ServiceInfo
+	BunList      []ServiceInfo
+	PHPList      []PHPVersionInfo
+	SkippedPHP   []string // 記錄被略過的舊 Patch 版本 (如 "8.2.28")
+	// PHPLifecycle 為各 PHP 分支（含未安裝者）的官方支援狀態，供 UI 標示 EOL / 即將停止支援
+	PHPLifecycle  []phpver.Branch
+	HasGlobalNode bool `json:"has_global_node"`
+	HasGlobalBun  bool `json:"has_global_bun"`
 }
 
 // ScanBinDir 掃描 bin/ 目錄，偵測已安裝的服務與版本
@@ -430,6 +433,9 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 	if len(result.RedisList) > 1 {
 		result.RedisList = result.RedisList[:1]
 	}
+
+	// 附上各分支的官方支援狀態，讓 UI 能標示 EOL / 即將停止支援
+	result.PHPLifecycle = phpver.All(time.Now())
 
 	return result, nil
 }

@@ -8,6 +8,8 @@ import {
 } from '../../wailsjs/go/main/App';
 import { scanner } from '../../wailsjs/go/models';
 import DependencyManager from './DependencyManager';
+import PhpLifecycleBadge from './PhpLifecycleBadge';
+import { buildPhpLifecycleIndex } from '../phpLifecycle';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 import { t, useLanguage } from '../i18n';
 
@@ -47,6 +49,9 @@ export default function Dashboard() {
   const [missingCore, setMissingCore] = useState<{ caddy: boolean }>({ caddy: false });
   const [dismissBanner, setDismissBanner] = useState(false);
   const [showDepGuide, setShowDepGuide] = useState(false);
+
+  // PHP 分支支援狀態查表（EOL / 即將停止支援），供服務卡片標示
+  const phpLifecycle = buildPhpLifecycleIndex(scanResult?.PHPLifecycle);
 
   useEffect(() => {
     const checkGuides = async () => {
@@ -621,6 +626,7 @@ export default function Dashboard() {
                           <Server size={16} />
                         </div>
                         <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>PHP {php.Version}</h4>
+                        <PhpLifecycleBadge entry={phpLifecycle[php.MajorMin]} />
                       </div>
                       <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
                         {!isStatusReady ? (

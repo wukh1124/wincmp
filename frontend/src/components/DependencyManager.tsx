@@ -7,10 +7,13 @@ import {
 } from 'lucide-react';
 import {
   GetDependencyConfig, FetchRemoteDependencies, DownloadDependency,
-  ScanServices, GetScanResult, UninstallDependency, OpenDependencyFolder
+  ScanServices, GetScanResult, UninstallDependency, OpenDependencyFolder,
+  RemoveStalePHPPatch
 } from '../../wailsjs/go/main/App';
 import { EventsOn, BrowserOpenURL } from '../../wailsjs/runtime/runtime';
 import { t, useLanguage } from '../i18n';
+import PhpLifecycleBadge from './PhpLifecycleBadge';
+import { buildPhpLifecycleIndex, toMajorMin } from '../phpLifecycle';
 
 interface DependencyItem {
   version: string;
@@ -54,6 +57,34 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
   const refreshLocalScan = async () => {
     try { setScanResult(await ScanServices()); } catch (err) { console.error("刷新服務掃描失敗:", err); }
+  };
+
+  // PHP 分支支援狀態查表（EOL / 即將停止支援）
+  const phpLifecycle = buildPhpLifecycleIndex(scanResult?.PHPLifecycle);
+
+  // 取得指定分支被掃描器略過的舊 patch 版本（例如 8.4 分支的 ["8.4.25"]）
+  const getStalePHPVersions = (phpKey: string): string[] => {
+    const majorMin = toMajorMin(phpKey);
+    const skipped: string[] = Array.isArray(scanResult?.SkippedPHP) ? scanResult.SkippedPHP : [];
+    if (!majorMin) return [];
+    return skipped.filter(version => version.startsWith(`${majorMin}.`));
+  };
+
+  const handleRemoveStalePHP = async (version: string) => {
+    const confirmed = await (window as any).customConfirm(
+      t("確定要刪除被取代的舊版 PHP v%s 嗎？\n\n路徑: bin/php/php-%s\n此目錄已由同分支較新版本取代，刪除不影響目前使用中的 PHP。", version, version)
+    );
+    if (!confirmed) return;
+
+    try {
+      await RemoveStalePHPPatch(version);
+      await refreshLocalScan();
+      if (onInstalled) onInstalled();
+      (window as any).customAlert(t("已清理舊版 PHP v%s", version));
+    } catch (err: any) {
+      console.error("清理舊版 PHP 失敗:", err);
+      (window as any).customAlert(`${t("清理舊版 PHP 失敗")}: ${err}`);
+    }
   };
 
   const isConfigDifferent = (oldCfg: DependencyConfig | null, newCfg: DependencyConfig | null): boolean => {
@@ -364,6 +395,7 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
 
     const isPhp = (key.startsWith('php_') || key.startsWith('php')) && !key.startsWith('php_redis');
     const phpRedisInfo = isPhp ? getPhpRedisStatus(key) : null;
+    const stalePHPVersions = isPhp ? getStalePHPVersions(key) : [];
     const isDropdownOpen = activeDropdown === key;
 
     let statusText = '';
@@ -519,6 +551,9 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                   {spec.license}
                 </span>
               )}
+              {isPhp && (
+                <PhpLifecycleBadge compact entry={phpLifecycle[toMajorMin(key)]} />
+              )}
             </div>
             <span className="text-xs mt-0.5 block font-medium truncate" style={{ color: statusColor }}>{statusText}</span>
             {isPhp && localVer !== '' && (
@@ -540,6 +575,25 @@ export default function DependencyManager({ isOpen, onClose, onInstalled }: Depe
                     {t("一鍵啟用")}
                   </button>
                 )}
+              </div>
+            )}
+            {isPhp && stalePHPVersions.length > 0 && (
+              <div className="mt-1 flex items-center gap-1.5 text-[11px] min-w-0">
+                <AlertTriangle size={11} className="shrink-0" style={{ color: 'var(--status-warn)' }} />
+                <span className="truncate" style={{ color: 'var(--status-warn)' }} title={t("這些目錄已被同分支較新版本取代，目前未被使用")}>
+                  {t("偵測到已被取代的舊版: %s", stalePHPVersions.join(', '))}
+                </span>
+                {stalePHPVersions.map(version => (
+                  <button
+                    key={version}
+                    onClick={() => handleRemoveStalePHP(version)}
+                    className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold transition hover:opacity-80 active:scale-95"
+                    style={{ background: 'var(--status-warn-bg)', color: 'var(--status-warn)', border: '1px solid var(--status-warn)' }}
+                    title={t("刪除 bin/php/php-%s（不影響使用中的版本）", version)}
+                  >
+                    {t("清理 v%s", version)}
+                  </button>
+                ))}
               </div>
             )}
           </div>
