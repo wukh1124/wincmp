@@ -2,6 +2,9 @@
 * text=auto
 
 # Explicitly set eol to lf for text files to avoid Wails generator creating CRLF mismatches
+# go.mod / go.sum 由 Go 工具鏈以 LF 覆寫，若被 checkout 成 CRLF，每次 `go mod tidy` 都會重寫整份檔案
+go.mod text eol=lf
+go.sum text eol=lf
 *.go text eol=lf
 *.js text eol=lf
 *.ts text eol=lf
