@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"wincmp/internal/config"
+	"wincmp/internal/phpver"
 )
 
 // scanCache 快取掃描結果與 TTL
@@ -44,18 +45,20 @@ type PHPVersionInfo struct {
 
 // ScanResult 掃描結果
 type ScanResult struct {
-	CaddyList     []ServiceInfo
-	ComposerList  []ServiceInfo
-	HeidiSQLList  []ServiceInfo
-	MariaDBList   []ServiceInfo
-	MailpitList   []ServiceInfo
-	RedisList     []ServiceInfo
-	NodeList      []ServiceInfo
-	BunList       []ServiceInfo
-	PHPList       []PHPVersionInfo
-	SkippedPHP    []string // 記錄被略過的舊 Patch 版本 (如 "8.2.28")
-	HasGlobalNode bool     `json:"has_global_node"`
-	HasGlobalBun  bool     `json:"has_global_bun"`
+	CaddyList    []ServiceInfo
+	ComposerList []ServiceInfo
+	HeidiSQLList []ServiceInfo
+	MariaDBList  []ServiceInfo
+	MailpitList  []ServiceInfo
+	RedisList    []ServiceInfo
+	NodeList     []ServiceInfo
+	BunList      []ServiceInfo
+	PHPList      []PHPVersionInfo
+	SkippedPHP   []string // 記錄被略過的舊 Patch 版本 (如 "8.2.28")
+	// PHPLifecycle 為各 PHP 分支（含未安裝者）的官方支援狀態，供 UI 標示 EOL / 即將停止支援
+	PHPLifecycle  []phpver.Branch
+	HasGlobalNode bool `json:"has_global_node"`
+	HasGlobalBun  bool `json:"has_global_bun"`
 }
 
 // ScanBinDir 掃描 bin/ 目錄，偵測已安裝的服務與版本
@@ -227,8 +230,9 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 				}
 
 				// 檢查是否已有同次版本的 PHP，若有則保留較新版本
+				// 必須用數值分段比較：字串比較會把 "8.4.9" 誤判為比 "8.4.10" 新
 				if existing, ok := phpMap[majorMin]; ok {
-					if version > existing.Version {
+					if compareVersions(version, existing.Version) > 0 {
 						// 記錄舊版本被略過
 						result.SkippedPHP = append(result.SkippedPHP, existing.Version)
 						// 更新為較新版本
@@ -244,7 +248,7 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 							IniRedisEnabled: iniRedisEnabled,
 							RedisStatus:     redisStatus,
 						}
-					} else if version < existing.Version {
+					} else if compareVersions(version, existing.Version) < 0 {
 						// 目前掃描到的比 Map 中的舊
 						result.SkippedPHP = append(result.SkippedPHP, version)
 					}
@@ -271,9 +275,9 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 		result.PHPList = append(result.PHPList, info)
 	}
 
-	// 排序：PHP 版本由高到低
+	// 排序：PHP 版本由高到低（數值分段比較，避免字串比較在跨 10 的 patch 上錯位）
 	sort.Slice(result.PHPList, func(i, j int) bool {
-		return result.PHPList[i].Version > result.PHPList[j].Version
+		return compareVersions(result.PHPList[i].Version, result.PHPList[j].Version) > 0
 	})
 
 	// 4. 掃描 HeidiSQL
@@ -429,6 +433,9 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 	if len(result.RedisList) > 1 {
 		result.RedisList = result.RedisList[:1]
 	}
+
+	// 附上各分支的官方支援狀態，讓 UI 能標示 EOL / 即將停止支援
+	result.PHPLifecycle = phpver.All(time.Now())
 
 	return result, nil
 }

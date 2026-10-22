@@ -80,6 +80,8 @@ export function RedisScanKeys(arg1:number,arg2:number,arg3:string,arg4:number):P
 
 export function ReloadCaddy():Promise<void>;
 
+export function RemoveStalePHPPatch(arg1:string):Promise<void>;
+
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function RestartApp():Promise<void>;

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,11 +42,29 @@ func isValidSHA256(s string) bool {
 	return true
 }
 
+// archivesFallbackURL 針對 PHP 官方 Windows 二進位連結推算 archives 備援網址。
+// 官方發布新 patch 後會把舊版 zip 自 releases/ 移入 releases/archives/，原本釘住的版本連結因此 404。
+// windows.php.net 與 downloads.php.net 同屬 php.net 網域且路徑結構一致，故以網域後綴判斷而非固定主機名。
+func archivesFallbackURL(rawURL string) (string, bool) {
+	u, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || u.Host == "" {
+		return "", false
+	}
+	if !strings.HasSuffix(strings.ToLower(u.Hostname()), "php.net") {
+		return "", false
+	}
+	if !strings.Contains(u.Path, "/releases/") || strings.Contains(u.Path, "/archives/") {
+		return "", false
+	}
+	u.Path = strings.Replace(u.Path, "/releases/", "/releases/archives/", 1)
+	return u.String(), true
+}
+
 // probeURL 探測 URL 存活性，若遇 PHP 官方 releases 404 則自動嘗試 archives 備援
 func probeURL(client *http.Client, rawURL string) (bool, string, error) {
 	urls := []string{rawURL}
-	if strings.Contains(rawURL, "windows.php.net/downloads/releases/") && !strings.Contains(rawURL, "/archives/") {
-		urls = append(urls, strings.Replace(rawURL, "/downloads/releases/", "/downloads/releases/archives/", 1))
+	if fallback, ok := archivesFallbackURL(rawURL); ok {
+		urls = append(urls, fallback)
 	}
 
 	for i, u := range urls {

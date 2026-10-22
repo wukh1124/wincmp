@@ -80,7 +80,7 @@ Dashboard 服務：**Caddy**（80/443）、**MariaDB**（3306）、**PHP**（選
 ## 設定說明
 
 - **連接埠** — 於 Settings 或 `conf/wincmp.json` 修改（Caddy 80/443、MariaDB 3306）。
-- **PHP 版本** — `bin/php/` 下每版一個資料夾（如 `php-8.3.33-nts-...`）。
+- **PHP 版本** — `bin/php/` 下每版一個資料夾（如 `php-8.5.12`）。
 - **Runtime** — Node/Bun 掃描 `bin/`；Python/Go 使用系統 PATH；Custom 支援 `%PORT%`、`%HOST%`、`%PROJECT_DIR%`、`%BIN_DIR%`。
 - **SSL** — 預設 Caddy 本地 CA；自訂憑證放 `conf/ssl/`。
 

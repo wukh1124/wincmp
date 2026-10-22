@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -17,6 +18,9 @@ import (
 	"wincmp/internal/i18n"
 	"wincmp/internal/scanner"
 )
+
+// phpPatchVersionPattern 限制可清理的 PHP 版本格式（主.次.patch），避免傳入路徑片段
+var phpPatchVersionPattern = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
 
 // getDependencyConfigPath 取得 dependencies.json 的本機存放路徑
 func (a *App) getDependencyConfigPath() string {
@@ -291,22 +295,19 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 		if strings.HasPrefix(key, "php_redis") {
 			dllSource := filepath.Join(destDir, "php_redis.dll")
 			if _, err := os.Stat(dllSource); err == nil {
+				// 由 key 後綴（如 "85"）通用推導「主.次」版本，避免每新增一個 PHP 分支就得改一次白名單。
+				// 無法辨識時必須跳過搬移：空字串前綴會命中所有 PHP 目錄，把 ABI 不符的 DLL 灌進去。
 				targetMajorMin := ""
-				if strings.HasSuffix(key, "_82") {
-					targetMajorMin = "8.2"
-				} else if strings.HasSuffix(key, "_83") {
-					targetMajorMin = "8.3"
-				} else if strings.HasSuffix(key, "_84") {
-					targetMajorMin = "8.4"
-				} else if strings.HasSuffix(key, "_73") {
-					targetMajorMin = "7.3"
-				} else if strings.HasSuffix(key, "_74") {
-					targetMajorMin = "7.4"
+				if suffix := strings.TrimPrefix(key, "php_redis_"); len(suffix) == 2 {
+					targetMajorMin = string(suffix[0]) + "." + string(suffix[1])
 				}
 
 				phpBaseDir := filepath.Join(binDir, "php")
 				copiedCount := 0
-				if entries, rErr := os.ReadDir(phpBaseDir); rErr == nil {
+				entries, rErr := os.ReadDir(phpBaseDir)
+				if targetMajorMin == "" {
+					a.handleErrorLog("system", i18n.Tfmt("無法辨識 %s 的 PHP 版本後綴，已跳過 php_redis.dll 安裝", key), nil)
+				} else if rErr == nil {
 					for _, entry := range entries {
 						if entry.IsDir() && strings.HasPrefix(entry.Name(), "php-"+targetMajorMin) {
 							extPath := filepath.Join(phpBaseDir, entry.Name(), "ext")
@@ -476,6 +477,56 @@ func (a *App) installPHPRedisExtension(key string, item config.DependencyItem, p
 	}
 
 	a.handleLog("system", i18n.Tfmt("已成功自動配置 php_redis.dll 至: %s", targetDll))
+}
+
+// RemoveStalePHPPatch 移除同分支已被較新版本取代的舊 patch 目錄。
+// 僅允許刪除掃描結果中被標記為 SkippedPHP 的版本，避免誤刪正在使用中的執行環境。
+func (a *App) RemoveStalePHPPatch(version string) error {
+	if !phpPatchVersionPattern.MatchString(version) {
+		return fmt.Errorf("PHP 版本格式無效: %s", version)
+	}
+
+	// 一律強制重新掃描：若沿用快取，可能在使用者手動刪掉較新版本後，
+	// 把「其實已成為使用中」的目錄誤判為舊版而刪除。
+	res, err := a.ScanServices()
+	if err != nil {
+		return err
+	}
+
+	// 白名單：必須是掃描器判定為「被略過的舊 patch」才可刪除
+	isStale := false
+	for _, v := range res.SkippedPHP {
+		if v == version {
+			isStale = true
+			break
+		}
+	}
+	if !isStale {
+		return fmt.Errorf("版本 %s 不在可清理清單中（可能正在使用或已不存在）", version)
+	}
+
+	phpBaseDir := filepath.Join(a.baseDir, "bin", "php")
+	target := filepath.Join(phpBaseDir, "php-"+version)
+
+	// 邊界檢查：解析後仍須位於 bin/php 之下，防止路徑穿越
+	rel, relErr := filepath.Rel(phpBaseDir, target)
+	if relErr != nil || rel == "." || strings.HasPrefix(rel, "..") {
+		return fmt.Errorf("目標路徑不在 bin/php 之下，已中止: %s", target)
+	}
+	if _, statErr := os.Stat(target); statErr != nil {
+		return fmt.Errorf("找不到目錄: %s", target)
+	}
+
+	if err := os.RemoveAll(target); err != nil {
+		return fmt.Errorf("移除舊版 PHP 目錄失敗: %w", err)
+	}
+	a.handleLog("system", i18n.Tfmt("已移除舊版 PHP 執行環境: %s", "php-"+version))
+
+	// 重新掃描，讓 UI 立即反映（清單與 SkippedPHP 都會更新）
+	if _, err := a.ScanServices(); err != nil {
+		a.handleErrorLog("system", i18n.T("移除後重新掃描失敗"), err)
+	}
+	return nil
 }
 
 // UninstallDependency 移除指定本機已安裝的依賴

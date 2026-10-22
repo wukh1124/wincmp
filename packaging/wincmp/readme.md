@@ -80,7 +80,7 @@ Minimize to tray (optional in Settings). Tray menu can start/stop services quick
 ## Settings notes
 
 - **Ports** — change in Settings UI or `conf/wincmp.json` (Caddy 80/443, MariaDB 3306).
-- **PHP versions** — one folder per version under `bin/php/` (e.g. `php-8.3.33-nts-...`).
+- **PHP versions** — one folder per version under `bin/php/` (e.g. `php-8.5.12`).
 - **Runtimes** — Node/Bun scanned from `bin/`; Python/Go from system PATH; Custom commands support `%PORT%`, `%HOST%`, `%PROJECT_DIR%`, `%BIN_DIR%`.
 - **SSL** — Caddy local CA by default; put custom certs in `conf/ssl/`.
 

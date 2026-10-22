@@ -37,9 +37,9 @@ func DownloadFile(downloadURL, destPath string, progressCb func(current, total i
 	}
 
 	urlsToTry := []string{downloadURL}
-	// 若為 PHP 官方 release 連結且未包含 archives，遇 404 時嘗試自動降級至 archives 備援
-	if strings.Contains(downloadURL, "windows.php.net/downloads/releases/") && !strings.Contains(downloadURL, "/archives/") {
-		urlsToTry = append(urlsToTry, strings.Replace(downloadURL, "/downloads/releases/", "/downloads/releases/archives/", 1))
+	// 官方發布新 patch 後會把舊版自 releases/ 移入 releases/archives/，釘住的連結因此 404
+	if fallback, ok := archivesFallbackURL(downloadURL); ok {
+		urlsToTry = append(urlsToTry, fallback)
 	}
 
 	var lastErr error
@@ -165,6 +165,24 @@ func CalculateSHA256(filePath string) (string, error) {
 	}
 
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+// archivesFallbackURL 針對 PHP 官方 Windows 二進位連結推算 archives 備援網址。
+// 官方發布新 patch 後會把舊版 zip 自 releases/ 移入 releases/archives/，原本釘住的版本連結因此 404。
+// windows.php.net 與 downloads.php.net 同屬 php.net 網域且路徑結構一致，故以網域後綴判斷而非固定主機名。
+func archivesFallbackURL(rawURL string) (string, bool) {
+	u, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || u.Host == "" {
+		return "", false
+	}
+	if !strings.HasSuffix(strings.ToLower(u.Hostname()), "php.net") {
+		return "", false
+	}
+	if !strings.Contains(u.Path, "/releases/") || strings.Contains(u.Path, "/archives/") {
+		return "", false
+	}
+	u.Path = strings.Replace(u.Path, "/releases/", "/releases/archives/", 1)
+	return u.String(), true
 }
 
 // TrustedHostSuffixes 定義受信任的依賴下載官方網域後綴

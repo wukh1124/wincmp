@@ -68,7 +68,7 @@ Config path used by the app: **`conf/wincmp.json`**.
 ## Architecture notes
 
 **PHP ports** — `3<major><minor><sequence>`:
-PHP 7.3 → `37300+`; PHP 8.2 → `38200+`. Default process count is 3 per version.
+PHP 7.3 → `37300+`; PHP 8.2 → `38200+`; PHP 8.5 → `38500+`. Default process count is 3 per version.
 
 **Config apply** — UI updates `conf/wincmp.json` → rewrite `conf/sites/{project}.caddy` → `caddy reload`.
 
