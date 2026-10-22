@@ -230,9 +230,11 @@ func (a *App) startup(ctx context.Context) {
 			a.handleLog("system", i18n.T("掃描 bin/ 目錄完成"))
 		}
 
+		// 掃描完成、恢復服務前，先校正 PHP 還原狀態並清掉殘留的舊版行程
+		a.reconcilePHPRestoreState()
+
 		// 恢復上次關閉前的服務狀態
-		a.restoreLastState()
-	}()
+		a.restoreLastState()	}()
 
 	// 7. 啟動背景資源監控
 	a.startResourceMonitoring()
@@ -728,6 +730,51 @@ func (a *App) restoreLastState() {
 		if err := a.procMgr.StartRedis(redisInfo.Version, redisInfo.ExePath, redisPort); err != nil {
 			a.handleErrorLog("redis", "自動啟動 Redis 失敗", err)
 		}
+	}
+}
+
+// reconcilePHPRestoreState 校正 PHP 的「上次執行狀態」。
+// 目錄已不存在、或已被較新 patch 取代（掃描結果的 SkippedPHP）的版本不再列入自動啟動，
+// 並終止仍殘留在該目錄下的 php-cgi：這些版本在 UI 上已無卡片，
+// 若繼續執行就會變成使用者看不到、也停不掉的幽靈行程。
+func (a *App) reconcilePHPRestoreState() {
+	if a.scanRes == nil || a.appCfg == nil || a.appCfg.Global.LastServiceState.PHP == nil {
+		return
+	}
+
+	active := make(map[string]bool, len(a.scanRes.PHPList))
+	for _, p := range a.scanRes.PHPList {
+		active[p.Version] = true
+	}
+
+	changed := false
+	for version := range a.appCfg.Global.LastServiceState.PHP {
+		if active[version] {
+			continue
+		}
+		delete(a.appCfg.Global.LastServiceState.PHP, version)
+		changed = true
+		a.stopPHPProcessesInDir(version)
+	}
+	if changed {
+		_ = a.appCfg.Save(filepath.Join(a.baseDir, "conf", "wincmp.json"))
+	}
+}
+
+// stopPHPProcessesInDir 停止指定 PHP 版本：先停面板追蹤的服務，再清掉目錄下未被追蹤的 php-cgi。
+func (a *App) stopPHPProcessesInDir(version string) {
+	if a.procMgr != nil {
+		_ = a.procMgr.StopPHPCGI(version)
+	}
+
+	dir := filepath.Join(a.baseDir, "bin", "php", "php-"+version)
+	pids, err := process.TerminateProcessesInDir(dir, 2*time.Second, "php-cgi.exe")
+	if err != nil {
+		a.handleErrorLog("php", i18n.Tfmt("終止殘留 PHP-CGI 行程失敗: %s", version), err)
+		return
+	}
+	if len(pids) > 0 {
+		a.handleLog("php", i18n.Tfmt("已終止 %d 個殘留 PHP-CGI 行程: %v", len(pids), pids))
 	}
 }
 

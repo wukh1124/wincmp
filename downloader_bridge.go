@@ -365,6 +365,10 @@ func (a *App) runDependencyDownloadPipeline(key string, item config.DependencyIt
 	} else {
 		a.scanRes = scanRes
 		a.handleLog("system", i18n.T("重新掃描 bin 目錄完成，服務已就緒。"))
+
+		// 安裝新 patch 後，舊 patch 已被掃描器標記為 SkippedPHP，UI 上不再有卡片；
+		// 這裡同步停掉它並清除還原狀態，避免留下看不到、也停不掉的幽靈行程。
+		a.reconcilePHPRestoreState()
 	}
 
 	// 回報下載成功事件
@@ -520,14 +524,7 @@ func (a *App) RemoveStalePHPPatch(version string) error {
 
 	// 舊版 runtime 若仍被 php-cgi 載入（例如舊面板或 bat 啟動、未被追蹤的孤兒行程），
 	// 直接 RemoveAll 會在第一個被鎖定的 DLL 就失敗並留下半殘目錄，因此先停服務再清殘留行程。
-	if a.procMgr != nil {
-		_ = a.procMgr.StopPHPCGI(version)
-	}
-	if pids, err := process.TerminateProcessesInDir(target, 3*time.Second, "php-cgi.exe"); err != nil {
-		a.handleErrorLog("system", i18n.T("終止殘留 PHP-CGI 行程失敗"), err)
-	} else if len(pids) > 0 {
-		a.handleLog("system", i18n.Tfmt("已終止 %d 個殘留 PHP-CGI 行程: %v", len(pids), pids))
-	}
+	a.stopPHPProcessesInDir(version)
 
 	if err := process.RemoveAllWithRetry(target, 3, 200*time.Millisecond); err != nil {
 		if procs, findErr := process.FindProcessesInDir(target, "php-cgi.exe"); findErr == nil && len(procs) > 0 {

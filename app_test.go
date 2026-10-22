@@ -10,6 +10,7 @@ import (
 
 	"gopkg.in/natefinch/lumberjack.v2"
 	"wincmp/internal/config"
+	"wincmp/internal/scanner"
 )
 
 func TestCleanExpiredLogs(t *testing.T) {
@@ -171,5 +172,41 @@ func TestEnsureBaseDocumentation(t *testing.T) {
 	}
 	if string(readBack) != "custom user notice" {
 		t.Errorf("EnsureBaseDocumentation 不應覆蓋已存在的使用者檔案")
+	}
+}
+
+// TestReconcilePHPRestoreState 驗證已被取代或目錄已消失的 PHP 版本不會再被自動啟動。
+func TestReconcilePHPRestoreState(t *testing.T) {
+	baseDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(baseDir, "conf"), 0755); err != nil {
+		t.Fatalf("建立 conf 目錄失敗: %v", err)
+	}
+
+	cfg := &config.WincmpConfig{}
+	cfg.Global.LastServiceState.PHP = map[string]bool{
+		"8.3.33": true, // 已被 8.3.36 取代
+		"8.3.36": true, // 現行版本
+		"7.4.33": true, // 目錄已不存在
+	}
+
+	app := &App{
+		baseDir: baseDir,
+		appCfg:  cfg,
+		scanRes: &scanner.ScanResult{
+			PHPList:    []scanner.PHPVersionInfo{{Version: "8.3.36"}},
+			SkippedPHP: []string{"8.3.33"},
+		},
+	}
+
+	app.reconcilePHPRestoreState()
+
+	if !cfg.Global.LastServiceState.PHP["8.3.36"] {
+		t.Error("現行版本的還原狀態應被保留")
+	}
+	if _, ok := cfg.Global.LastServiceState.PHP["8.3.33"]; ok {
+		t.Error("已被取代的版本不應留在還原狀態中")
+	}
+	if _, ok := cfg.Global.LastServiceState.PHP["7.4.33"]; ok {
+		t.Error("目錄已不存在的版本不應留在還原狀態中")
 	}
 }
