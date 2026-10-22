@@ -1,0 +1,68 @@
+version: '3'
+
+# WinCMP 任務入口（Go + Wails v2，前端 Vite + React）。
+#
+# 重要：build/bin 若由「低完整性（Low IL）」行程建立，其產物會繼承 Low 標籤，
+# 使 exe 在執行時無法寫入 %APPDATA%，WebView2 建立 controller 會以 8000ffff 失敗
+# 並直接閃退（無視窗、無日誌）。所有會產生 exe 的任務都必須把目錄與產物校正回 Medium。
+
+vars:
+  BUILD_BIN: 'build\bin'
+  APP_EXE: 'build\bin\WinCMP.exe'
+
+tasks:
+  default:
+    desc: 顯示所有可用任務
+    silent: true
+    cmds:
+      - task --list
+
+  run-build:
+    aliases: [build]
+    desc: 正式編譯至 build/bin（注入 VERSION 並校正完整性等級）
+    vars:
+      VERSION:
+        sh: powershell -NoProfile -Command "(Get-Content VERSION).Trim()"
+    cmds:
+      - powershell -NoProfile -Command "Get-Process -Name WinCMP,WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0"
+      - powershell -NoProfile -Command "wails build -clean -ldflags '-s -w -X main.AppVersion=v{{.VERSION}}'"
+      - powershell -NoProfile -Command "New-Item -ItemType Directory -Force '{{.BUILD_BIN}}' | Out-Null; icacls '{{.BUILD_BIN}}' /setintegritylevel '(OI)(CI)Medium' | Out-Null; icacls '{{.APP_EXE}}' /setintegritylevel Medium | Out-Null"
+      - powershell -NoProfile -Command "Write-Host '[WinCMP] 已產出 build/bin/WinCMP.exe (v{{.VERSION}})，完整性等級：Medium'"
+
+  run-dev:
+    aliases: [dev]
+    desc: 開發模式（Vite 熱重載 + 桌面視窗）
+    cmds:
+      - powershell -NoProfile -Command "Get-Process -Name WinCMP,WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0"
+      - powershell -NoProfile -Command "New-Item -ItemType Directory -Force '{{.BUILD_BIN}}' | Out-Null; icacls '{{.BUILD_BIN}}' /setintegritylevel '(OI)(CI)Medium' | Out-Null"
+      - wails dev
+
+  clean:
+    desc: 移除編譯產物與前端 dist（保留 build/dev 執行期資料）
+    cmds:
+      - powershell -NoProfile -Command "Get-Process -Name WinCMP,WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0"
+      - powershell -NoProfile -Command "Remove-Item -Force -Recurse -ErrorAction SilentlyContinue '{{.BUILD_BIN}}','frontend\dist'; Remove-Item -Force -ErrorAction SilentlyContinue '.\*.exe','.\*.syso'; Write-Host '[WinCMP] 已清理 build/bin、frontend/dist 與根目錄產物'"
+
+  run-zip:
+    aliases: [package]
+    desc: 打包純源碼為 7z（沿用 bat/zip-exclude.txt 排除清單）
+    cmds:
+      - node scripts/package-source.js
+
+  check-frontend:
+    desc: 前端 TypeScript 型別檢查（tsc --noEmit）
+    dir: frontend
+    cmds:
+      - npx tsc --noEmit
+
+  check-go:
+    desc: Go 靜態檢查（go vet）與單元測試
+    cmds:
+      - go vet ./...
+      - go test -count=1 ./...
+
+  check:
+    desc: 全專案健康檢查（前端型別 + Go 檢查與測試）
+    cmds:
+      - task: check-frontend
+      - task: check-go
