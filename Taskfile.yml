@@ -2,6 +2,9 @@ version: '3'
 
 # WinCMP 任務入口（Go + Wails v2，前端 Vite + React）。
 #
+# 指令一律以 `powershell -NoProfile -Command` 內嵌，不落地成 .ps1 檔，
+# 因此不受 Windows ExecutionPolicy 與檔案編碼影響（見 AGENTS.md §1）。
+#
 # 重要：build/bin 若由「低完整性（Low IL）」行程建立，其產物會繼承 Low 標籤，
 # 使 exe 在執行時無法寫入 %APPDATA%，WebView2 建立 controller 會以 8000ffff 失敗
 # 並直接閃退（無視窗、無日誌）。所有會產生 exe 的任務都必須把目錄與產物校正回 Medium。
@@ -17,31 +20,40 @@ tasks:
     cmds:
       - task --list
 
+  doctor:
+    desc: 檢查 Go / Wails / WebView2 環境（版本不一致時先跑這個）
+    cmds:
+      - wails doctor
+      - go version
+
   run-build:
     aliases: [build]
     desc: 正式編譯至 build/bin（注入 VERSION 並校正完整性等級）
-    vars:
-      VERSION:
-        sh: powershell -NoProfile -Command "(Get-Content VERSION).Trim()"
     cmds:
-      - powershell -NoProfile -Command "Get-Process -Name WinCMP,WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0"
-      - powershell -NoProfile -Command "wails build -clean -ldflags '-s -w -X main.AppVersion=v{{.VERSION}}'"
+      # 正式版執行中直接中止：靜默砍掉使用者正在用的面板，比建置失敗更糟
+      - powershell -NoProfile -Command "if (Get-Process -Name WinCMP -ErrorAction SilentlyContinue) { Write-Host '[WinCMP] 偵測到 WinCMP 正在執行，請先關閉面板再建置。' -ForegroundColor Red; exit 1 }"
+      - powershell -NoProfile -Command "Get-Process -Name WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0"
+      # 版號直接讀 VERSION，避免依賴 sh（Task 的 sh: 變數需要 Git Bash 在 PATH）
+      # 注意：Task 會展開 `$變數`，此處刻意不用 PowerShell 變數
+      - powershell -NoProfile -Command "wails build -clean -ldflags ('-s -w -X main.AppVersion=v' + (Get-Content VERSION).Trim())"
       - powershell -NoProfile -Command "New-Item -ItemType Directory -Force '{{.BUILD_BIN}}' | Out-Null; icacls '{{.BUILD_BIN}}' /setintegritylevel '(OI)(CI)Medium' | Out-Null; icacls '{{.APP_EXE}}' /setintegritylevel Medium | Out-Null"
-      - powershell -NoProfile -Command "Write-Host '[WinCMP] 已產出 build/bin/WinCMP.exe (v{{.VERSION}})，完整性等級：Medium'"
+      - powershell -NoProfile -Command "Write-Host ('[WinCMP] Build OK -> build/bin/WinCMP.exe (v' + (Get-Content VERSION).Trim() + ')，完整性等級：Medium')"
 
   run-dev:
     aliases: [dev]
     desc: 開發模式（Vite 熱重載 + 桌面視窗）
     cmds:
-      - powershell -NoProfile -Command "Get-Process -Name WinCMP,WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0"
+      # 開發迭代會覆寫 build/bin，先停掉舊實例；有停到才提示，避免靜默關閉
+      - powershell -NoProfile -Command "if (Get-Process -Name WinCMP,WinCMP-dev -ErrorAction SilentlyContinue) { Write-Host '[WinCMP] 停止執行中的實例（含正式版）' -ForegroundColor Yellow }; Get-Process -Name WinCMP,WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0"
       - powershell -NoProfile -Command "New-Item -ItemType Directory -Force '{{.BUILD_BIN}}' | Out-Null; icacls '{{.BUILD_BIN}}' /setintegritylevel '(OI)(CI)Medium' | Out-Null"
       - wails dev
 
   clean:
     desc: 移除編譯產物與前端 dist（保留 build/dev 執行期資料）
     cmds:
-      - powershell -NoProfile -Command "Get-Process -Name WinCMP,WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0"
-      - powershell -NoProfile -Command "Remove-Item -Force -Recurse -ErrorAction SilentlyContinue '{{.BUILD_BIN}}','frontend\dist'; Remove-Item -Force -ErrorAction SilentlyContinue '.\*.exe','.\*.syso'; Write-Host '[WinCMP] 已清理 build/bin、frontend/dist 與根目錄產物'"
+      - powershell -NoProfile -Command "Get-Process -Name WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; Remove-Item -Force -Recurse -ErrorAction SilentlyContinue '{{.BUILD_BIN}}','frontend\dist'; Remove-Item -Force -ErrorAction SilentlyContinue '.\*.exe','.\*.syso'; exit 0"
+      # 正式版若還在跑，上面的刪除會失敗；明確報錯，不要留半套狀態
+      - powershell -NoProfile -Command "if (Test-Path '{{.BUILD_BIN}}') { Write-Host '[WinCMP] build/bin 仍存在：請關閉 WinCMP 後再執行 task clean。' -ForegroundColor Red; exit 1 }"
 
   run-zip:
     aliases: [package]
@@ -53,7 +65,7 @@ tasks:
     desc: 前端 TypeScript 型別檢查（tsc --noEmit）
     dir: frontend
     cmds:
-      - npx tsc --noEmit
+      - npx --no-install tsc --noEmit
 
   check-go:
     desc: Go 靜態檢查（go vet）與單元測試

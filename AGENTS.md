@@ -10,7 +10,10 @@
   * 範例：`$ver = (Get-Content VERSION).Trim(); wails build -clean -ldflags "-s -w -X main.AppVersion=v$ver"`
 * **測試驗證**：代碼變更後務必執行測試：`go test ./...`（或指定套件如 `go test ./internal/process`）。
 * **清理原則**：**嚴禁**提交編譯產物與暫存檔（`*.exe`、`frontend/dist/`、`*.log` 等）。
-* **腳本技術棧規範**：專案工具、發布驗證與輔助腳本**一律使用 Node.js**（置於 `scripts/*.js`），**嚴禁新增或調用 .ps1 / .bat**（避免受 Windows ExecutionPolicy 阻礙與編碼歧異）。
+* **腳本技術棧規範**：
+  * **檔案型腳本一律 Node.js**（置於 `scripts/*.js`），**嚴禁新增 `.ps1` / `.bat` 檔案**。
+  * `Taskfile.yml` 是本機統一入口，允許內嵌 `powershell -NoProfile -Command`：指令不落地成檔案，不受 ExecutionPolicy 限制；但**不得在 Taskfile 內呼叫 `.ps1` / `.bat`**。
+  * `bat/**` 屬既有 legacy 資產（`release.ps1`、`start-*.bat` 等），**只維護不擴充**；新功能、CI 與發布流程不得新增依賴，遷移完成後刪除。
 
 ---
 
