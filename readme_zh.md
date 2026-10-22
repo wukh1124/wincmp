@@ -1,7 +1,7 @@
 # WinCMP
 
 ![Go Version](https://img.shields.io/badge/Go-1.26.2+-00ADD8?style=for-the-badge&logo=go)
-![Wails Version](https://img.shields.io/badge/Wails-v2.12.0-red?style=for-the-badge&logo=wails)
+![Wails Version](https://img.shields.io/badge/Wails-v2.17.0-red?style=for-the-badge&logo=wails)
 ![React Version](https://img.shields.io/badge/React-v18-blue?style=for-the-badge&logo=react)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?style=for-the-badge&logo=windows)
 ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
@@ -86,6 +86,20 @@ PHP 7.3 → `37300+`；PHP 8.2 → `38200+`；PHP 8.5 → `38500+`。每版預�
 - Node.js 18+
 
 ### 指令
+
+#### 0. 任務捷徑（Taskfile）
+
+安裝 [go-task](https://taskfile.dev/) 後可使用統一入口（建置任務會同時校正 exe 完整性等級）：
+
+```bash
+go install github.com/go-task/task/v3/cmd/task@latest
+task --list      # 列出所有任務
+task run-build   # 正式建置（讀 VERSION、注入版號、校正完整性等級）
+task run-dev     # 開發模式
+task check       # 前端型別 + Go 檢查與測試
+task clean       # 清理產物
+task run-zip     # 打包純源碼 7z
+```
 
 #### 1. 建置與執行
 

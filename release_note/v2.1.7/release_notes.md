@@ -14,7 +14,12 @@ This is a security release: the bundled PHP runtimes now carry the fixes for CVE
 - **PHP lifecycle badges**: Service cards and the dependency manager now mark branches that reached end of life (EOL) or end support within 180 days; hover shows the end-of-support date and remaining days. PHP 7.3 / 7.4 no longer receive Windows security fixes upstream, so consider upgrading.
 - **Superseded runtime detection and cleanup**: After a patch upgrade, directories left behind in `bin/php/` are listed with a "Clean up" action. Deletion shows the full path, asks for confirmation, and only targets directories replaced by a newer patch of the same branch.
 
+### Changed
+- **Leaner dependency list**: License badges next to dependency titles were removed because they duplicated the dropdown entry and the footer notice; license details remain available in the dropdown.
+- **Background work no longer animates buttons**: The dependency manager's post-check callback now refreshes silently; only a manual click on "Rescan Services" shows the loading state.
+
 ### Dependencies
+- **Wails upgraded to 2.17.0**: go-webview2 is bumped to 1.0.23, fixing a COM argument bug in WebView2 controller initialization and letting the project build with Go 1.27 (older CLI builds bundled an x/tools release that could not read Go 1.27 type data).
 - **Default dependency updates**: Caddy 2.11.7, Node.js 24.22.1 (flagged as a security release upstream), MariaDB 11.4.13 and Mailpit 1.31.6; Composer 2.10.3, HeidiSQL 12.21 and Redis 5.0.14.1 are already current.
 - **CA bundle pinned to an immutable snapshot**: Switched to `cacert-2026-10-20.pem`. The previously pinned rolling `cacert.pem` broke download verification whenever upstream refreshed the Mozilla store.
 

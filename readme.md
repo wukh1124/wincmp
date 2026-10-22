@@ -1,7 +1,7 @@
 # WinCMP
 
 ![Go Version](https://img.shields.io/badge/Go-1.26.2+-00ADD8?style=for-the-badge&logo=go)
-![Wails Version](https://img.shields.io/badge/Wails-v2.12.0-red?style=for-the-badge&logo=wails)
+![Wails Version](https://img.shields.io/badge/Wails-v2.17.0-red?style=for-the-badge&logo=wails)
 ![React Version](https://img.shields.io/badge/React-v18-blue?style=for-the-badge&logo=react)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?style=for-the-badge&logo=windows)
 ![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
@@ -86,6 +86,20 @@ PHP 7.3 → `37300+`; PHP 8.2 → `38200+`; PHP 8.5 → `38500+`. Default proces
 - Node.js 18+
 
 ### Commands
+
+#### 0. Task shortcuts (Taskfile)
+
+Install [go-task](https://taskfile.dev/) once, then use the unified entry points (build tasks also repair the exe integrity level):
+
+```bash
+go install github.com/go-task/task/v3/cmd/task@latest
+task --list      # list every task
+task run-build   # release build (reads VERSION, injects version, fixes integrity level)
+task run-dev     # development mode
+task check       # frontend type check + Go vet and tests
+task clean       # remove build artifacts
+task run-zip     # package source-only 7z archive
+```
 
 #### 1. Build & Run
 
