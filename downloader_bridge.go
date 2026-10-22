@@ -16,6 +16,7 @@ import (
 	"wincmp/internal/config"
 	"wincmp/internal/downloader"
 	"wincmp/internal/i18n"
+	"wincmp/internal/process"
 	"wincmp/internal/scanner"
 )
 
@@ -517,8 +518,22 @@ func (a *App) RemoveStalePHPPatch(version string) error {
 		return fmt.Errorf("找不到目錄: %s", target)
 	}
 
-	if err := os.RemoveAll(target); err != nil {
-		return fmt.Errorf("移除舊版 PHP 目錄失敗: %w", err)
+	// 舊版 runtime 若仍被 php-cgi 載入（例如舊面板或 bat 啟動、未被追蹤的孤兒行程），
+	// 直接 RemoveAll 會在第一個被鎖定的 DLL 就失敗並留下半殘目錄，因此先停服務再清殘留行程。
+	if a.procMgr != nil {
+		_ = a.procMgr.StopPHPCGI(version)
+	}
+	if pids, err := process.TerminateProcessesInDir(target, 3*time.Second, "php-cgi.exe"); err != nil {
+		a.handleErrorLog("system", i18n.T("終止殘留 PHP-CGI 行程失敗"), err)
+	} else if len(pids) > 0 {
+		a.handleLog("system", i18n.Tfmt("已終止 %d 個殘留 PHP-CGI 行程: %v", len(pids), pids))
+	}
+
+	if err := process.RemoveAllWithRetry(target, 3, 200*time.Millisecond); err != nil {
+		if procs, findErr := process.FindProcessesInDir(target, "php-cgi.exe"); findErr == nil && len(procs) > 0 {
+			return fmt.Errorf("%s: %w", i18n.Tfmt("移除舊版 PHP 目錄失敗（仍有 %d 個 PHP-CGI 行程佔用）", len(procs)), err)
+		}
+		return fmt.Errorf("%s: %w", i18n.T("移除舊版 PHP 目錄失敗"), err)
 	}
 	a.handleLog("system", i18n.Tfmt("已移除舊版 PHP 執行環境: %s", "php-"+version))
 
