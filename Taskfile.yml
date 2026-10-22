@@ -28,8 +28,9 @@ tasks:
 
   run-build:
     aliases: [build]
-    desc: 正式編譯至 build/bin（注入 VERSION 並校正完整性等級）
+    desc: 正式編譯至 build/bin（含前端 npm run build；注入 VERSION 並校正完整性等級）
     cmds:
+      # 前端由 Wails 依 wails.json 的 frontend:build 執行 `npm run build`（tsc + vite build），不需另外呼叫
       # 正式版執行中直接中止：靜默砍掉使用者正在用的面板，比建置失敗更糟
       - powershell -NoProfile -Command "if (Get-Process -Name WinCMP -ErrorAction SilentlyContinue) { Write-Host '[WinCMP] 偵測到 WinCMP 正在執行，請先關閉面板再建置。' -ForegroundColor Red; exit 1 }"
       - powershell -NoProfile -Command "Get-Process -Name WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0"
@@ -38,6 +39,17 @@ tasks:
       - powershell -NoProfile -Command "wails build -clean -ldflags ('-s -w -X main.AppVersion=v' + (Get-Content VERSION).Trim())"
       - powershell -NoProfile -Command "New-Item -ItemType Directory -Force '{{.BUILD_BIN}}' | Out-Null; icacls '{{.BUILD_BIN}}' /setintegritylevel '(OI)(CI)Medium' | Out-Null; icacls '{{.APP_EXE}}' /setintegritylevel Medium | Out-Null"
       - powershell -NoProfile -Command "Write-Host ('[WinCMP] Build OK -> build/bin/WinCMP.exe (v' + (Get-Content VERSION).Trim() + ')，完整性等級：Medium')"
+
+  build-backend:
+    aliases: [build-go]
+    desc: 只重編 Go 後端，沿用現有 frontend/dist（wails build -s；需先跑 task build-frontend）
+    cmds:
+      - powershell -NoProfile -Command "if (-not (Test-Path 'frontend\dist\index.html')) { Write-Host '[WinCMP] 找不到 frontend/dist，請先執行 task build-frontend。' -ForegroundColor Red; exit 1 }"
+      - powershell -NoProfile -Command "if (Get-Process -Name WinCMP -ErrorAction SilentlyContinue) { Write-Host '[WinCMP] 偵測到 WinCMP 正在執行，請先關閉面板再建置。' -ForegroundColor Red; exit 1 }"
+      - powershell -NoProfile -Command "Get-Process -Name WinCMP-dev -ErrorAction SilentlyContinue | Stop-Process -Force; exit 0"
+      - powershell -NoProfile -Command "wails build -clean -s -ldflags ('-s -w -X main.AppVersion=v' + (Get-Content VERSION).Trim())"
+      - powershell -NoProfile -Command "New-Item -ItemType Directory -Force '{{.BUILD_BIN}}' | Out-Null; icacls '{{.BUILD_BIN}}' /setintegritylevel '(OI)(CI)Medium' | Out-Null; icacls '{{.APP_EXE}}' /setintegritylevel Medium | Out-Null"
+      - powershell -NoProfile -Command "Write-Host ('[WinCMP] Backend-only build OK -> build/bin/WinCMP.exe (v' + (Get-Content VERSION).Trim() + ')，前端沿用 frontend/dist')"
 
   run-dev:
     aliases: [dev]
@@ -60,6 +72,12 @@ tasks:
     desc: 打包純源碼為 7z（沿用 bat/zip-exclude.txt 排除清單）
     cmds:
       - node scripts/package-source.js
+
+  build-frontend:
+    desc: 前端型別檢查與打包（npm run build = tsc + vite build，產出 frontend/dist）
+    dir: frontend
+    cmds:
+      - npm run build
 
   check-frontend:
     desc: 前端 TypeScript 型別檢查（tsc --noEmit）

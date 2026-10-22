@@ -95,7 +95,9 @@ Install [go-task](https://taskfile.dev/) once, then use the unified entry points
 go install github.com/go-task/task/v3/cmd/task@latest
 task --list      # list every task
 task doctor      # check Go / Wails / WebView2 versions
-task run-build   # release build (reads VERSION, injects version, fixes integrity level)
+task run-build   # release build: frontend (npm run build) + Go, reads VERSION
+task build-frontend  # frontend only: tsc + vite build -> frontend/dist
+task build-backend   # Go only, reuses existing frontend/dist (wails build -s)
 task run-dev     # development mode
 task check       # frontend type check + Go vet and tests
 task clean       # remove build artifacts
