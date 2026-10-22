@@ -80,8 +80,8 @@ PHP 7.3 → `37300+`；PHP 8.2 → `38200+`；PHP 8.5 → `38500+`。每版預�
 
 ### 環境需求
 
-- Go 1.26.2+
-- [Wails v2](https://wails.io/docs/gettingstarted/installation/)
+- Go 1.26.2+（`go.mod` 宣告的最低版本；用 1.27.x 建置亦可）
+- [Wails v2.17.0](https://wails.io/docs/gettingstarted/installation/)（CLI 版本需與 `go.mod` 一致，用 `task doctor` 檢查）
 - MinGW-w64（WinLibs），可執行 `gcc -v`
 - Node.js 18+
 
@@ -94,6 +94,7 @@ PHP 7.3 → `37300+`；PHP 8.2 → `38200+`；PHP 8.5 → `38500+`。每版預�
 ```bash
 go install github.com/go-task/task/v3/cmd/task@latest
 task --list      # 列出所有任務
+task doctor      # 檢查 Go / Wails / WebView2 版本
 task run-build   # 正式建置（讀 VERSION、注入版號、校正完整性等級）
 task run-dev     # 開發模式
 task check       # 前端型別 + Go 檢查與測試
@@ -116,7 +117,7 @@ wails build -clean -ldflags "-s -w"
 # PowerShell:
 $ver = (Get-Content VERSION).Trim(); wails build -clean -ldflags "-s -w -X main.AppVersion=v$ver"
 
-# 自動化發布打包（於 ../wincmp-release-only/ 產生 zip 與 exe 乾淨發行包）
+# 自動化發布打包（legacy：bat/release.ps1；於 ../wincmp-release-only/ 產生 zip 與 exe 乾淨發行包）
 .\release.bat
 ```
 

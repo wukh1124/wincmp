@@ -80,8 +80,8 @@ PHP 7.3 → `37300+`; PHP 8.2 → `38200+`; PHP 8.5 → `38500+`. Default proces
 
 ### Prerequisites
 
-- Go 1.26.2+
-- [Wails v2](https://wails.io/docs/gettingstarted/installation/)
+- Go 1.26.2+ (the minimum declared in `go.mod`; building with 1.27.x is fine)
+- [Wails v2.17.0](https://wails.io/docs/gettingstarted/installation/) (CLI version must match `go.mod`; run `task doctor` to check)
 - MinGW-w64 (WinLibs) so `gcc -v` works
 - Node.js 18+
 
@@ -94,6 +94,7 @@ Install [go-task](https://taskfile.dev/) once, then use the unified entry points
 ```bash
 go install github.com/go-task/task/v3/cmd/task@latest
 task --list      # list every task
+task doctor      # check Go / Wails / WebView2 versions
 task run-build   # release build (reads VERSION, injects version, fixes integrity level)
 task run-dev     # development mode
 task check       # frontend type check + Go vet and tests
@@ -116,7 +117,7 @@ wails build -clean -ldflags "-s -w"
 # PowerShell:
 $ver = (Get-Content VERSION).Trim(); wails build -clean -ldflags "-s -w -X main.AppVersion=v$ver"
 
-# Automated release packaging (creates zip & exe with checksums in ../wincmp-release-only/)
+# Automated release packaging (legacy: bat/release.ps1; creates zip & exe with checksums in ../wincmp-release-only/)
 .\release.bat
 ```
 
