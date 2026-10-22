@@ -100,6 +100,7 @@ task build-frontend  # frontend only: tsc + vite build -> frontend/dist
 task build-backend   # Go only, reuses existing frontend/dist (wails build -s)
 task run-dev     # development mode
 task check       # frontend type check + Go vet and tests
+task test        # Go unit tests only (go test ./...)
 task clean       # remove build artifacts
 task run-zip     # package source-only 7z archive
 ```

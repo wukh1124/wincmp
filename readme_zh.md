@@ -100,6 +100,7 @@ task build-frontend  # 只建前端：tsc + vite build -> frontend/dist
 task build-backend   # 只建 Go：沿用現有 frontend/dist（wails build -s）
 task run-dev     # 開發模式
 task check       # 前端型別 + Go 檢查與測試
+task test        # 只跑 Go 單元測試（go test ./...）
 task clean       # 清理產物
 task run-zip     # 打包純源碼 7z
 ```

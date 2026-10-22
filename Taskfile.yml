@@ -85,11 +85,16 @@ tasks:
     cmds:
       - npx --no-install tsc --noEmit
 
+  test:
+    desc: 執行全部 Go 單元測試（go test ./...）
+    cmds:
+      - go test -count=1 ./...
+
   check-go:
     desc: Go 靜態檢查（go vet）與單元測試
     cmds:
       - go vet ./...
-      - go test -count=1 ./...
+      - task: test
 
   check:
     desc: 全專案健康檢查（前端型別 + Go 檢查與測試）
