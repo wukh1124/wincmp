@@ -1,6 +1,6 @@
 # WinCMP
 
-![Go Version](https://img.shields.io/badge/Go-1.26.2+-00ADD8?style=for-the-badge&logo=go)
+![Go Version](https://img.shields.io/badge/Go-1.27.3+-00ADD8?style=for-the-badge&logo=go)
 ![Wails Version](https://img.shields.io/badge/Wails-v2.17.0-red?style=for-the-badge&logo=wails)
 ![React Version](https://img.shields.io/badge/React-v18-blue?style=for-the-badge&logo=react)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?style=for-the-badge&logo=windows)
@@ -80,7 +80,7 @@ PHP 7.3 → `37300+`; PHP 8.2 → `38200+`; PHP 8.5 → `38500+`. Default proces
 
 ### Prerequisites
 
-- Go 1.26.2+ (the minimum declared in `go.mod`; building with 1.27.x is fine)
+- Go 1.27.3+ (the minimum declared in `go.mod`; older releases ship unpatched stdlib CVEs)
 - [Wails v2.17.0](https://wails.io/docs/gettingstarted/installation/) (CLI version must match `go.mod`; run `task doctor` to check)
 - MinGW-w64 (WinLibs) so `gcc -v` works
 - Node.js 18+

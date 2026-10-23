@@ -1,6 +1,6 @@
 # WinCMP
 
-![Go Version](https://img.shields.io/badge/Go-1.26.2+-00ADD8?style=for-the-badge&logo=go)
+![Go Version](https://img.shields.io/badge/Go-1.27.3+-00ADD8?style=for-the-badge&logo=go)
 ![Wails Version](https://img.shields.io/badge/Wails-v2.17.0-red?style=for-the-badge&logo=wails)
 ![React Version](https://img.shields.io/badge/React-v18-blue?style=for-the-badge&logo=react)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?style=for-the-badge&logo=windows)
@@ -80,7 +80,7 @@ PHP 7.3 → `37300+`；PHP 8.2 → `38200+`；PHP 8.5 → `38500+`。每版預�
 
 ### 環境需求
 
-- Go 1.26.2+（`go.mod` 宣告的最低版本；用 1.27.x 建置亦可）
+- Go 1.27.3+（`go.mod` 宣告的最低版本；更舊版本含未修補的標準庫 CVE）
 - [Wails v2.17.0](https://wails.io/docs/gettingstarted/installation/)（CLI 版本需與 `go.mod` 一致，用 `task doctor` 檢查）
 - MinGW-w64（WinLibs），可執行 `gcc -v`
 - Node.js 18+
