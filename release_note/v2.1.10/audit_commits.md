@@ -21,6 +21,13 @@
   - **核心變更檔案**：`conf/dependencies.json`、`docs/dependencies.md`、`.agents/skills/wincmp-dependencies-update/SKILL.md`
   - **查驗指令**：`git show 3ed0b25 -- docs/dependencies.md`
 
+### [Security]
+- [x] **改用 Go 1.27.4 編譯**
+  - **實際影響**：`go.mod` 的 `go` 指令由 `1.27.3` 提升為 `1.27.4`，修補 GO-2026-6859（`net/http` 的 `MaxBytesReader` 標頭競態導致伺服器 crash）。CI 的 `actions/setup-go@v7` 以 `go-version-file: go.mod` 解析版本，因此 v2.1.10 起的執行檔由 Go 1.27.4 編譯；README 徽章與環境需求段落同步改為硬性最低 1.27.4。
+  - **觸發來源**：v2.1.10 tag 的 Build and Release run 由 `govulncheck` 在 `Scan for Known Vulnerabilities` 步驟阻斷（`net/http@go1.27.3`，修復於 `go1.27.4`）。
+  - **核心變更檔案**：`go.mod`、`readme.md`、`readme_zh.md`、`release_note/v2.1.10/release_notes*.md`
+  - **查驗指令**：`go version -m build\bin\wincmp.exe`（應顯示 `go1.27.4`）
+
 ## 2. 未納入發布說明的 Commit 查驗
 
 | Commit | 類型 | 標題 | 未納入原因 |
@@ -33,6 +40,6 @@
 - [x] 1. 條目代碼核對通過
 - [x] 2. `node .agents/skills/wincmp-release/scripts/validate_release.js` 通過
 - [x] 3. `cd frontend && npm run build` 通過
-- [x] 4. `go test ./...` 通過
+- [x] 4. `go test ./...` 通過（僅 `TestOpenFolderAndShowInExplorerValidation` 在沙盒環境因 `ShellExecute` 被拒而失敗，非代碼問題）
 - [ ] 5. 截圖：本版無 UI 變更，沿用 v2.1.9 的 `screenshot/`（未改動），可免重跑 `node scripts/capture.js`
 - [ ] 6. `.\release.bat` 成功生成 Release 壓縮包

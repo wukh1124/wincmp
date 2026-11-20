@@ -9,6 +9,9 @@
 ### Changed
 - **固定執行檔名稱為 `WinCMP.exe`**：發行壓縮包內的執行檔改為固定名稱 `WinCMP.exe`（不再使用 `WinCMP_vX.Y.Z.exe`），應用程式內自動更新覆蓋後也會維持 `WinCMP.exe`，避免每次升級後 Windows 工作列釘選與桌面捷徑失效。
 
+### Security
+- **改用 Go 1.27.4 編譯**：修補 Go 標準庫的 `net/http` 伺服器當機漏洞（GO-2026-6859，`MaxBytesReader` 標頭競態）。WinCMP 內建更新器、依賴下載與內嵌 Caddy 反向代理皆會觸及該路徑，因此 `go.mod` 的工具鏈下限同步提高為 1.27.4；本機與 GitHub Actions 產出的執行檔都由此版本編譯。
+
 ### Dependencies
 - **更新內建相依套件目錄**：同步更新 `conf/dependencies.json` 與 `docs/dependencies.md` 的版本與 SHA-256 校驗碼：
   - Caddy：`2.11.7` -> `2.11.9`

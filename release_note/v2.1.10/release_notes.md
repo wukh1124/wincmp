@@ -9,6 +9,9 @@ This release switches WinCMP to a fixed executable filename to preserve Windows 
 ### Changed
 - **Fixed executable filename (`WinCMP.exe`)**: The release archive now ships `WinCMP.exe` instead of a versioned filename (`WinCMP_vX.Y.Z.exe`). The in-app updater also replaces the binary using `WinCMP.exe`, so Windows taskbar pins and shortcuts remain valid after upgrading.
 
+### Security
+- **Rebuilt with Go 1.27.4**: Patches a `net/http` server crash in the Go standard library (GO-2026-6859, a `MaxBytesReader` header race). WinCMP's updater, dependency downloads, and embedded Caddy reverse proxy all reach that code path, so the toolchain floor in `go.mod` is now 1.27.4 and both local and GitHub Actions builds compile with it.
+
 ### Dependencies
 - **Updated bundled dependency catalog**: Refreshed versions and SHA-256 checksums in `conf/dependencies.json` and `docs/dependencies.md`:
   - Caddy: `2.11.7` -> `2.11.9`
