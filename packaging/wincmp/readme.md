@@ -33,7 +33,7 @@ Source & issues: [github.com/wukh1124/wincmp](https://github.com/wukh1124/wincmp
 
 1. Download the latest **`wincmp-v*-win-x64.zip`** from [Releases](https://github.com/wukh1124/wincmp/releases/latest).
 2. Extract anywhere (example: `D:\wincmp`).
-3. Run **`WinCMP_vX.Y.Z.exe`**.
+3. Run **`WinCMP.exe`**.
 4. If core binaries are missing, use the in-app **dependency downloader** (recommended), or place them under `bin/` yourself.
 
 ### Manual `bin/` layout (optional)

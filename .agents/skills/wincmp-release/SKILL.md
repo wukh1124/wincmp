@@ -106,7 +106,7 @@ wincmp/
 ## Getting Started
 1. 下載 `wincmp-vX.Y.Z-win-x64.zip`。
 2. 解壓縮至您系統中的任何資料夾。
-3. 按兩下 `WinCMP_vX.Y.Z.exe` 啟動控制面板。
+3. 按兩下 `WinCMP.exe` 啟動控制面板。
 ```
 
 **日期行（必填）**：緊接主標題之後，單獨一行。

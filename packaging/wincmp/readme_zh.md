@@ -33,7 +33,7 @@ Windows 可攜式本地開發控制面板：**Caddy + MariaDB + PHP + Mailpit + 
 
 1. 至 [Releases](https://github.com/wukh1124/wincmp/releases/latest) 下載最新 **`wincmp-v*-win-x64.zip`**。
 2. 解壓縮到任意目錄（例如 `D:\wincmp`）。
-3. 執行 **`WinCMP_vX.Y.Z.exe`**。
+3. 執行 **`WinCMP.exe`**。
 4. 若缺少核心元件，使用程式內**依賴下載器**（建議），或自行放到 `bin/`。
 
 ### 手動 `bin/` 結構（可選）

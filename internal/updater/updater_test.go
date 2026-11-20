@@ -172,3 +172,84 @@ func TestRollbackUpdateWithPath(t *testing.T) {
 	}
 }
 
+func TestReplaceExecutableFixedName(t *testing.T) {
+	t.Run("固定檔名原地升級", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		execPath := filepath.Join(tmpDir, updater.FixedExecutableName)
+		tempExePath := filepath.Join(tmpDir, "wincmp_new.exe")
+
+		if err := os.WriteFile(execPath, []byte("old-v1"), 0755); err != nil {
+			t.Fatalf("寫入舊執行檔失敗: %v", err)
+		}
+		if err := os.WriteFile(tempExePath, []byte("new-v2"), 0755); err != nil {
+			t.Fatalf("寫入新執行檔失敗: %v", err)
+		}
+
+		newExePath, err := updater.ReplaceExecutable(execPath, tempExePath)
+		if err != nil {
+			t.Fatalf("替換執行檔失敗: %v", err)
+		}
+		if newExePath != execPath {
+			t.Errorf("預期固定落地路徑為 %s，實際為 %s", execPath, newExePath)
+		}
+
+		gotNew, err := os.ReadFile(newExePath)
+		if err != nil || string(gotNew) != "new-v2" {
+			t.Errorf("新執行檔內容不符或讀取失敗: %q, err=%v", string(gotNew), err)
+		}
+		gotOld, err := os.ReadFile(execPath + ".old")
+		if err != nil || string(gotOld) != "old-v1" {
+			t.Errorf("舊備份檔內容不符或讀取失敗: %q, err=%v", string(gotOld), err)
+		}
+	})
+
+	t.Run("舊版帶版號檔名過渡收斂為 WinCMP.exe", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		execPath := filepath.Join(tmpDir, "WinCMP_v2.1.9.exe")
+		tempExePath := filepath.Join(tmpDir, "wincmp_new.exe")
+
+		if err := os.WriteFile(execPath, []byte("old-versioned"), 0755); err != nil {
+			t.Fatalf("寫入舊執行檔失敗: %v", err)
+		}
+		if err := os.WriteFile(tempExePath, []byte("new-fixed"), 0755); err != nil {
+			t.Fatalf("寫入新執行檔失敗: %v", err)
+		}
+
+		newExePath, err := updater.ReplaceExecutable(execPath, tempExePath)
+		if err != nil {
+			t.Fatalf("替換執行檔失敗: %v", err)
+		}
+		expectedPath := filepath.Join(tmpDir, updater.FixedExecutableName)
+		if newExePath != expectedPath {
+			t.Errorf("預期收斂為 %s，實際為 %s", expectedPath, newExePath)
+		}
+		if _, err := os.Stat(execPath + ".old"); err != nil {
+			t.Errorf("預期舊版備份檔 %s 存在: %v", execPath+".old", err)
+		}
+	})
+
+	t.Run("固定檔名啟動失敗時回滾", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		execPath := filepath.Join(tmpDir, updater.FixedExecutableName)
+		oldPath := execPath + ".old"
+
+		if err := os.WriteFile(oldPath, []byte("old-good"), 0755); err != nil {
+			t.Fatalf("寫入 old 檔失敗: %v", err)
+		}
+		if err := os.WriteFile(execPath, []byte("new-broken"), 0755); err != nil {
+			t.Fatalf("寫入新檔失敗: %v", err)
+		}
+
+		if err := updater.RollbackUpdateWithPath(execPath, execPath); err != nil {
+			t.Fatalf("同名回滾失敗: %v", err)
+		}
+		got, err := os.ReadFile(execPath)
+		if err != nil || string(got) != "old-good" {
+			t.Errorf("回滾後內容不符: %q, err=%v", string(got), err)
+		}
+		if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+			t.Errorf("預期 .old 檔案已還原並移除")
+		}
+	})
+}
+

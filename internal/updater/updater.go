@@ -44,6 +44,9 @@ type ReleaseInfo struct {
 // OfficialReleaseURLPrefix 定義官方 GitHub Release 下載網址前綴
 const OfficialReleaseURLPrefix = "https://github.com/wukh1124/wincmp/releases/download/"
 
+// FixedExecutableName 定義本機落地之固定執行檔名稱，避免每次版本更新更換檔名導致 Windows 工具列釘選失效
+const FixedExecutableName = "WinCMP.exe"
+
 // ValidateReleaseURL 檢查更新下載 URL 是否符合官方倉庫釋出規則
 func ValidateReleaseURL(targetURL string) error {
 	trimmed := strings.TrimSpace(targetURL)
@@ -325,7 +328,6 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 	}
 
 	var tempExePath string
-	var newExeName string
 
 	if assetType == "exe" {
 		tempExePath = filepath.Join(tempDir, "wincmp_new.exe")
@@ -345,11 +347,6 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 				_ = os.Remove(tempExePath)
 				return "", fmt.Errorf("新版本完整性校驗 (SHA-256) 失敗，已中止更新覆蓋 (預期: %s, 實際: %s)。\n\n建議指引：\n請直接前往官方 Releases 手動下載安裝包：\n%s", expectedSHA256, actualSHA, url)
 			}
-		}
-
-		newExeName = filepath.Base(url)
-		if !strings.HasSuffix(strings.ToLower(newExeName), ".exe") {
-			newExeName = "wincmp.exe"
 		}
 	} else {
 		// zip 流程
@@ -398,7 +395,6 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 			return "", fmt.Errorf("在壓縮包中找不到任何 exe 執行檔。\n\n建議指引：\n請直接手動下載官方安裝包：\n%s", url)
 		}
 
-		newExeName = filepath.Base(foundExe)
 		tempExePath = filepath.Join(tempDir, "wincmp_new.exe")
 		_ = os.Remove(tempExePath)
 		if err := os.Rename(foundExe, tempExePath); err != nil {
@@ -426,6 +422,11 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 		return "", fmt.Errorf("無法取得當前進程的執行檔路徑: %w", err)
 	}
 
+	return ReplaceExecutable(execPath, tempExePath)
+}
+
+// ReplaceExecutable 將當前執行檔重命名為 .old，並將已驗證的新執行檔以固定檔名 WinCMP.exe 搬移至同目錄
+func ReplaceExecutable(execPath, tempExePath string) (string, error) {
 	oldPath := execPath + ".old"
 	_ = os.Remove(oldPath) // 先刪除舊的備份（如果存在）
 
@@ -435,9 +436,11 @@ func DownloadAndUpdate(url string, assetType string, expectedSHA256 string, base
 		return "", fmt.Errorf("無法將當前執行檔重命名，可能權限不足: %w", err)
 	}
 
-	// 將新下載的 exe 移動到原執行目錄，並保持新版本原檔名
-	newExePath := filepath.Join(filepath.Dir(execPath), newExeName)
-	_ = os.Remove(newExePath) // 先刪除同名的新執行檔（如果存在）
+	// 將新下載的 exe 移動到原執行目錄，並固定檔名為 WinCMP.exe（維持工具列釘選與捷徑有效）
+	newExePath := filepath.Join(filepath.Dir(execPath), FixedExecutableName)
+	if !strings.EqualFold(newExePath, execPath) {
+		_ = os.Remove(newExePath)
+	}
 	if err := os.Rename(tempExePath, newExePath); err != nil {
 		// 若移動失敗，嘗試還原舊版，以防崩潰
 		_ = os.Rename(oldPath, execPath)

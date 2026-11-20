@@ -82,16 +82,16 @@ if (Test-Path $EmbeddedGo) {
     Remove-Item -Path $EmbeddedGo -Force
 }
 
-# 5. Copy and rename executable
-Write-Host "[5] Copying and renaming executable..." -ForegroundColor Gray
+# 5. Copy executable (fixed WinCMP.exe in zip for persistent taskbar pinning; versioned standalone exe for direct download)
+Write-Host "[5] Copying executable..." -ForegroundColor Gray
 $BuiltExe = Join-Path $ProjectRoot "build\bin\wincmp.exe"
-$TargetExe = Join-Path $TargetDir "WinCMP_v$Version.exe"
+$TargetExe = Join-Path $TargetDir "WinCMP.exe"
 
 if (-not (Test-Path $BuiltExe)) {
     Write-Error "Could not find built wincmp.exe at $BuiltExe"
 }
 Copy-Item -Path $BuiltExe -Destination $TargetExe -Force
-Write-Host "    -> Created executable: WinCMP_v$Version.exe" -ForegroundColor Green
+Write-Host "    -> Created executable: WinCMP.exe" -ForegroundColor Green
 
 # Copy standalone executable to release parent directory for auto updates
 $StandaloneExe = Join-Path $ReleaseParentDir "WinCMP_v$Version.exe"
@@ -232,7 +232,7 @@ This release introduces new features, updates, and fixes to WinCMP.
 ## Getting Started
 1. Download ``wincmp-v$Version-win-x64.zip``.
 2. Extract the archive to any folder on your system.
-3. Double-click ``WinCMP_v$Version.exe`` to launch the control panel.
+3. Double-click ``WinCMP.exe`` to launch the control panel.
 "@
     [System.IO.File]::WriteAllText($EnReleaseFile, $EnTemplate, $utf8NoBom)
     Write-Host "    [Warn] English release notes missing/empty, wrote stub: $EnReleaseFile" -ForegroundColor Yellow
@@ -255,7 +255,7 @@ if (-not (Test-Path $ZhReleaseFile) -or (Get-Item $ZhReleaseFile).Length -lt 20)
 ## Getting Started
 1. 下載 ``wincmp-v$Version-win-x64.zip``。
 2. 解壓縮至您系統中的任何資料夾。
-3. 按兩下 ``WinCMP_v$Version.exe`` 啟動控制面板。
+3. 按兩下 ``WinCMP.exe`` 啟動控制面板。
 "@
     [System.IO.File]::WriteAllText($ZhReleaseFile, $ZhTemplate, $utf8NoBom)
     Write-Host "    [Warn] Chinese release notes missing/empty, wrote stub: $ZhReleaseFile" -ForegroundColor Yellow
