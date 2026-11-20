@@ -11,39 +11,39 @@ WinCMP 依賴的二進位檔案目錄定義於 [`conf/dependencies.json`](../con
 
 | Key | 元件 | 目前版本 | 授權協議 (SPDX) | 官方原始碼 / 首頁 | 安裝位置（相對於 `bin/`） |
 |-----|------|----------|-----------------|-------------------|---------------------------|
-| `caddy` | Caddy | 2.11.7 | Apache-2.0 | [GitHub](https://github.com/caddyserver/caddy) | `caddy/caddy-2.11.7/caddy.exe` |
-| `mariadb` | MariaDB | 11.4.13 | GPL-2.0-only | [GitHub](https://github.com/MariaDB/server) | `mariadb/mariadb-11.4.13/bin/mariadbd.exe` |
+| `caddy` | Caddy | 2.11.9 | Apache-2.0 | [GitHub](https://github.com/caddyserver/caddy) | `caddy/caddy-2.11.9/caddy.exe` |
+| `mariadb` | MariaDB | 11.4.14 | GPL-2.0-only | [GitHub](https://github.com/MariaDB/server) | `mariadb/mariadb-11.4.14/bin/mariadbd.exe` |
 | `php73` | PHP 7.3 | 7.3.33 ⚠️ EOL | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-7.3.33/php-cgi.exe` |
 | `php74` | PHP 7.4 | 7.4.33 ⚠️ EOL | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-7.4.33/php-cgi.exe` |
-| `php82` | PHP 8.2 | 8.2.35 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.2.35/php-cgi.exe` |
-| `php83` | PHP 8.3 | 8.3.36 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.3.36/php-cgi.exe` |
-| `php84` | PHP 8.4 | 8.4.27 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.4.27/php-cgi.exe` |
-| `php85` | PHP 8.5 | 8.5.12 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.5.12/php-cgi.exe` |
+| `php82` | PHP 8.2 | 8.2.36 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.2.36/php-cgi.exe` |
+| `php83` | PHP 8.3 | 8.3.37 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.3.37/php-cgi.exe` |
+| `php84` | PHP 8.4 | 8.4.28 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.4.28/php-cgi.exe` |
+| `php85` | PHP 8.5 | 8.5.13 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.5.13/php-cgi.exe` |
 | `php_redis_*` | PHP Redis 擴充 | 5.3.7 / 6.3.0 | PHP-3.01 | [GitHub](https://github.com/phpredis/phpredis) | 解壓後的 `php_redis.dll` → `php/php-*/ext/`（6.3.0 涵蓋 8.2～8.5） |
 | `redis` | Redis | 5.0.14.1 | BSD-3-Clause | [GitHub](https://github.com/tporadowski/redis) | `redis/redis-5.0.14.1/redis-server.exe` |
-| `mailpit` | Mailpit | 1.31.6 | MIT | [GitHub](https://github.com/axllent/mailpit) | `mailpit/mailpit-1.31.6/mailpit.exe` |
-| `node` | Node.js | 24.22.1 | MIT | [GitHub](https://github.com/nodejs/node) | `node/node-24.22.1/npm.cmd` |
-| `composer` | Composer | 2.10.3 | MIT | [GitHub](https://github.com/composer/composer) | `composer/composer-2.10.3/composer.phar`（並產生 `composer.bat`） |
-| `heidisql` | HeidiSQL | 12.21 | GPL-3.0-or-later | [GitHub](https://github.com/HeidiSQL/HeidiSQL) | `heidisql/heidisql-12.21/heidisql.exe` |
-| `cacert` | CA 憑證包 | 2026-10-20 | MPL-2.0 | [curl.se](https://curl.se/ca/) | 由下載流程使用（非 `bin/` 服務） |
+| `mailpit` | Mailpit | 1.34.0 | MIT | [GitHub](https://github.com/axllent/mailpit) | `mailpit/mailpit-1.34.0/mailpit.exe` |
+| `node` | Node.js | 24.22.3 | MIT | [GitHub](https://github.com/nodejs/node) | `node/node-24.22.3/npm.cmd` |
+| `composer` | Composer | 2.11.2 | MIT | [GitHub](https://github.com/composer/composer) | `composer/composer-2.11.2/composer.phar`（並產生 `composer.bat`） |
+| `heidisql` | HeidiSQL | 12.22 | GPL-3.0-or-later | [GitHub](https://github.com/HeidiSQL/HeidiSQL) | `heidisql/heidisql-12.22/heidisql.exe` |
+| `cacert` | CA 憑證包 | 2026-11-05 | MPL-2.0 | [curl.se](https://curl.se/ca/) | 由下載流程使用（非 `bin/` 服務） |
 
 ### 目錄範例
 
 ```text
 wincmp/bin/
-├── caddy/caddy-2.11.7/caddy.exe
-├── mariadb/mariadb-11.4.13/bin/mariadbd.exe
+├── caddy/caddy-2.11.9/caddy.exe
+├── mariadb/mariadb-11.4.14/bin/mariadbd.exe
 ├── php/
-│   ├── php-8.5.12/
+│   ├── php-8.5.13/
 │   │   ├── php-cgi.exe
 │   │   └── ext/php_redis.dll
-│   ├── php-8.4.27/
-│   └── php-8.3.36/
+│   ├── php-8.4.28/
+│   └── php-8.3.37/
 ├── redis/redis-5.0.14.1/redis-server.exe
-├── mailpit/mailpit-1.31.6/mailpit.exe
-├── node/node-24.22.1/npm.cmd
-├── composer/composer-2.10.3/composer.phar
-└── heidisql/heidisql-12.21/heidisql.exe
+├── mailpit/mailpit-1.34.0/mailpit.exe
+├── node/node-24.22.3/npm.cmd
+├── composer/composer-2.11.2/composer.phar
+└── heidisql/heidisql-12.22/heidisql.exe
 ```
 
 ### 相容掃描
