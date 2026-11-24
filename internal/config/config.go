@@ -79,6 +79,18 @@ type LastServiceState struct {
 	PHP     map[string]bool `json:"php"` // key 為 PHP 版本號 (例: "8.2.30"), value 為啟動狀態
 }
 
+// Clone 複製 LastServiceState，避免共享 PHP map 參考
+func (s LastServiceState) Clone() LastServiceState {
+	cloned := s
+	if s.PHP != nil {
+		cloned.PHP = make(map[string]bool, len(s.PHP))
+		for k, v := range s.PHP {
+			cloned.PHP[k] = v
+		}
+	}
+	return cloned
+}
+
 // PHPSettings 控制 PHP 進程數量與基礎 Port
 type PHPSettings struct {
 	ProcessesPerVersion int            `json:"processes_per_version"` // 預設值 (例如 3)
@@ -308,15 +320,39 @@ func (c *WincmpConfig) Save(path string) error {
 	// 儲存後還原明文密碼（避免記憶體中的 cfg 被改為密文）
 	c.Global.MariaDBPassword = originalPassword
 
-	// 確保目錄存在
+	// 確保目錄存在並以暫存檔 + Rename 進行原子寫入，避免跨進程重啟交接時讀到半截 JSON
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("無法建立目錄 %s: %w", dir, err)
 	}
 
-	if err := os.WriteFile(path, data, 0600); err != nil {
+	tmpFile, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("無法建立暫存設定檔 %s: %w", dir, err)
+	}
+	tmpPath := tmpFile.Name()
+	cleanupTmp := true
+	defer func() {
+		if cleanupTmp {
+			_ = os.Remove(tmpPath)
+		}
+	}()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		_ = tmpFile.Close()
+		return fmt.Errorf("無法寫入暫存設定檔 %s: %w", tmpPath, err)
+	}
+	if err := tmpFile.Sync(); err != nil {
+		_ = tmpFile.Close()
+		return fmt.Errorf("無法同步暫存設定檔 %s: %w", tmpPath, err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("無法關閉暫存設定檔 %s: %w", tmpPath, err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
 		return fmt.Errorf("無法寫入設定檔 %s: %w", path, err)
 	}
+	cleanupTmp = false
 
 	return nil
 }

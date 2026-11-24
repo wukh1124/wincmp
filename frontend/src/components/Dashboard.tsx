@@ -6,7 +6,7 @@ import {
   StartMailpit, StopMailpit, StartRedis, StopRedis, RestartRedis, StartPHP, StopPHP,
   CheckMissingCoreDependencies
 } from '../../wailsjs/go/main/App';
-import { scanner } from '../../wailsjs/go/models';
+import { config as wincmpConfig, scanner } from '../../wailsjs/go/models';
 import DependencyManager from './DependencyManager';
 import PhpLifecycleBadge from './PhpLifecycleBadge';
 import { buildPhpLifecycleIndex } from '../phpLifecycle';
@@ -221,12 +221,28 @@ export default function Dashboard() {
   };
 
   const handlePHPProcessChange = async (majorMin: string, count: number) => {
-    if (!config) return;
-    const newCfg = { ...config };
-    if (!newCfg.global.php) newCfg.global.php = { processes: {} };
-    newCfg.global.php.processes[majorMin] = count;
-    try { await SaveConfig(newCfg); setConfig(newCfg); }
-    catch (err) { (window as any).customAlert(`${t("保存設定失敗")}: ${err}`); }
+    try {
+      const latestCfg = (await GetConfig()) || config;
+      if (!latestCfg) return;
+      const newCfg = wincmpConfig.WincmpConfig.createFrom({
+        ...latestCfg,
+        global: {
+          ...latestCfg.global,
+          php: {
+            ...(latestCfg.global?.php || {}),
+            processes: {
+              ...(latestCfg.global?.php?.processes || {}),
+              [majorMin]: count,
+            },
+          },
+        },
+      });
+      await SaveConfig(newCfg);
+      cachedConfig = newCfg;
+      setConfig(newCfg);
+    } catch (err) {
+      (window as any).customAlert(`${t("保存設定失敗")}: ${err}`);
+    }
   };
 
   const handleEnablePHPRedis = async () => {

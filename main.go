@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -47,14 +48,8 @@ func main() {
 	var isFirst bool
 	var err error
 	if isRestart {
-		// 如果是重啟，最多等待 2 秒讓舊進程完全釋放 Mutex
-		for i := 0; i < 20; i++ {
-			isFirst, err = singleinstance.TryAcquire()
-			if err == nil && isFirst {
-				break
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
+		// 如果是重啟，最多等待 10 秒讓舊進程完整退出（包含固定檔名 WinCMP.exe 與防毒掃描延遲）
+		isFirst, err = singleinstance.TryAcquireForRestart(10 * time.Second)
 	} else {
 		isFirst, err = singleinstance.TryAcquire()
 	}
@@ -69,8 +64,17 @@ func main() {
 	}
 	defer singleinstance.Release()
 
+	// 相容從 v2.1.9 等不同檔名舊版重啟：等待同目錄下舊 WinCMP 行程完全退出，
+	// 確保舊版已完成設定檔寫入並透過 Job Object 釋放所有子服務 Port。
+	if isRestart {
+		if execPath, exeErr := os.Executable(); exeErr == nil {
+			singleinstance.WaitForSiblingWinCMPExit(filepath.Dir(execPath), 10*time.Second)
+		}
+	}
+
 	// 建立應用程式實例
 	app := NewApp()
+	app.isRestart = isRestart
 
 	// 啟動 Wails 視窗應用程式
 	err = wails.Run(&options.App{

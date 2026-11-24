@@ -82,16 +82,126 @@ func TryAcquire() (bool, error) {
 		uintptr(unsafe.Pointer(name)),
 	)
 
-	hMutex = windows.Handle(handle)
-
 	if lastErr == windows.ERROR_ALREADY_EXISTS {
+		// CreateMutexW 在互斥鎖已存在時仍會回傳有效 Handle，必須立即關閉避免控制碼洩漏
+		if handle != 0 {
+			_ = windows.CloseHandle(windows.Handle(handle))
+		}
 		return false, nil
 	}
 	if handle == 0 {
 		return false, fmt.Errorf("CreateMutex failed: %w", lastErr)
 	}
 
+	hMutex = windows.Handle(handle)
 	return true, nil
+}
+
+// TryAcquireForRestart 在 --restart 自我更新重啟時重試取得單實例鎖，
+// 避免因舊版 WinCMP.exe（固定檔名）或防毒掃描退出較慢而誤判為重複開啟。
+func TryAcquireForRestart(timeout time.Duration) (bool, error) {
+	deadline := time.Now().Add(timeout)
+	for {
+		isFirst, err := TryAcquire()
+		if err != nil || isFirst {
+			return isFirst, err
+		}
+		if time.Now().After(deadline) {
+			return false, nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// isWinCMPExecutableInDir 判斷映像檔路徑是否為 dir 目錄下直接存在的 WinCMP 主程式（含更新備份 .old）
+func isWinCMPExecutableInDir(imagePath, absDir string) bool {
+	if imagePath == "" || absDir == "" {
+		return false
+	}
+	if !strings.EqualFold(filepath.Clean(filepath.Dir(imagePath)), filepath.Clean(absDir)) {
+		return false
+	}
+	base := strings.ToLower(filepath.Base(imagePath))
+	if !strings.HasPrefix(base, "wincmp") {
+		return false
+	}
+	return strings.HasSuffix(base, ".exe") || strings.HasSuffix(base, ".exe.old")
+}
+
+// WaitForSiblingWinCMPExit 等待同目錄下的舊版 WinCMP 進程（例如 WinCMP_v2.1.9.exe 或 WinCMP.exe）完全退出，
+// 確保舊版設定檔寫入完成且 Job Object 釋放所有子服務 Port。
+func WaitForSiblingWinCMPExit(dir string, timeout time.Duration) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return
+	}
+
+	deadline := time.Now().Add(timeout)
+	for {
+		pids := findSiblingWinCMPPIDs(absDir)
+		if len(pids) == 0 {
+			return
+		}
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return
+		}
+
+		// 直接等待第一個仍在執行的兄弟行程結束，避免純輪詢浪費 CPU
+		waitMs := uint32(remaining / time.Millisecond)
+		if waitMs > 500 {
+			waitMs = 500
+		}
+		if handle, openErr := windows.OpenProcess(windows.SYNCHRONIZE, false, pids[0]); openErr == nil {
+			_, _ = windows.WaitForSingleObject(handle, waitMs)
+			_ = windows.CloseHandle(handle)
+		} else {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+}
+
+func findSiblingWinCMPPIDs(absDir string) []uint32 {
+	snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
+	if err != nil {
+		return nil
+	}
+	defer windows.CloseHandle(snapshot)
+
+	entry := windows.ProcessEntry32{Size: uint32(unsafe.Sizeof(windows.ProcessEntry32{}))}
+	if err := windows.Process32First(snapshot, &entry); err != nil {
+		return nil
+	}
+
+	selfPID := uint32(os.Getpid())
+	var pids []uint32
+	for {
+		pid := entry.ProcessID
+		if pid != 0 && pid != selfPID {
+			if imagePath, ok := queryProcessImagePath(pid); ok && isWinCMPExecutableInDir(imagePath, absDir) {
+				pids = append(pids, pid)
+			}
+		}
+		if err := windows.Process32Next(snapshot, &entry); err != nil {
+			break
+		}
+	}
+	return pids
+}
+
+func queryProcessImagePath(pid uint32) (string, bool) {
+	handle, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+	if err != nil {
+		return "", false
+	}
+	defer windows.CloseHandle(handle)
+
+	buf := make([]uint16, windows.MAX_PATH)
+	size := uint32(len(buf))
+	if err := windows.QueryFullProcessImageName(handle, 0, &buf[0], &size); err != nil {
+		return "", false
+	}
+	return windows.UTF16ToString(buf[:size]), true
 }
 
 // Release 釋放 Mutex（程式結束時呼叫）

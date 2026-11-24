@@ -48,6 +48,7 @@ type App struct {
 
 	saveStateMu sync.Mutex
 	startProjMu sync.Mutex
+	isRestart   bool
 
 	quitting       bool
 	quittingMu     sync.RWMutex
@@ -230,11 +231,20 @@ func (a *App) startup(ctx context.Context) {
 			a.handleLog("system", i18n.T("掃描 bin/ 目錄完成"))
 		}
 
+		// 若為自我更新重啟，先等待舊版遺留的服務子行程完全結束並釋放 Port
+		if a.isRestart {
+			binDir := filepath.Join(a.baseDir, "bin")
+			process.WaitForProcessesInDirExit(binDir, 2*time.Second,
+				"php-cgi.exe", "caddy.exe", "mariadbd.exe", "mailpit.exe", "redis-server.exe",
+			)
+		}
+
 		// 掃描完成、恢復服務前，先校正 PHP 還原狀態並清掉殘留的舊版行程
 		a.reconcilePHPRestoreState()
 
 		// 恢復上次關閉前的服務狀態
-		a.restoreLastState()	}()
+		a.restoreLastState()
+	}()
 
 	// 7. 啟動背景資源監控
 	a.startResourceMonitoring()
@@ -269,7 +279,12 @@ func (a *App) startup(ctx context.Context) {
 // shutdown 在應用程式關閉時由 Wails 自動呼叫，安全停止所有背景服務與子進程並關閉日誌
 func (a *App) shutdown(ctx context.Context) {
 	a.saveLastServiceState()
+	a.stopAllServices()
+	a.closeAllLogWriters()
+}
 
+// stopAllServices 停止所有背景服務、終端會話與資料庫連線池
+func (a *App) stopAllServices() {
 	if a.procMgr != nil {
 		a.procMgr.StopAll()
 	}
@@ -277,8 +292,10 @@ func (a *App) shutdown(ctx context.Context) {
 		a.termMgr.StopAll()
 	}
 	a.closeDBPool()
+}
 
-	// 關閉所有的日誌寫入器
+// closeAllLogWriters 關閉所有日誌寫入器以釋放檔案控制碼
+func (a *App) closeAllLogWriters() {
 	a.runtimeLogMu.Lock()
 	defer a.runtimeLogMu.Unlock()
 	for _, w := range a.runtimeLogWriters {
@@ -747,17 +764,22 @@ func (a *App) reconcilePHPRestoreState() {
 		active[p.Version] = true
 	}
 
-	changed := false
+	a.saveStateMu.Lock()
+	var stoppedVersions []string
 	for version := range a.appCfg.Global.LastServiceState.PHP {
 		if active[version] {
 			continue
 		}
 		delete(a.appCfg.Global.LastServiceState.PHP, version)
-		changed = true
-		a.stopPHPProcessesInDir(version)
+		stoppedVersions = append(stoppedVersions, version)
 	}
-	if changed {
+	if len(stoppedVersions) > 0 {
 		_ = a.appCfg.Save(filepath.Join(a.baseDir, "conf", "wincmp.json"))
+	}
+	a.saveStateMu.Unlock()
+
+	for _, version := range stoppedVersions {
+		a.stopPHPProcessesInDir(version)
 	}
 }
 
@@ -821,12 +843,29 @@ func (a *App) startUpdateCheckTimer() {
 	}
 }
 
+// snapshotUpdateCheckResult 讀取目前設定中的更新檢查標記（供更新回滾還原用）
+func (a *App) snapshotUpdateCheckResult() (bool, string, int64) {
+	a.saveStateMu.Lock()
+	defer a.saveStateMu.Unlock()
+	if a.appCfg == nil {
+		return false, "", 0
+	}
+	return a.appCfg.Global.HasUpdateAvailable, a.appCfg.Global.LatestUpdateVersion, a.appCfg.Global.LastCheckUpdateTime
+}
+
 // persistUpdateCheckResult 寫入檢查結果到設定檔
 func (a *App) persistUpdateCheckResult(hasUpdate bool, latestVersion string) {
+	a.restoreUpdateCheckResult(hasUpdate, latestVersion, time.Now().Unix())
+}
+
+// restoreUpdateCheckResult 將指定的更新檢查狀態與時間戳記寫回設定檔
+func (a *App) restoreUpdateCheckResult(hasUpdate bool, latestVersion string, checkTime int64) {
+	a.saveStateMu.Lock()
+	defer a.saveStateMu.Unlock()
 	if a.appCfg == nil {
 		return
 	}
-	a.appCfg.Global.LastCheckUpdateTime = time.Now().Unix()
+	a.appCfg.Global.LastCheckUpdateTime = checkTime
 	a.appCfg.Global.HasUpdateAvailable = hasUpdate
 	if hasUpdate {
 		a.appCfg.Global.LatestUpdateVersion = latestVersion

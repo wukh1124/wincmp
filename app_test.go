@@ -210,3 +210,102 @@ func TestReconcilePHPRestoreState(t *testing.T) {
 		t.Error("目錄已不存在的版本不應留在還原狀態中")
 	}
 }
+
+// TestSaveConfigPreservesLastServiceStateAndUpdateFlags 驗證前端傳入舊設定快照時，
+// SaveConfig 不會覆蓋後端維護的服務運行狀態與更新檢查標記。
+func TestSaveConfigPreservesLastServiceStateAndUpdateFlags(t *testing.T) {
+	baseDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(baseDir, "conf"), 0755); err != nil {
+		t.Fatalf("建立 conf 目錄失敗: %v", err)
+	}
+
+	app := &App{
+		baseDir: baseDir,
+		appCfg: &config.WincmpConfig{
+			Global: config.GlobalConfig{
+				DefaultWWW:           "www",
+				Language:             "zh-TW",
+				Theme:                "sketch",
+				FontSize:             "large",
+				TerminalShell:        "powershell.exe",
+				RestoreLastState:     true,
+				LastCheckUpdateTime:  1700000000,
+				HasUpdateAvailable:   true,
+				LatestUpdateVersion:  "v2.1.11",
+				LastServiceState: config.LastServiceState{
+					Caddy: true,
+					PHP:   map[string]bool{"7.3.33": true},
+				},
+			},
+		},
+	}
+
+	// 模擬前端持有啟動服務前的舊快照，僅修改 DefaultWWW 後呼叫 SaveConfig
+	staleFrontendCfg := &config.WincmpConfig{
+		Global: config.GlobalConfig{
+			DefaultWWW:       "D:/sites",
+			Language:         "zh-TW",
+			Theme:            "sketch",
+			FontSize:         "large",
+			TerminalShell:    "powershell.exe",
+			RestoreLastState: true,
+			LastServiceState: config.LastServiceState{
+				Caddy: false,
+				PHP:   map[string]bool{"7.3.33": false},
+			},
+		},
+	}
+
+	if err := app.SaveConfig(staleFrontendCfg); err != nil {
+		t.Fatalf("SaveConfig 失敗: %v", err)
+	}
+
+	if app.appCfg.Global.DefaultWWW != "D:/sites" {
+		t.Errorf("使用者修改的 DefaultWWW 未套用，實際為 %q", app.appCfg.Global.DefaultWWW)
+	}
+	if !app.appCfg.Global.LastServiceState.Caddy || !app.appCfg.Global.LastServiceState.PHP["7.3.33"] {
+		t.Errorf("SaveConfig 不應洗掉既有 LastServiceState: %+v", app.appCfg.Global.LastServiceState)
+	}
+	if !app.appCfg.Global.HasUpdateAvailable || app.appCfg.Global.LatestUpdateVersion != "v2.1.11" || app.appCfg.Global.LastCheckUpdateTime != 1700000000 {
+		t.Errorf("SaveConfig 不應洗掉更新檢查標記: %+v", app.appCfg.Global)
+	}
+
+	// 確認寫回磁碟後重新 Load 也一致保留
+	reloaded, err := config.Load(filepath.Join(baseDir, "conf", "wincmp.json"))
+	if err != nil {
+		t.Fatalf("重新載入設定檔失敗: %v", err)
+	}
+	if !reloaded.Global.LastServiceState.PHP["7.3.33"] {
+		t.Errorf("磁碟上的 PHP 7.3.33 運行狀態應被保留，實際為 %+v", reloaded.Global.LastServiceState.PHP)
+	}
+}
+
+// TestUpdateCheckResultSnapshotAndRestore 驗證更新重啟失敗回滾時可正確還原更新提示標記。
+func TestUpdateCheckResultSnapshotAndRestore(t *testing.T) {
+	baseDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(baseDir, "conf"), 0755); err != nil {
+		t.Fatalf("建立 conf 目錄失敗: %v", err)
+	}
+
+	app := &App{
+		baseDir: baseDir,
+		appCfg: &config.WincmpConfig{
+			Global: config.GlobalConfig{
+				LastCheckUpdateTime: 1700000123,
+				HasUpdateAvailable:  true,
+				LatestUpdateVersion: "v2.1.11",
+			},
+		},
+	}
+
+	hasUpdate, latestVer, checkTime := app.snapshotUpdateCheckResult()
+	app.persistUpdateCheckResult(false, "")
+	if app.appCfg.Global.HasUpdateAvailable || app.appCfg.Global.LatestUpdateVersion != "" {
+		t.Fatal("persistUpdateCheckResult(false, \"\") 應清除更新標記")
+	}
+
+	app.restoreUpdateCheckResult(hasUpdate, latestVer, checkTime)
+	if !app.appCfg.Global.HasUpdateAvailable || app.appCfg.Global.LatestUpdateVersion != "v2.1.11" || app.appCfg.Global.LastCheckUpdateTime != 1700000123 {
+		t.Errorf("restoreUpdateCheckResult 應完整還原狀態，實際為 %+v", app.appCfg.Global)
+	}
+}

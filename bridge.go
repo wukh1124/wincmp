@@ -119,15 +119,27 @@ func (a *App) SaveConfig(newCfg *config.WincmpConfig) error {
 		}
 	}
 
+	a.saveStateMu.Lock()
+	// 保留後端維護的服務運行狀態與更新檢查標記，防止前端持有舊設定快照時整包覆寫遺失
+	if a.appCfg != nil {
+		newCfg.Global.LastServiceState = a.appCfg.Global.LastServiceState.Clone()
+		newCfg.Global.LastCheckUpdateTime = a.appCfg.Global.LastCheckUpdateTime
+		newCfg.Global.HasUpdateAvailable = a.appCfg.Global.HasUpdateAvailable
+		newCfg.Global.LatestUpdateVersion = a.appCfg.Global.LatestUpdateVersion
+	}
+
 	a.appCfg = newCfg
 	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
 
 	if err := a.appCfg.Save(cfgPath); err != nil {
+		a.saveStateMu.Unlock()
 		return fmt.Errorf(i18n.T("無法儲存設定檔: %w"), err)
 	}
+	lang := a.appCfg.Global.Language
+	a.saveStateMu.Unlock()
 
 	// 更新後端語系並同步刷新系統托盤選單
-	i18n.SetLanguage(a.appCfg.Global.Language)
+	i18n.SetLanguage(lang)
 	a.updateTrayMenu()
 
 	return nil
@@ -135,14 +147,17 @@ func (a *App) SaveConfig(newCfg *config.WincmpConfig) error {
 
 // SaveQuickSettings 快速儲存主題、語言與字體大小設定，避免與其他設定頁草稿衝突
 func (a *App) SaveQuickSettings(theme string, language string, fontSize string) error {
+	a.saveStateMu.Lock()
 	a.appCfg.Global.Theme = theme
 	a.appCfg.Global.Language = language
 	a.appCfg.Global.FontSize = fontSize
 	cfgPath := filepath.Join(a.baseDir, "conf", "wincmp.json")
 
 	if err := a.appCfg.Save(cfgPath); err != nil {
+		a.saveStateMu.Unlock()
 		return fmt.Errorf(i18n.T("無法儲存設定檔: %w"), err)
 	}
+	a.saveStateMu.Unlock()
 
 	// 更新後端語系並同步刷新系統托盤選單
 	i18n.SetLanguage(language)
@@ -869,7 +884,6 @@ func (a *App) ShowInExplorer(path string) error {
 	}
 	return cmd.Start()
 }
-
 
 // openFileWithFallback 使用 Windows 原生 ShellExecute 開啟檔案（零 cmd 黑視窗），若無關聯程式則自動以記事本開啟
 func openFileWithFallback(path string) error {
@@ -1680,7 +1694,6 @@ func (a *App) OpenCategoryLogFolder(category string, subCategory string) error {
 	return a.OpenFolder(logsDir)
 }
 
-
 // GetCategoryLogs 獲取指定分類的當天日誌歷史紀錄
 // 支援 system, caddy, mariadb, mailpit, php, runtime 等分類
 func (a *App) GetCategoryLogs(category string, subCategory string) ([]LogEntry, error) {
@@ -1812,6 +1825,17 @@ func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
 			})
 		}
 
+		// 在啟動新版之前先持久化目前服務狀態並安全停止所有子服務，避免新版搶先啟動時撞 Port
+		a.saveLastServiceState()
+		a.stopAllServices()
+		process.WaitForProcessesInDirExit(filepath.Join(a.baseDir, "bin"), 2*time.Second,
+			"php-cgi.exe", "caddy.exe", "mariadbd.exe", "mailpit.exe", "redis-server.exe",
+		)
+
+		// 在啟動新版本前重置 update 標記，避免跨進程競爭寫入 conf/wincmp.json；若啟動失敗再還原
+		prevHasUpdate, prevLatestVer, prevCheckTime := a.snapshotUpdateCheckResult()
+		a.persistUpdateCheckResult(false, "")
+
 		// 提前釋放單實例鎖，讓新啟動的行程順利取得鎖
 		singleinstance.Release()
 
@@ -1825,12 +1849,13 @@ func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
 		if err := cmd.Start(); err != nil {
 			a.handleErrorLog("system", i18n.T("啟動新版本失敗，正在自動復原原版本..."), err)
 
-			// 啟動失敗時緊急回滾：刪除新版 exe，復原原版本 .old
+			// 啟動失敗時緊急回滾：刪除新版 exe，復原原版本 .old，並恢復更新提醒狀態
 			if rollbackErr := updater.RollbackUpdate(newExePath); rollbackErr != nil {
 				a.handleErrorLog("system", i18n.T("自動復原原版本失敗"), rollbackErr)
 			} else {
 				a.handleLog("system", i18n.T("已成功復原原版本程式，您可以繼續正常使用。"))
 			}
+			a.restoreUpdateCheckResult(prevHasUpdate, prevLatestVer, prevCheckTime)
 
 			// 重新搶回單實例鎖
 			_, _ = singleinstance.TryAcquire()
@@ -1844,11 +1869,9 @@ func (a *App) StartAutoUpdate(downloadURL string, assetType string) error {
 			return // 終止流程，絕不退出，讓用戶能繼續使用原版本！
 		}
 
-		// 啟動新版本成功，在退出前重置 update 標記，避免新版本啟動時因讀取舊設定檔而誤亮紅點
-		a.persistUpdateCheckResult(false, "")
-
-		// 啟動成功，稍微延遲後退出舊進程
-		time.Sleep(1 * time.Second)
+		// 給予前端極短緩衝接收 completed 事件後關閉日誌並退出舊進程
+		time.Sleep(150 * time.Millisecond)
+		a.closeAllLogWriters()
 		os.Exit(0)
 	}()
 

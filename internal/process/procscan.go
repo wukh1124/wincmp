@@ -92,6 +92,32 @@ func TerminateProcessesInDir(dir string, wait time.Duration, names ...string) ([
 	return killed, nil
 }
 
+// WaitForProcessesInDirExit 等待映像檔位於 dir 下、檔名符合 names 的行程結束。
+// 用於自我更新重啟交接期間，確保舊進程的子服務完整釋放 Port，不會直接強制終止外部行程。
+func WaitForProcessesInDirExit(dir string, timeout time.Duration, names ...string) {
+	deadline := time.Now().Add(timeout)
+	for {
+		procs, err := FindProcessesInDir(dir, names...)
+		if err != nil || len(procs) == 0 {
+			return
+		}
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return
+		}
+		waitMs := uint32(remaining / time.Millisecond)
+		if waitMs > 200 {
+			waitMs = 200
+		}
+		if handle, openErr := windows.OpenProcess(windows.SYNCHRONIZE, false, procs[0].PID); openErr == nil {
+			_, _ = windows.WaitForSingleObject(handle, waitMs)
+			windows.CloseHandle(handle)
+		} else {
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+}
+
 // RemoveAllWithRetry 以固定間隔重試 os.RemoveAll。
 // Windows 上行程終止與檔案鎖釋放之間有短暫時間差，單次刪除容易誤報 Access is denied。
 func RemoveAllWithRetry(dir string, attempts int, interval time.Duration) error {

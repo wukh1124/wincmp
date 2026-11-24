@@ -353,3 +353,70 @@ func TestEnsurePHPIniOptimizations(t *testing.T) {
 	}
 }
 
+func TestConfigSaveAtomic(t *testing.T) {
+	baseDir := t.TempDir()
+	confDir := filepath.Join(baseDir, "conf")
+	cfgPath := filepath.Join(confDir, "wincmp.json")
+
+	firstCfg := &WincmpConfig{
+		Global: GlobalConfig{
+			DefaultWWW:       "www",
+			Language:         "zh-TW",
+			Theme:            "sketch",
+			FontSize:         "large",
+			TerminalShell:    "powershell.exe",
+			RestoreLastState: true,
+			LastServiceState: LastServiceState{
+				PHP: map[string]bool{"7.3.33": true},
+			},
+		},
+	}
+
+	if err := firstCfg.Save(cfgPath); err != nil {
+		t.Fatalf("首次 Save 失敗: %v", err)
+	}
+
+	secondCfg := &WincmpConfig{
+		Global: GlobalConfig{
+			DefaultWWW:       "D:/projects",
+			Language:         "en-US",
+			Theme:            "carbon",
+			FontSize:         "medium",
+			TerminalShell:    "cmd.exe",
+			RestoreLastState: true,
+			LastServiceState: LastServiceState{
+				Caddy: true,
+				PHP:   map[string]bool{"7.3.33": true, "8.3.37": true},
+			},
+		},
+	}
+
+	if err := secondCfg.Save(cfgPath); err != nil {
+		t.Fatalf("覆寫 Save 失敗: %v", err)
+	}
+
+	// 確認 conf 目錄內沒有殘留任何 .tmp-* 暫存檔
+	entries, err := os.ReadDir(confDir)
+	if err != nil {
+		t.Fatalf("讀取 conf 目錄失敗: %v", err)
+	}
+	for _, entry := range entries {
+		if strings.Contains(entry.Name(), ".tmp-") {
+			t.Errorf("原子寫入後不應殘留暫存檔: %s", entry.Name())
+		}
+	}
+
+	// 確認備份與最新內容皆正確
+	if _, err := os.Stat(filepath.Join(baseDir, "data", "backup", "wincmp.json.bak")); err != nil {
+		t.Errorf("預期應產生設定檔備份 wincmp.json.bak: %v", err)
+	}
+
+	loaded, err := Load(cfgPath)
+	if err != nil {
+		t.Fatalf("Load 失敗: %v", err)
+	}
+	if loaded.Global.DefaultWWW != "D:/projects" || !loaded.Global.LastServiceState.PHP["7.3.33"] || !loaded.Global.LastServiceState.PHP["8.3.37"] {
+		t.Errorf("重新讀取設定內容不符: %+v", loaded.Global)
+	}
+}
+
