@@ -7,6 +7,7 @@ import {
   OpenFolder, SelectFolder, DetectProjectPath, OpenProjectCaddyfile,
   GetDefaultCommandTemplate, GetPortOccupiedProcess, KillProcessByPort
 } from '../../wailsjs/go/main/App';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { t, useLanguage } from '../i18n';
 
 interface Project {
@@ -207,7 +208,15 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
   useEffect(() => {
     const timer = setInterval(() => updateStatus(), 2000);
-    return () => clearInterval(timer);
+    const unsubscribe = EventsOn('services_status_changed', (snap: any) => {
+      if (snap?.statuses) {
+        setServicesStatus(snap.statuses);
+      }
+    });
+    return () => {
+      clearInterval(timer);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {

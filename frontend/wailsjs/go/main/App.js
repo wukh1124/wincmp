@@ -66,6 +66,10 @@ export function GetScanResult() {
   return window['go']['main']['App']['GetScanResult']();
 }
 
+export function GetServicesStateSnapshot() {
+  return window['go']['main']['App']['GetServicesStateSnapshot']();
+}
+
 export function GetServicesStatus() {
   return window['go']['main']['App']['GetServicesStatus']();
 }

@@ -167,6 +167,7 @@ func (a *App) SaveQuickSettings(theme string, language string, fontSize string) 
 }
 
 // ScanServices 重新掃描 bin/ 目錄並更新二進位服務版本資訊
+// ScanServices 執行一次服務掃描並更新快取
 // 顯式呼叫時先清除掃描快取，確保手動安裝/替換的依賴（如 php_redis）能立即反映
 func (a *App) ScanServices() (*scanner.ScanResult, error) {
 	scanner.InvalidateScanCache()
@@ -174,19 +175,26 @@ func (a *App) ScanServices() (*scanner.ScanResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf(i18n.T("服務掃描失敗: %w"), err)
 	}
+	a.scanMu.Lock()
 	a.scanRes = res
-	return a.scanRes, nil
+	a.scanMu.Unlock()
+	return res, nil
 }
 
 // GetScanResult 獲取當前已快取的服務掃描結果
 func (a *App) GetScanResult() *scanner.ScanResult {
-	if a.scanRes == nil {
-		res, err := scanner.ScanBinDir(a.baseDir)
-		if err == nil {
-			a.scanRes = res
-		}
+	res, err := a.ensureScanResult()
+	if err != nil {
+		return nil
 	}
-	return a.scanRes
+	return res
+}
+
+// ServicesStateSnapshot 封裝服務運行狀態與自動恢復進度，供前端單次原子讀取與事件推送
+type ServicesStateSnapshot struct {
+	Statuses       map[string]bool `json:"statuses"`
+	Restoring      map[string]bool `json:"restoring"`
+	RestorePending bool            `json:"restore_pending"`
 }
 
 // EnablePHPRedisExtension 自動平滑啟用 conf/php/php.ini 中的 extension=redis
@@ -209,7 +217,11 @@ func (a *App) IsServiceRunning(serviceKey string) bool {
 // GetServicesStatus 獲取所有已偵測服務的運行狀態對照表
 func (a *App) GetServicesStatus() map[string]bool {
 	status := make(map[string]bool)
-	if a.procMgr == nil || a.scanRes == nil {
+	a.scanMu.Lock()
+	scanRes := a.scanRes
+	a.scanMu.Unlock()
+
+	if a.procMgr == nil || scanRes == nil {
 		return status
 	}
 
@@ -223,26 +235,57 @@ func (a *App) GetServicesStatus() map[string]bool {
 	status["redis"] = a.procMgr.IsRunning(process.RedisServiceKey())
 
 	// MariaDB
-	for _, m := range a.scanRes.MariaDBList {
+	for _, m := range scanRes.MariaDBList {
 		key := process.MariaDBServiceKey(m.Version)
 		status[key] = a.procMgr.IsRunning(key)
 	}
 
 	// PHP
-	for _, p := range a.scanRes.PHPList {
+	for _, p := range scanRes.PHPList {
 		key := process.PHPServiceKey(p.Version)
 		status[key] = a.procMgr.IsRunning(key)
 	}
 
 	// 專案 Runtime 狀態
-	for _, proj := range a.appCfg.Projects {
-		if proj.Enabled && preset.IsRuntimeProject(proj.Type) {
-			key := process.RuntimeServiceKey(proj.Name)
-			status[key] = a.procMgr.IsRunning(key)
+	if a.appCfg != nil {
+		for _, proj := range a.appCfg.Projects {
+			if proj.Enabled && preset.IsRuntimeProject(proj.Type) {
+				key := process.RuntimeServiceKey(proj.Name)
+				status[key] = a.procMgr.IsRunning(key)
+			}
 		}
 	}
 
 	return status
+}
+
+// GetServicesStateSnapshot 獲取服務運行狀態與自動恢復中狀態快照
+func (a *App) GetServicesStateSnapshot() ServicesStateSnapshot {
+	statuses := a.GetServicesStatus()
+
+	a.restoringMu.RLock()
+	restoring := make(map[string]bool, len(a.restoringServices))
+	for k, v := range a.restoringServices {
+		if v {
+			restoring[k] = true
+		}
+	}
+	pending := a.restorePending
+	a.restoringMu.RUnlock()
+
+	return ServicesStateSnapshot{
+		Statuses:       statuses,
+		Restoring:      restoring,
+		RestorePending: pending,
+	}
+}
+
+// emitServicesStatusChanged 向前端推送最新的服務狀態與自動恢復進度快照
+func (a *App) emitServicesStatusChanged() {
+	if a.ctx == nil {
+		return
+	}
+	runtime.EventsEmit(a.ctx, "services_status_changed", a.GetServicesStateSnapshot())
 }
 
 // ==========================================

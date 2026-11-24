@@ -40,6 +40,8 @@ export function GetPortOccupiedProcess(arg1:number):Promise<process.OccupiedProc
 
 export function GetScanResult():Promise<scanner.ScanResult>;
 
+export function GetServicesStateSnapshot():Promise<main.ServicesStateSnapshot>;
+
 export function GetServicesStatus():Promise<Record<string, boolean>>;
 
 export function IsAdmin():Promise<boolean>;

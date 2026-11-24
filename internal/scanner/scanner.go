@@ -18,8 +18,10 @@ import (
 // scanCache 快取掃描結果與 TTL
 var (
 	scanCacheMu   sync.RWMutex
+	scanRunMu     sync.Mutex
 	scanCache     *ScanResult
 	scanCacheTime time.Time
+	scanEpoch     uint64
 	scanCacheTTL  = 2 * time.Second // 快取有效期限
 )
 
@@ -62,7 +64,7 @@ type ScanResult struct {
 }
 
 // ScanBinDir 掃描 bin/ 目錄，偵測已安裝的服務與版本
-// 快取機制：2 秒內重複呼叫直接回傳快取結果
+// 快取機制：2 秒內重複呼叫直接回傳快取結果；併發呼叫共用同一次掃描避免重複 I/O
 func ScanBinDir(baseDir string) (*ScanResult, error) {
 	scanCacheMu.RLock()
 	if scanCache != nil && time.Since(scanCacheTime) < scanCacheTTL {
@@ -72,23 +74,40 @@ func ScanBinDir(baseDir string) (*ScanResult, error) {
 	}
 	scanCacheMu.RUnlock()
 
+	scanRunMu.Lock()
+	defer scanRunMu.Unlock()
+
+	// 取得掃描執行鎖後再次檢查快取，避免啟動時多執行緒重複掃描磁碟
+	scanCacheMu.RLock()
+	if scanCache != nil && time.Since(scanCacheTime) < scanCacheTTL {
+		result := *scanCache
+		scanCacheMu.RUnlock()
+		return &result, nil
+	}
+	epochBefore := scanEpoch
+	scanCacheMu.RUnlock()
+
 	result, err := scanBinDirInternal(baseDir)
 	if err != nil {
 		return nil, err
 	}
 
 	scanCacheMu.Lock()
-	scanCache = result
-	scanCacheTime = time.Now()
+	if scanEpoch == epochBefore {
+		scanCache = result
+		scanCacheTime = time.Now()
+	}
 	scanCacheMu.Unlock()
 
-	return result, nil
+	resCopy := *result
+	return &resCopy, nil
 }
 
 // InvalidateScanCache 主動清除掃描快取
 func InvalidateScanCache() {
 	scanCacheMu.Lock()
 	scanCache = nil
+	scanEpoch++
 	scanCacheMu.Unlock()
 }
 

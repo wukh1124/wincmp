@@ -689,6 +689,7 @@ export const enTranslations: Record<string, string> = {
   "確定要刪除被取代的舊版 PHP v%s 嗎？\n\n路徑: bin/php/php-%s\n此目錄已由同分支較新版本取代，刪除不影響目前使用中的 PHP。": "Delete the superseded PHP v%s?\n\nPath: bin/php/php-%s\nA newer patch of the same branch already replaces it, so the PHP in use is not affected.",
   "已清理舊版 PHP v%s": "Cleaned up old PHP v%s",
   "清理舊版 PHP 失敗": "Failed to clean up old PHP",
+  "自動啟動中...": "Auto-starting...",
 };
 
 // 格式化函數，支援 %s|%d|%v 等佔位符

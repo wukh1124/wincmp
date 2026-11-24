@@ -688,5 +688,6 @@ var enTranslations = map[string]string{
 	"移除舊版 PHP 目錄失敗（仍有 %d 個 PHP-CGI 行程佔用）": "Failed to remove stale PHP directory (%d PHP-CGI processes still hold it)",
 	"已終止 %d 個殘留 PHP-CGI 行程: %v": "Terminated %d lingering PHP-CGI processes: %v",
 	"終止殘留 PHP-CGI 行程失敗: %s": "Failed to terminate lingering PHP-CGI processes: %s",
+	"自動啟動中...": "Auto-starting...",
 }
 

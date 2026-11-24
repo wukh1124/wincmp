@@ -48,7 +48,13 @@ type App struct {
 
 	saveStateMu sync.Mutex
 	startProjMu sync.Mutex
+	scanMu      sync.Mutex
 	isRestart   bool
+
+	// 啟動恢復服務狀態追蹤（用於通知前端正在自動恢復，避免閃現啟動按鈕）
+	restoringMu       sync.RWMutex
+	restoringServices map[string]bool
+	restorePending    bool
 
 	quitting       bool
 	quittingMu     sync.RWMutex
@@ -67,6 +73,7 @@ func NewApp() *App {
 	return &App{
 		baseDir:           baseDir,
 		runtimeLogWriters: make(map[string]*lumberjack.Logger),
+		restoringServices: make(map[string]bool),
 		windowHidden:      true, // 預設隱藏啟動
 	}
 }
@@ -127,6 +134,9 @@ func (a *App) startup(ctx context.Context) {
 	}
 	i18n.SetLanguage(a.appCfg.Global.Language)
 
+	// 在背景掃描與視窗顯示前先標記待恢復狀態，避免前端首幀誤顯示「啟動服務」按鈕
+	a.initRestorePendingState()
+
 	// 校驗設定檔中的歷史更新標記：若目前運行版本已大於等於標記版本，自動清理紅點標記
 	if a.appCfg.Global.HasUpdateAvailable && a.appCfg.Global.LatestUpdateVersion != "" {
 		if updater.CompareVersions(a.appCfg.Global.LatestUpdateVersion, AppVersion) <= 0 {
@@ -171,59 +181,58 @@ func (a *App) startup(ctx context.Context) {
 	// 6. 啟動背景掃描與服務狀態恢復 (避免阻塞 Wails 視窗顯示與 JS 載入)
 	go func() {
 		a.handleLog("system", i18n.T("掃描 ./bin 目錄中的服務版本..."))
-		var err error
-		a.scanRes, err = scanner.ScanBinDir(a.baseDir)
+		scanRes, err := a.ensureScanResult()
 		if err != nil {
 			a.handleErrorLog("system", i18n.T("掃描服務版本失敗"), err)
 		} else {
-			if len(a.scanRes.CaddyList) > 0 {
-				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Caddy 版本: [%s]", a.scanRes.CaddyList[0].Version))
+			if len(scanRes.CaddyList) > 0 {
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Caddy 版本: [%s]", scanRes.CaddyList[0].Version))
 			} else {
 				a.handleLog("system", i18n.T("  ✗ 未找到 Caddy"))
 			}
-			if len(a.scanRes.MariaDBList) > 0 {
-				a.handleLog("system", i18n.Tfmt("  ✓ 找到 MariaDB 版本: [%s]", a.scanRes.MariaDBList[0].Version))
+			if len(scanRes.MariaDBList) > 0 {
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 MariaDB 版本: [%s]", scanRes.MariaDBList[0].Version))
 			} else {
 				a.handleLog("system", i18n.T("  ✗ 未找到 MariaDB"))
 			}
-			if len(a.scanRes.MailpitList) > 0 {
-				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Mailpit 版本: [%s]", a.scanRes.MailpitList[0].Version))
+			if len(scanRes.MailpitList) > 0 {
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Mailpit 版本: [%s]", scanRes.MailpitList[0].Version))
 			} else {
 				a.handleLog("system", i18n.T("  ✗ 未找到 Mailpit"))
 			}
-			if len(a.scanRes.PHPList) > 0 {
+			if len(scanRes.PHPList) > 0 {
 				var phpVers []string
-				for _, php := range a.scanRes.PHPList {
+				for _, php := range scanRes.PHPList {
 					phpVers = append(phpVers, php.Version)
 				}
 				a.handleLog("system", i18n.Tfmt("  ✓ 找到 PHP 版本: [%s]", strings.Join(phpVers, ", ")))
 			} else {
 				a.handleLog("system", i18n.T("  ✗ 未找到 PHP"))
 			}
-			if len(a.scanRes.NodeList) > 0 {
+			if len(scanRes.NodeList) > 0 {
 				var nodeVers []string
-				for _, n := range a.scanRes.NodeList {
+				for _, n := range scanRes.NodeList {
 					nodeVers = append(nodeVers, n.Version)
 				}
 				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Node 版本: [%s]", strings.Join(nodeVers, ", ")))
 			} else {
 				a.handleLog("system", i18n.T("  ✗ 未找到 Node"))
 			}
-			if len(a.scanRes.BunList) > 0 {
+			if len(scanRes.BunList) > 0 {
 				var bunVers []string
-				for _, b := range a.scanRes.BunList {
+				for _, b := range scanRes.BunList {
 					bunVers = append(bunVers, b.Version)
 				}
 				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Bun 版本: [%s]", strings.Join(bunVers, ", ")))
 			}
 
-			if len(a.scanRes.ComposerList) > 0 {
-				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Composer 版本: [%s]", a.scanRes.ComposerList[0].Version))
+			if len(scanRes.ComposerList) > 0 {
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 Composer 版本: [%s]", scanRes.ComposerList[0].Version))
 			} else {
 				a.handleLog("system", i18n.T("  ✗ 未找到 Composer"))
 			}
-			if len(a.scanRes.HeidiSQLList) > 0 {
-				a.handleLog("system", i18n.Tfmt("  ✓ 找到 HeidiSQL 版本: [%s]", a.scanRes.HeidiSQLList[0].Version))
+			if len(scanRes.HeidiSQLList) > 0 {
+				a.handleLog("system", i18n.Tfmt("  ✓ 找到 HeidiSQL 版本: [%s]", scanRes.HeidiSQLList[0].Version))
 			} else {
 				a.handleLog("system", i18n.T("  ✗ 未找到 HeidiSQL"))
 			}
@@ -657,33 +666,167 @@ func (a *App) saveLastServiceState() {
 	}
 }
 
-// restoreLastState 根據上次關閉時的服務狀態進行恢復
+// ensureScanResult 安全取得並快取掃描結果，避免 startup 與前端初始化同時掃描磁碟
+func (a *App) ensureScanResult() (*scanner.ScanResult, error) {
+	a.scanMu.Lock()
+	defer a.scanMu.Unlock()
+
+	if a.scanRes != nil {
+		return a.scanRes, nil
+	}
+	res, err := scanner.ScanBinDir(a.baseDir)
+	if err != nil {
+		return nil, err
+	}
+	a.scanRes = res
+	return res, nil
+}
+
+// hasAnyLastServiceToRestore 檢查設定檔是否有任何需要於啟動時恢復的服務
+func (a *App) hasAnyLastServiceToRestore() bool {
+	if a.appCfg == nil || !a.appCfg.Global.RestoreLastState {
+		return false
+	}
+	last := a.appCfg.Global.LastServiceState
+	if last.Caddy || last.MariaDB || last.Mailpit || last.Redis {
+		return true
+	}
+	for _, enabled := range last.PHP {
+		if enabled {
+			return true
+		}
+	}
+	return false
+}
+
+// initRestorePendingState 在載入設定後立即預標記即將自動恢復的服務鍵值，消除啟動初期的按鈕閃爍
+func (a *App) initRestorePendingState() {
+	if !a.hasAnyLastServiceToRestore() {
+		return
+	}
+	last := a.appCfg.Global.LastServiceState
+	a.restoringMu.Lock()
+	a.restorePending = true
+	a.restoringServices = make(map[string]bool)
+	if last.Caddy {
+		a.restoringServices["caddy"] = true
+	}
+	if last.Mailpit {
+		a.restoringServices[process.MailpitServiceKey()] = true
+	}
+	if last.Redis {
+		a.restoringServices[process.RedisServiceKey()] = true
+	}
+	for ver, enabled := range last.PHP {
+		if enabled {
+			a.restoringServices[process.PHPServiceKey(ver)] = true
+		}
+	}
+	a.restoringMu.Unlock()
+}
+
+// finishRestoringService 在單一服務完成自動啟動（或失敗）後移除其恢復中標記
+func (a *App) finishRestoringService(serviceKey string) {
+	a.restoringMu.Lock()
+	delete(a.restoringServices, serviceKey)
+	a.restoringMu.Unlock()
+}
+
+// clearRestoringState 清除全部恢復中狀態標記
+func (a *App) clearRestoringState() {
+	a.restoringMu.Lock()
+	a.restorePending = false
+	a.restoringServices = make(map[string]bool)
+	a.restoringMu.Unlock()
+}
+
+// restoreLastState 根據上次關閉時的服務狀態進行並行恢復，並於各服務就緒時即時推播狀態
 func (a *App) restoreLastState() {
 	if a.appCfg == nil || a.scanRes == nil || !a.appCfg.Global.RestoreLastState {
+		a.clearRestoringState()
+		a.emitServicesStatusChanged()
 		return
 	}
 
-	// 1. Caddy
-	if a.appCfg.Global.LastServiceState.Caddy && len(a.scanRes.CaddyList) > 0 {
-		info := a.scanRes.CaddyList[0]
-		a.handleLog("system", i18n.T("自動啟動上次執行的服務: Caddy"))
-		a.checkSSLCerts()
-		if err := a.generateCaddyfiles(); err == nil {
-			if err := a.procMgr.StartCaddy(info.Version, info.ExePath); err != nil {
-				a.handleErrorLog("caddy", "自動啟動 Caddy 失敗", err)
-			} else {
-				a.triggerHostsUpdate()
-			}
-		} else {
-			a.handleErrorLog("caddy", "自動啟動 Caddy 失敗（無法產生設定檔）", err)
+	last := a.appCfg.Global.LastServiceState
+	scanRes := a.scanRes
+
+	// 建立本次實際要恢復的精確服務鍵值清單（對應掃描到的實際版本）
+	restoring := make(map[string]bool)
+	if last.Caddy && len(scanRes.CaddyList) > 0 {
+		restoring["caddy"] = true
+	}
+	var mariadbKey string
+	if last.MariaDB && len(scanRes.MariaDBList) > 0 {
+		mariadbKey = process.MariaDBServiceKey(scanRes.MariaDBList[0].Version)
+		if a.appCfg.Global.MariaDBExternal {
+			mariadbKey = process.MariaDBExternalServiceKey
 		}
+		restoring[mariadbKey] = true
+	}
+	if last.Mailpit && len(scanRes.MailpitList) > 0 {
+		restoring[process.MailpitServiceKey()] = true
+	}
+	var phpTargets []scanner.PHPVersionInfo
+	if last.PHP != nil {
+		for _, info := range scanRes.PHPList {
+			if last.PHP[info.Version] {
+				restoring[process.PHPServiceKey(info.Version)] = true
+				phpTargets = append(phpTargets, info)
+			}
+		}
+	}
+	if last.Redis && len(scanRes.RedisList) > 0 {
+		restoring[process.RedisServiceKey()] = true
+	}
+
+	a.restoringMu.Lock()
+	a.restorePending = false
+	a.restoringServices = restoring
+	a.restoringMu.Unlock()
+	a.emitServicesStatusChanged()
+
+	if len(restoring) == 0 {
+		return
+	}
+
+	var wg sync.WaitGroup
+
+	// 1. Caddy
+	if restoring["caddy"] {
+		info := scanRes.CaddyList[0]
+		wg.Add(1)
+		go func() {
+			defer func() {
+				a.finishRestoringService("caddy")
+				a.emitServicesStatusChanged()
+				wg.Done()
+			}()
+			a.handleLog("system", i18n.T("自動啟動上次執行的服務: Caddy"))
+			a.checkSSLCerts()
+			if err := a.generateCaddyfiles(); err == nil {
+				if err := a.procMgr.StartCaddy(info.Version, info.ExePath); err != nil {
+					a.handleErrorLog("caddy", "自動啟動 Caddy 失敗", err)
+				} else {
+					a.triggerHostsUpdate()
+				}
+			} else {
+				a.handleErrorLog("caddy", "自動啟動 Caddy 失敗（無法產生設定檔）", err)
+			}
+		}()
 	}
 
 	// 2. MariaDB
-	if a.appCfg.Global.LastServiceState.MariaDB && len(a.scanRes.MariaDBList) > 0 {
-		info := a.scanRes.MariaDBList[0]
-		a.handleLog("system", i18n.T("自動啟動上次執行的服務: MariaDB"))
+	if mariadbKey != "" && restoring[mariadbKey] {
+		info := scanRes.MariaDBList[0]
+		wg.Add(1)
 		go func() {
+			defer func() {
+				a.finishRestoringService(mariadbKey)
+				a.emitServicesStatusChanged()
+				wg.Done()
+			}()
+			a.handleLog("system", i18n.T("自動啟動上次執行的服務: MariaDB"))
 			done, errCh := a.procMgr.StartMariaDBAsync(
 				info.Version,
 				a.appCfg.Global.MariaDBExternal,
@@ -700,8 +843,8 @@ func (a *App) restoreLastState() {
 	}
 
 	// 3. Mailpit
-	if a.appCfg.Global.LastServiceState.Mailpit && len(a.scanRes.MailpitList) > 0 {
-		mpInfo := a.scanRes.MailpitList[0]
+	if mpKey := process.MailpitServiceKey(); restoring[mpKey] {
+		mpInfo := scanRes.MailpitList[0]
 		mpSmtp := 1025
 		mpHttp := 8025
 		if a.appCfg.Global.MailpitSMTPPort > 0 {
@@ -710,44 +853,68 @@ func (a *App) restoreLastState() {
 		if a.appCfg.Global.MailpitHTTPPort > 0 {
 			mpHttp = a.appCfg.Global.MailpitHTTPPort
 		}
-		a.handleLog("system", i18n.T("自動啟動上次執行的服務: Mailpit"))
-		if err := a.procMgr.StartMailpit(mpInfo.Version, mpInfo.ExePath, mpSmtp, mpHttp, a.appCfg.Global.MailpitUseDB); err != nil {
-			a.handleErrorLog("mailpit", "自動啟動 Mailpit 失敗", err)
-		}
+		wg.Add(1)
+		go func() {
+			defer func() {
+				a.finishRestoringService(mpKey)
+				a.emitServicesStatusChanged()
+				wg.Done()
+			}()
+			a.handleLog("system", i18n.T("自動啟動上次執行的服務: Mailpit"))
+			if err := a.procMgr.StartMailpit(mpInfo.Version, mpInfo.ExePath, mpSmtp, mpHttp, a.appCfg.Global.MailpitUseDB); err != nil {
+				a.handleErrorLog("mailpit", "自動啟動 Mailpit 失敗", err)
+			}
+		}()
 	}
 
-	// 4. PHP-CGI
-	if a.appCfg.Global.LastServiceState.PHP != nil {
-		for i := range a.scanRes.PHPList {
-			info := &a.scanRes.PHPList[i]
-			if a.appCfg.Global.LastServiceState.PHP[info.Version] {
-				a.handleLog("system", i18n.Tfmt("自動啟動上次執行的服務: PHP-CGI %s", info.Version))
-				// 套用進程數配置
-				count := a.appCfg.Global.PHP.ProcessesPerVersion
-				if c, ok := a.appCfg.Global.PHP.Processes[info.MajorMin]; ok {
-					count = c
-				}
-				info.PortCount = count
-
-				if err := a.procMgr.StartPHPCGI(*info); err != nil {
-					a.handleErrorLog("php", fmt.Sprintf("自動啟動 PHP-CGI %s 失敗", info.Version), err)
-				}
-			}
+	// 4. PHP-CGI（各版本並行啟動，使用值複製避免並發讀寫 ScanResult）
+	for _, phpInfo := range phpTargets {
+		info := phpInfo
+		phpKey := process.PHPServiceKey(info.Version)
+		count := a.appCfg.Global.PHP.ProcessesPerVersion
+		if c, ok := a.appCfg.Global.PHP.Processes[info.MajorMin]; ok {
+			count = c
 		}
+		info.PortCount = count
+
+		wg.Add(1)
+		go func() {
+			defer func() {
+				a.finishRestoringService(phpKey)
+				a.emitServicesStatusChanged()
+				wg.Done()
+			}()
+			a.handleLog("system", i18n.Tfmt("自動啟動上次執行的服務: PHP-CGI %s", info.Version))
+			if err := a.procMgr.StartPHPCGI(info); err != nil {
+				a.handleErrorLog("php", fmt.Sprintf("自動啟動 PHP-CGI %s 失敗", info.Version), err)
+			}
+		}()
 	}
 
 	// 5. Redis
-	if a.appCfg.Global.LastServiceState.Redis && len(a.scanRes.RedisList) > 0 {
-		redisInfo := a.scanRes.RedisList[0]
-		a.handleLog("system", i18n.T("自動啟動上次執行的服務: Redis"))
+	if redisKey := process.RedisServiceKey(); restoring[redisKey] {
+		redisInfo := scanRes.RedisList[0]
 		redisPort := a.appCfg.Global.RedisPort
 		if redisPort <= 0 {
 			redisPort = 6379
 		}
-		if err := a.procMgr.StartRedis(redisInfo.Version, redisInfo.ExePath, redisPort); err != nil {
-			a.handleErrorLog("redis", "自動啟動 Redis 失敗", err)
-		}
+		wg.Add(1)
+		go func() {
+			defer func() {
+				a.finishRestoringService(redisKey)
+				a.emitServicesStatusChanged()
+				wg.Done()
+			}()
+			a.handleLog("system", i18n.T("自動啟動上次執行的服務: Redis"))
+			if err := a.procMgr.StartRedis(redisInfo.Version, redisInfo.ExePath, redisPort); err != nil {
+				a.handleErrorLog("redis", "自動啟動 Redis 失敗", err)
+			}
+		}()
 	}
+
+	wg.Wait()
+	a.clearRestoringState()
+	a.emitServicesStatusChanged()
 }
 
 // reconcilePHPRestoreState 校正 PHP 的「上次執行狀態」。

@@ -313,6 +313,22 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class ServicesStateSnapshot {
+	    statuses: Record<string, boolean>;
+	    restoring: Record<string, boolean>;
+	    restore_pending: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServicesStateSnapshot(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.statuses = source["statuses"];
+	        this.restoring = source["restoring"];
+	        this.restore_pending = source["restore_pending"];
+	    }
+	}
 
 }
 

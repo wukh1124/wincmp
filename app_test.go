@@ -309,3 +309,54 @@ func TestUpdateCheckResultSnapshotAndRestore(t *testing.T) {
 		t.Errorf("restoreUpdateCheckResult 應完整還原狀態，實際為 %+v", app.appCfg.Global)
 	}
 }
+
+// TestRestorePendingAndServicesSnapshot 驗證啟動預標記與服務狀態快照的一致性。
+func TestRestorePendingAndServicesSnapshot(t *testing.T) {
+	app := &App{
+		appCfg: &config.WincmpConfig{
+			Global: config.GlobalConfig{
+				RestoreLastState: true,
+				LastServiceState: config.LastServiceState{
+					Caddy:   true,
+					MariaDB: true,
+					Mailpit: false,
+					Redis:   true,
+					PHP: map[string]bool{
+						"8.3.36": true,
+						"8.2.28": false,
+					},
+				},
+			},
+		},
+		restoringServices: make(map[string]bool),
+	}
+
+	app.initRestorePendingState()
+	snap := app.GetServicesStateSnapshot()
+
+	if !snap.RestorePending {
+		t.Fatal("啟用 RestoreLastState 且有待恢復服務時，RestorePending 應為 true")
+	}
+	if !snap.Restoring["caddy"] || !snap.Restoring["redis"] || !snap.Restoring["php-8.3.36"] {
+		t.Errorf("預標記應包含 caddy, redis 與 php-8.3.36，實際為 %+v", snap.Restoring)
+	}
+	if snap.Restoring["mailpit"] || snap.Restoring["php-8.2.28"] {
+		t.Errorf("未啟用的服務不應進入預標記: %+v", snap.Restoring)
+	}
+
+	app.finishRestoringService("caddy")
+	snapAfterFinish := app.GetServicesStateSnapshot()
+	if snapAfterFinish.Restoring["caddy"] {
+		t.Error("finishRestoringService 後 caddy 標記應被移除")
+	}
+
+	// 當 RestoreLastState 關閉時呼叫 restoreLastState 應清除殘留待恢復標記
+	app.appCfg.Global.RestoreLastState = false
+	app.scanRes = &scanner.ScanResult{}
+	app.restoreLastState()
+
+	snapCleared := app.GetServicesStateSnapshot()
+	if snapCleared.RestorePending || len(snapCleared.Restoring) != 0 {
+		t.Errorf("RestoreLastState 關閉後 restoreLastState 應清除待恢復狀態，實際為 %+v", snapCleared)
+	}
+}

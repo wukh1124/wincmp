@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Square, RefreshCw, Cpu, Database, Server, CheckCircle, XCircle, AlertTriangle, Package, LayoutGrid, Terminal, X, Zap, Lightbulb } from 'lucide-react';
 import {
-  GetConfig, SaveConfig, ScanServices, GetScanResult, GetServicesStatus,
+  GetConfig, SaveConfig, ScanServices, GetScanResult, GetServicesStateSnapshot,
   StartCaddy, StopCaddy, ReloadCaddy, StartMariaDB, StopMariaDB,
   StartMailpit, StopMailpit, StartRedis, StopRedis, RestartRedis, StartPHP, StopPHP,
   CheckMissingCoreDependencies
 } from '../../wailsjs/go/main/App';
-import { config as wincmpConfig, scanner } from '../../wailsjs/go/models';
+import { config as wincmpConfig, main as wincmpMain, scanner } from '../../wailsjs/go/models';
 import DependencyManager from './DependencyManager';
 import PhpLifecycleBadge from './PhpLifecycleBadge';
 import { buildPhpLifecycleIndex } from '../phpLifecycle';
-import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { t, useLanguage } from '../i18n';
 
 let logsAutoExpanded = false;
 
 // 模組層級快取：保留最新狀態，避免切換 Tab 時重新掛載造成按鈕閃爍與狀態丟失
 let cachedServicesStatus: Record<string, boolean> | null = null;
+let cachedRestoringServices: Record<string, boolean> | null = null;
+let cachedRestorePending = false;
 let cachedScanResult: scanner.ScanResult | null = null;
 let cachedConfig: any = null;
 let isInitialLoaded = false;
@@ -37,11 +39,60 @@ function ServiceButtonSkeleton() {
   );
 }
 
+// ServiceStatusBadge 顯示服務運行狀態；背景自動啟動時不顯示閃爍或旋轉動畫
+function ServiceStatusBadge({ ready, running, restoring }: { ready: boolean; running: boolean; restoring: boolean }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
+      {!ready ? (
+        <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
+      ) : restoring && !running ? (
+        <>
+          <span className="inline-flex rounded-full" style={{ width: '7px', height: '7px', background: 'var(--status-warn, var(--status-info))' }} />
+          <span className="font-bold" style={{ color: 'var(--status-warn, var(--status-info))' }}>
+            {t("啟動中...")}
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="relative flex" style={{ width: '7px', height: '7px' }}>
+            {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
+            <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
+          </span>
+          <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
+            {running ? t("運行中") : t("已停止")}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
+
+// RestoringServiceButton 顯示自動恢復進行中的靜態停用按鈕，避免與手動點擊動效混淆
+function RestoringServiceButton() {
+  return (
+    <button
+      type="button"
+      disabled
+      className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 select-none cursor-default"
+      style={{
+        background: 'var(--surface-active, var(--surface))',
+        border: '1px solid var(--border)',
+        color: 'var(--fg-2)',
+        opacity: 0.85,
+      }}
+    >
+      <Play size={12} /> {t("自動啟動中...")}
+    </button>
+  );
+}
+
 export default function Dashboard() {
   useLanguage();
   const [config, setConfig] = useState<any>(() => cachedConfig);
   const [scanResult, setScanResult] = useState<scanner.ScanResult | null>(() => cachedScanResult);
   const [servicesStatus, setServicesStatus] = useState<Record<string, boolean>>(() => cachedServicesStatus || {});
+  const [restoringServices, setRestoringServices] = useState<Record<string, boolean>>(() => cachedRestoringServices || {});
+  const [restorePending, setRestorePending] = useState<boolean>(() => cachedRestorePending);
   const [isStatusReady, setIsStatusReady] = useState(isInitialLoaded);
   const [loadingServices, setLoadingServices] = useState<Record<string, boolean>>({});
   const [isScanning, setIsScanning] = useState(false);
@@ -97,31 +148,55 @@ export default function Dashboard() {
     setShowDepManager(true);
   };
 
+  const applySnapshot = (snap?: Partial<wincmpMain.ServicesStateSnapshot> | null) => {
+    if (!snap) return;
+    const statuses = snap.statuses || {};
+    const restoring = snap.restoring || {};
+    const pending = !!snap.restore_pending;
+
+    cachedServicesStatus = statuses;
+    cachedRestoringServices = restoring;
+    cachedRestorePending = pending;
+    isInitialLoaded = true;
+
+    setServicesStatus(statuses);
+    setRestoringServices(restoring);
+    setRestorePending(pending);
+    setIsStatusReady(true);
+  };
+
   useEffect(() => {
+    let active = true;
     async function initData() {
       try {
         // 並行請求以大幅降低延遲，避免各 RPC 串行等待
-        const [cfg, scan, status, missing] = await Promise.all([
+        const [cfg, scan, snap, missing] = await Promise.all([
           GetConfig(),
           GetScanResult(),
-          GetServicesStatus(),
+          GetServicesStateSnapshot(),
           CheckMissingCoreDependencies(),
         ]);
+        if (!active) return;
         cachedConfig = cfg;
         cachedScanResult = scan;
-        cachedServicesStatus = status;
-        isInitialLoaded = true;
 
         setConfig(cfg);
         setScanResult(scan);
-        setServicesStatus(status);
-        setIsStatusReady(true);
+        applySnapshot(snap);
         setMissingCore({ caddy: !!missing?.caddy });
       } catch (err) {
         console.error("初始化資料失敗:", err);
       }
     }
     initData();
+
+    const unsubscribe = EventsOn('services_status_changed', (snap: any) => {
+      applySnapshot(snap);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -131,11 +206,8 @@ export default function Dashboard() {
 
   const updateStatus = async () => {
     try {
-      const status = await GetServicesStatus();
-      cachedServicesStatus = status;
-      setServicesStatus(status);
-      setIsStatusReady(true);
-      isInitialLoaded = true;
+      const snap = await GetServicesStateSnapshot();
+      applySnapshot(snap);
     } catch (err) {
       console.error("更新服務狀態失敗:", err);
     }
@@ -259,6 +331,11 @@ export default function Dashboard() {
   };
 
   const isRunning = (key: string) => !!servicesStatus[key];
+  const isRestoring = (key: string, fallbackLastEnabled?: boolean, extraKey?: string) => {
+    if (isRunning(key)) return false;
+    if (restoringServices[key] || (extraKey && restoringServices[extraKey])) return true;
+    return restorePending && !!config?.global?.restore_last_state && !!fallbackLastEnabled;
+  };
 
   // ─── Reusable Styles ──────────────────────────────────────
   const cardStyle: React.CSSProperties = {
@@ -374,6 +451,7 @@ export default function Dashboard() {
           {(() => {
             const caddy = scanResult?.CaddyList?.[0];
             const running = isRunning('caddy');
+            const restoring = isRestoring('caddy', config?.global?.last_service_state?.caddy);
             const loadingStart = loadingServices['caddy-start'];
             const loadingStop = loadingServices['caddy-stop'];
             const loadingReload = loadingServices['caddy-reload'];
@@ -388,21 +466,7 @@ export default function Dashboard() {
                       </div>
                       <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>Caddy</h4>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
-                      {!isStatusReady ? (
-                        <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
-                      ) : (
-                        <>
-                          <span className="relative flex" style={{ width: '7px', height: '7px' }}>
-                            {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                            <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                          </span>
-                          <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                            {running ? t("運行中") : t("已停止")}
-                          </span>
-                        </>
-                      )}
-                    </div>
+                    <ServiceStatusBadge ready={isStatusReady} running={running} restoring={restoring} />
                   </div>
 
                   <div className="space-y-1">
@@ -415,6 +479,8 @@ export default function Dashboard() {
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
                   {!isStatusReady ? (
                     <ServiceButtonSkeleton />
+                  ) : !running && restoring ? (
+                    <RestoringServiceButton />
                   ) : !running ? (
                     <button onClick={() => handleServiceAction('caddy', 'start', caddy)} disabled={loadingStart || !caddy} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !caddy ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
@@ -439,6 +505,7 @@ export default function Dashboard() {
             const mariadb = scanResult?.MariaDBList?.[0];
             const serviceKey = mariadb ? `mariadb-${mariadb.Version}` : 'mariadb-none';
             const running = isRunning(serviceKey);
+            const restoring = isRestoring(serviceKey, config?.global?.last_service_state?.mariadb, 'mariadb-external');
             const loadingStart = loadingServices[`${serviceKey}-start`];
             const loadingStop = loadingServices[`${serviceKey}-stop`];
             const dbPort = config?.global?.mariadb_port || 3306;
@@ -453,21 +520,7 @@ export default function Dashboard() {
                       </div>
                       <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>MariaDB</h4>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
-                      {!isStatusReady ? (
-                        <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
-                      ) : (
-                        <>
-                          <span className="relative flex" style={{ width: '7px', height: '7px' }}>
-                            {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                            <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                          </span>
-                          <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                            {running ? t("運行中") : t("已停止")}
-                          </span>
-                        </>
-                      )}
-                    </div>
+                    <ServiceStatusBadge ready={isStatusReady} running={running} restoring={restoring} />
                   </div>
 
                   <div className="space-y-1">
@@ -480,6 +533,8 @@ export default function Dashboard() {
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
                   {!isStatusReady ? (
                     <ServiceButtonSkeleton />
+                  ) : !running && restoring ? (
+                    <RestoringServiceButton />
                   ) : !running ? (
                     <button onClick={() => handleServiceAction(serviceKey, 'start', mariadb)} disabled={loadingStart || !mariadb} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !mariadb ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
@@ -498,6 +553,7 @@ export default function Dashboard() {
           {(() => {
             const mailpit = scanResult?.MailpitList?.[0];
             const running = isRunning('mailpit');
+            const restoring = isRestoring('mailpit', config?.global?.last_service_state?.mailpit);
             const loadingStart = loadingServices['mailpit-start'];
             const loadingStop = loadingServices['mailpit-stop'];
             const httpPort = config?.global?.mailpit_http_port || 8025;
@@ -513,21 +569,7 @@ export default function Dashboard() {
                       </div>
                       <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>Mailpit</h4>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
-                      {!isStatusReady ? (
-                        <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
-                      ) : (
-                        <>
-                          <span className="relative flex" style={{ width: '7px', height: '7px' }}>
-                            {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                            <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                          </span>
-                          <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                            {running ? t("運行中") : t("已停止")}
-                          </span>
-                        </>
-                      )}
-                    </div>
+                    <ServiceStatusBadge ready={isStatusReady} running={running} restoring={restoring} />
                   </div>
 
                   <div className="space-y-1">
@@ -540,6 +582,8 @@ export default function Dashboard() {
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
                   {!isStatusReady ? (
                     <ServiceButtonSkeleton />
+                  ) : !running && restoring ? (
+                    <RestoringServiceButton />
                   ) : !running ? (
                     <button onClick={() => handleServiceAction('mailpit', 'start', mailpit)} disabled={loadingStart || !mailpit} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !mailpit ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
@@ -558,6 +602,7 @@ export default function Dashboard() {
           {(() => {
             const redis = scanResult?.RedisList?.[0];
             const running = isRunning('redis');
+            const restoring = isRestoring('redis', config?.global?.last_service_state?.redis);
             const loadingStart = loadingServices['redis-start'];
             const loadingStop = loadingServices['redis-stop'];
             const loadingReload = loadingServices['redis-reload'];
@@ -572,21 +617,7 @@ export default function Dashboard() {
                       </div>
                       <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>Redis</h4>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
-                      {!isStatusReady ? (
-                        <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
-                      ) : (
-                        <>
-                          <span className="relative flex" style={{ width: '7px', height: '7px' }}>
-                            {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                            <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                          </span>
-                          <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                            {running ? t("運行中") : t("已停止")}
-                          </span>
-                        </>
-                      )}
-                    </div>
+                    <ServiceStatusBadge ready={isStatusReady} running={running} restoring={restoring} />
                   </div>
 
                   <div className="space-y-1">
@@ -599,6 +630,8 @@ export default function Dashboard() {
                 <div className="mt-5 pt-3.5 flex gap-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
                   {!isStatusReady ? (
                     <ServiceButtonSkeleton />
+                  ) : !running && restoring ? (
+                    <RestoringServiceButton />
                   ) : !running ? (
                     <button onClick={() => handleServiceAction('redis', 'start', redis)} disabled={loadingStart || !redis} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff', opacity: loadingStart || !redis ? 0.5 : 1 }}>
                       <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動服務")}
@@ -632,6 +665,7 @@ export default function Dashboard() {
             {scanResult.PHPList.map((php, idx) => {
               const serviceKey = `php-${php.Version}`;
               const running = isRunning(serviceKey);
+              const restoring = isRestoring(serviceKey, config?.global?.last_service_state?.php?.[php.Version]);
               const loadingStart = loadingServices[`${serviceKey}-start`];
               const loadingStop = loadingServices[`${serviceKey}-stop`];
               const configuredCount = config?.global?.php?.processes?.[php.MajorMin] || config?.global?.php?.processes_per_version || 3;
@@ -650,21 +684,7 @@ export default function Dashboard() {
                         <h4 className="font-bold text-sm tracking-tight" style={{ color: 'var(--fg)' }}>PHP {php.Version}</h4>
                         <PhpLifecycleBadge entry={phpLifecycle[php.MajorMin]} />
                       </div>
-                      <div className="flex items-center gap-1.5 text-[11px] shrink-0 min-h-[16px]">
-                        {!isStatusReady ? (
-                          <span className="inline-block w-11 h-3.5 rounded animate-pulse" style={{ background: 'var(--surface-active, var(--surface))' }} />
-                        ) : (
-                          <>
-                            <span className="relative flex" style={{ width: '7px', height: '7px' }}>
-                              {running && <span className="animate-ping absolute top-0 left-0 inline-flex h-full w-full rounded-full opacity-75" style={{ background: 'var(--status-ok)' }}></span>}
-                              <span className="absolute top-0 left-0 inline-flex rounded-full h-full w-full" style={{ background: running ? 'var(--status-ok)' : 'var(--meta)' }}></span>
-                            </span>
-                            <span className="font-bold" style={{ color: running ? 'var(--status-ok)' : 'var(--muted)' }}>
-                              {running ? t("運行中") : t("已停止")}
-                            </span>
-                          </>
-                        )}
-                      </div>
+                      <ServiceStatusBadge ready={isStatusReady} running={running} restoring={restoring} />
                     </div>
 
                     <div className="space-y-1">
@@ -703,10 +723,10 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between text-xs select-none">
                       <span className="font-semibold" style={{ color: 'var(--muted)' }}>{t("進程數量 (Processes)")}</span>
                       <select
-                        disabled={running}
+                        disabled={running || restoring}
                         value={configuredCount}
                         onChange={(e) => handlePHPProcessChange(php.MajorMin, parseInt(e.target.value))}
-                        className={`rounded-lg pl-2.5 pr-8 py-1 outline-none transition text-xs font-semibold ${running ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                        className={`rounded-lg pl-2.5 pr-8 py-1 outline-none transition text-xs font-semibold ${running || restoring ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                         style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg)' }}
                       >
                         {[1, 2, 3, 5, 10, 20, 50, 100].map(n => (
@@ -718,6 +738,8 @@ export default function Dashboard() {
                     <div className="flex gap-2">
                       {!isStatusReady ? (
                         <ServiceButtonSkeleton />
+                      ) : !running && restoring ? (
+                        <RestoringServiceButton />
                       ) : !running ? (
                         <button onClick={() => handleServiceAction(serviceKey, 'start', php)} disabled={loadingStart} className="w-full py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition select-none" style={{ background: 'var(--status-ok)', color: '#fff' }}>
                           <Play size={12} /> {loadingStart ? t("啟動中...") : t("啟動 PHP")}

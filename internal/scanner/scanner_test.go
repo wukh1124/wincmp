@@ -3,6 +3,7 @@ package scanner
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -52,5 +53,72 @@ func TestCompareVersions(t *testing.T) {
 		if got := compareVersions(c.a, c.b); got != c.want {
 			t.Errorf("compareVersions(%q, %q) = %d, 預期 %d", c.a, c.b, got, c.want)
 		}
+	}
+}
+
+// TestScanBinDirConcurrentAndInvalidate 驗證併發呼叫 ScanBinDir 安全且 InvalidateScanCache 可立即刷新結果
+func TestScanBinDirConcurrentAndInvalidate(t *testing.T) {
+	base := t.TempDir()
+	caddyDir := filepath.Join(base, "bin", "caddy", "caddy-2.9.0")
+	if err := os.MkdirAll(caddyDir, 0755); err != nil {
+		t.Fatalf("建立 Caddy 目錄失敗: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(caddyDir, "caddy.exe"), []byte{}, 0644); err != nil {
+		t.Fatalf("建立 caddy.exe 失敗: %v", err)
+	}
+
+	InvalidateScanCache()
+	defer InvalidateScanCache()
+
+	const workers = 6
+	var wg sync.WaitGroup
+	errs := make(chan error, workers)
+	versions := make(chan string, workers)
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			res, err := ScanBinDir(base)
+			if err != nil {
+				errs <- err
+				return
+			}
+			if len(res.CaddyList) != 1 {
+				errs <- os.ErrNotExist
+				return
+			}
+			versions <- res.CaddyList[0].Version
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	close(versions)
+
+	for err := range errs {
+		t.Fatalf("併發 ScanBinDir 失敗: %v", err)
+	}
+	for v := range versions {
+		if v != "2.9.0" {
+			t.Errorf("預期掃描到 2.9.0，實際為 %s", v)
+		}
+	}
+
+	// 新增一個 PHP 版本並失效快取後，應立即掃描到新版本
+	phpDir := filepath.Join(base, "bin", "php", "php-8.4.11")
+	if err := os.MkdirAll(phpDir, 0755); err != nil {
+		t.Fatalf("建立 PHP 目錄失敗: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(phpDir, "php-cgi.exe"), []byte{}, 0644); err != nil {
+		t.Fatalf("建立 php-cgi.exe 失敗: %v", err)
+	}
+
+	InvalidateScanCache()
+	res, err := ScanBinDir(base)
+	if err != nil {
+		t.Fatalf("失效快取後 ScanBinDir 失敗: %v", err)
+	}
+	if len(res.PHPList) != 1 || res.PHPList[0].Version != "8.4.11" {
+		t.Errorf("預期失效快取後掃描到 PHP 8.4.11，實際為 %+v", res.PHPList)
 	}
 }
