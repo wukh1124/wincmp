@@ -56,10 +56,10 @@ func (m *Manager) StartMailpit(version, exePath string, smtpPort, httpPort int, 
 		return fmt.Errorf("%s: %w", i18n.T("Mailpit 啟動失敗"), err)
 	}
 
-	m.register(mailpitServiceKey, fmt.Sprintf("Mailpit (%s)", version), exePath, []*exec.Cmd{cmd})
+	state := m.register(mailpitServiceKey, fmt.Sprintf("Mailpit (%s)", version), exePath, []*exec.Cmd{cmd})
 	m.log("mailpit", "%s", i18n.Tfmt("✅ Mailpit (%s) 已啟動 (PID: %d)", version, cmd.Process.Pid))
 
-	go m.waitForExit(cmd, mailpitServiceKey, "mailpit", "Mailpit")
+	go m.waitForExit(cmd, mailpitServiceKey, state, "mailpit", "Mailpit")
 
 	return nil
 }

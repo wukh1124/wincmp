@@ -179,10 +179,10 @@ func (m *Manager) StartMariaDBAsync(
 			return
 		}
 
-		m.register(serviceKey, displayName, exePath, []*exec.Cmd{cmd})
+		state := m.register(serviceKey, displayName, exePath, []*exec.Cmd{cmd})
 		m.log("mariadb", "%s", i18n.Tfmt("✅ %s 已啟動 (PID: %d)", displayName, cmd.Process.Pid))
 
-		go m.waitForExit(cmd, serviceKey, "mariadb", displayName)
+		go m.waitForExit(cmd, serviceKey, state, "mariadb", displayName)
 		errCh <- nil
 	}()
 
@@ -215,6 +215,7 @@ func (m *Manager) StopMariaDB(
 		adminExe = filepath.Join(m.baseDir, "bin", "mariadb", "mariadb-"+version, "bin", m.getAdminExecutableName("mariadb"))
 	}
 
+	m.markStopping(serviceKey)
 	shutdownCmd := m.createCommand(adminExe, "-u", "root", "-P", fmt.Sprintf("%d", port), "shutdown")
 	if err := shutdownCmd.Run(); err != nil {
 		m.errorLog("mariadb", i18n.T("admin shutdown 失敗，改用強制終止"), err)

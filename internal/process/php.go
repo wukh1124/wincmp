@@ -107,10 +107,16 @@ func (m *Manager) StartPHPCGI(phpInfo scanner.PHPVersionInfo) error {
 		cmds = append(cmds, cmd)
 	}
 
-	m.register(serviceKey, "PHP-CGI "+phpInfo.Version, phpInfo.ExePath, cmds)
+	state := m.register(serviceKey, "PHP-CGI "+phpInfo.Version, phpInfo.ExePath, cmds)
 	m.log("php", "%s", i18n.Tfmt("✅ PHP-CGI %s 已啟動 (%s)", phpInfo.Version, phpInfo.GetPortRangeStr()))
 
-	// 監控每個行程的退出，單一程序退出時更新 PID 列表，所有退出則 unregister
+	m.monitorPHPCGIProcesses(serviceKey, phpInfo.Version, state, cmds, ports)
+
+	return nil
+}
+
+// monitorPHPCGIProcesses 監控每個 PHP-CGI 行程退出；單一程序退出更新 PID，全部退出時註銷服務
+func (m *Manager) monitorPHPCGIProcesses(serviceKey, version string, state *ServiceState, cmds []*exec.Cmd, ports []int) {
 	var exitedCount int32
 	for i, cmd := range cmds {
 		go func(c *exec.Cmd, port int) {
@@ -118,31 +124,31 @@ func (m *Manager) StartPHPCGI(phpInfo scanner.PHPVersionInfo) error {
 			remaining := atomic.AddInt32(&exitedCount, 1)
 			total := int32(len(cmds))
 			stillRunning := total - remaining
+			// 主動停止或已切換至新啟動實例時，不誤報異常退出
+			if !m.isExpectedRunning(serviceKey, state) {
+				return
+			}
 			if stillRunning > 0 {
 				// 還有程序在運行：從 PID 列表移除已退出的，但保持服務運行
 				if c.Process != nil {
 					m.RemovePID(serviceKey, c.Process.Pid)
 				}
 				if err != nil {
-					m.errorLog("php", i18n.Tfmt("PHP-CGI %s (Port %d) 異常退出，剩餘 %d 個程序", phpInfo.Version, port, stillRunning), err)
+					m.errorLog("php", i18n.Tfmt("PHP-CGI %s (Port %d) 異常退出，剩餘 %d 個程序", version, port, stillRunning), err)
 				} else {
-					m.log("php", "%s", i18n.Tfmt("ℹ️ PHP-CGI %s (Port %d) 已退出，剩餘 %d 個程序", phpInfo.Version, port, stillRunning))
+					m.log("php", "%s", i18n.Tfmt("ℹ️ PHP-CGI %s (Port %d) 已退出，剩餘 %d 個程序", version, port, stillRunning))
 				}
 			} else {
 				// 所有程序都已退出
-				if m.IsRunning(serviceKey) {
-					if err != nil {
-						m.errorLog("php", i18n.Tfmt("PHP-CGI %s 最後一個程序 (Port %d) 異常退出", phpInfo.Version, port), err)
-					} else {
-						m.log("php", "%s", i18n.Tfmt("ℹ️ PHP-CGI %s 所有程序已退出", phpInfo.Version))
-					}
-					m.unregister(serviceKey)
+				if err != nil {
+					m.errorLog("php", i18n.Tfmt("PHP-CGI %s 最後一個程序 (Port %d) 異常退出", version, port), err)
+				} else {
+					m.log("php", "%s", i18n.Tfmt("ℹ️ PHP-CGI %s 所有程序已退出", version))
 				}
+				m.unregister(serviceKey)
 			}
 		}(cmd, ports[i])
 	}
-
-	return nil
 }
 
 // StopPHPCGI 停止指定版本的所有 PHP-CGI 行程

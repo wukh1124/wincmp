@@ -52,10 +52,10 @@ func (m *Manager) StartRedis(version, exePath string, port int) error {
 		return fmt.Errorf("%s: %w", i18n.T("Redis 啟動失敗"), err)
 	}
 
-	m.register(redisServiceKey, fmt.Sprintf("Redis (%s)", version), exePath, []*exec.Cmd{cmd})
+	state := m.register(redisServiceKey, fmt.Sprintf("Redis (%s)", version), exePath, []*exec.Cmd{cmd})
 	m.log("redis", "%s", i18n.Tfmt("✅ Redis (%s) 已啟動 (PID: %d)", version, cmd.Process.Pid))
 
-	go m.waitForExit(cmd, redisServiceKey, "redis", "Redis")
+	go m.waitForExit(cmd, redisServiceKey, state, "redis", "Redis")
 
 	return nil
 }

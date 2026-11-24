@@ -39,11 +39,11 @@ func (m *Manager) StartCaddy(version, exePath string) error {
 		return fmt.Errorf("%s: %w", i18n.T("Caddy 啟動失敗"), err)
 	}
 
-	m.register(caddyServiceKey, fmt.Sprintf("Caddy (%s)", version), exePath, []*exec.Cmd{cmd})
+	state := m.register(caddyServiceKey, fmt.Sprintf("Caddy (%s)", version), exePath, []*exec.Cmd{cmd})
 	m.log("caddy", "%s", i18n.Tfmt("✅ Caddy (%s) 已啟動 (PID: %d)", version, cmd.Process.Pid))
 
 	// 監控程序退出
-	go m.waitForExit(cmd, caddyServiceKey, "caddy", "Caddy")
+	go m.waitForExit(cmd, caddyServiceKey, state, "caddy", "Caddy")
 
 	return nil
 }

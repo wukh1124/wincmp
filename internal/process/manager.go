@@ -19,6 +19,7 @@ import (
 type ServiceState struct {
 	Name      string      // 服務名稱 (如 "Caddy", "MariaDB", "PHP-CGI 8.2.30")
 	Running   bool        // 是否正在運行
+	Stopping  bool        // 是否正在主動停止（避免 Kill/Wait 競態誤報異常退出）
 	ExePath   string      // 啟動時使用的執行檔路徑 (用於 Reload 等操作)
 	Commands  []*exec.Cmd // 該服務的所有子程序（PHP 可能有多個）
 	PIDs      []int       // 所有子程序的 PID
@@ -156,32 +157,12 @@ func (m *Manager) GetServiceBreakdown() []ServiceInfo {
 }
 
 // register 註冊一個新的服務狀態
-func (m *Manager) register(serviceKey, name, exePath string, cmds []*exec.Cmd) {
-	pids := make([]int, len(cmds))
-	for i, cmd := range cmds {
-		if cmd.Process != nil {
-			pids[i] = cmd.Process.Pid
-		}
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	m.mu.Lock()
-	m.services[serviceKey] = &ServiceState{
-		Name:      name,
-		Running:   true,
-		ExePath:   exePath,
-		Commands:  cmds,
-		PIDs:      pids,
-		StartTime: time.Now(),
-		Ctx:       ctx,
-		Cancel:    cancel,
-	}
-	m.mu.Unlock()
+func (m *Manager) register(serviceKey, name, exePath string, cmds []*exec.Cmd) *ServiceState {
+	return m.registerWithJob(serviceKey, name, exePath, cmds, 0)
 }
 
 // registerWithJob 註冊一個帶有 Job Object 的新服務狀態
-func (m *Manager) registerWithJob(serviceKey, name, exePath string, cmds []*exec.Cmd, job windows.Handle) {
+func (m *Manager) registerWithJob(serviceKey, name, exePath string, cmds []*exec.Cmd, job windows.Handle) *ServiceState {
 	pids := make([]int, len(cmds))
 	for i, cmd := range cmds {
 		if cmd.Process != nil {
@@ -190,9 +171,7 @@ func (m *Manager) registerWithJob(serviceKey, name, exePath string, cmds []*exec
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-
-	m.mu.Lock()
-	m.services[serviceKey] = &ServiceState{
+	state := &ServiceState{
 		Name:      name,
 		Running:   true,
 		ExePath:   exePath,
@@ -203,7 +182,35 @@ func (m *Manager) registerWithJob(serviceKey, name, exePath string, cmds []*exec
 		Cancel:    cancel,
 		JobHandle: job,
 	}
+
+	m.mu.Lock()
+	m.services[serviceKey] = state
 	m.mu.Unlock()
+	return state
+}
+
+// markStopping 標記指定服務正在主動停止，避免監控協程誤報異常退出
+func (m *Manager) markStopping(serviceKey string) {
+	m.mu.Lock()
+	if state, exists := m.services[serviceKey]; exists && state.Running {
+		state.Stopping = true
+	}
+	m.mu.Unlock()
+}
+
+// isExpectedRunning 檢查服務是否仍為同一啟動實例且非處於主動停止階段
+func (m *Manager) isExpectedRunning(serviceKey string, expected *ServiceState) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	state, exists := m.services[serviceKey]
+	if !exists || !state.Running || state.Stopping {
+		return false
+	}
+	if expected != nil && state != expected {
+		return false
+	}
+	return true
 }
 
 // UpdatePIDs 手動更新指定服務的 PID 列表（用於啟動後才能確定的進程）
@@ -306,6 +313,8 @@ func (m *Manager) stopService(serviceKey string) error {
 		m.mu.Unlock()
 		return fmt.Errorf("服務 %s 未在運行", serviceKey)
 	}
+	// 先標記正在停止再終止程序，避免 Wait 協程與 unregister 競態誤報異常退出
+	state.Stopping = true
 	cmds := state.Commands
 	m.mu.Unlock()
 
@@ -372,9 +381,9 @@ func (m *Manager) pipeOutput(cmd *exec.Cmd, category string, serviceName string)
 }
 
 // waitForExit 在 goroutine 中等待程序退出，並更新狀態
-func (m *Manager) waitForExit(cmd *exec.Cmd, serviceKey, category, serviceName string) {
+func (m *Manager) waitForExit(cmd *exec.Cmd, serviceKey string, expected *ServiceState, category, serviceName string) {
 	err := cmd.Wait()
-	if m.IsRunning(serviceKey) {
+	if m.isExpectedRunning(serviceKey, expected) {
 		// 非預期退出（不是由 Stop 觸發的）
 		if err != nil {
 			m.errorLog(category, fmt.Sprintf("%s 異常退出", serviceName), err)
@@ -390,8 +399,8 @@ func isProcessFinished(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Go 1.20+ 提供 os.ErrProcessDone
-	if errors.Is(err, os.ErrProcessDone) {
+	// Go 1.20+ 提供 os.ErrProcessDone；Windows 上 Wait() 釋放 handle 後再 Kill() 會回傳 syscall.EINVAL
+	if errors.Is(err, os.ErrProcessDone) || errors.Is(err, syscall.EINVAL) {
 		return true
 	}
 	// Windows 特性：TerminateProcess 在進程已結束時會回傳 ERROR_ACCESS_DENIED (5) 或 ERROR_INVALID_PARAMETER (87)

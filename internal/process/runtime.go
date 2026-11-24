@@ -519,12 +519,12 @@ func (m *Manager) StartRuntime(project config.ProjectConfig, mode string, exePat
 		}
 	}
 
-	m.registerWithJob(serviceKey, runtimeLabel+" ("+project.Name+")", exePath, []*exec.Cmd{startCmd}, job)
+	state := m.registerWithJob(serviceKey, runtimeLabel+" ("+project.Name+")", exePath, []*exec.Cmd{startCmd}, job)
 
 	// 背景監聽退出事件
 	go func() {
 		err := startCmd.Wait()
-		if m.IsRunning(serviceKey) {
+		if m.isExpectedRunning(serviceKey, state) {
 			if err != nil {
 				m.errorLog("runtime", i18n.Tfmt("[%s] 異常退出", project.Name), err)
 			} else {
@@ -561,7 +561,7 @@ func (m *Manager) trackRuntimePIDs(serviceKey, projectName string, port int, isT
 				pids = append(pids, m.getChildPIDs(pid)...)
 				m.UpdatePIDs(serviceKey, pids)
 			} else if isTerminal {
-				if m.IsRunning(serviceKey) {
+				if m.isExpectedRunning(serviceKey, nil) {
 					m.log("runtime", "%s", i18n.Tfmt("ℹ️ [%s] Terminal 模式 Runtime 已停止 (Port %d 已釋放)", projectName, port))
 					m.unregister(serviceKey)
 				}
@@ -603,6 +603,7 @@ func (m *Manager) StopRuntime(project config.ProjectConfig) error {
 		m.mu.Unlock()
 		return fmt.Errorf("%s", i18n.Tfmt("服務 %s 未在運行", project.Name))
 	}
+	state.Stopping = true
 	pids := state.PIDs
 	cmds := state.Commands
 	job := state.JobHandle
