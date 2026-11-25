@@ -152,7 +152,11 @@ func (m *Manager) Start(
 		HideWindow:    true,
 		CreationFlags: 0x08000000, // CREATE_NO_WINDOW
 	}
-	cmd.Env = buildIsolatedEnv(filepath.Dir(opts.PHPExe), m.HardTimeout)
+	phprcDir := ""
+	if len(opts.ExtraArgsPrefix) == 0 {
+		phprcDir = config.PreparePHPCLIRuntimeDir(m.baseDir, filepath.Dir(opts.PHPExe))
+	}
+	cmd.Env = buildIsolatedEnv(filepath.Dir(opts.PHPExe), phprcDir, m.HardTimeout)
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -418,14 +422,14 @@ func buildPHPComposerArgs(baseDir string, opts RunOptions) []string {
 	return cmdArgs
 }
 
-func buildIsolatedEnv(phpDir string, hardTimeout time.Duration) []string {
+func buildIsolatedEnv(phpDir, phprcDir string, hardTimeout time.Duration) []string {
 	timeoutSec := int(hardTimeout.Seconds())
 	if timeoutSec <= 0 {
 		timeoutSec = int(DefaultHardTimeout.Seconds())
 	}
 
 	env := os.Environ()
-	out := make([]string, 0, len(env)+4)
+	out := make([]string, 0, len(env)+6)
 	pathUpdated := false
 	for _, kv := range env {
 		upper := strings.ToUpper(kv)
@@ -436,13 +440,17 @@ func buildIsolatedEnv(phpDir string, hardTimeout time.Duration) []string {
 			continue
 		}
 		if strings.HasPrefix(upper, "COMPOSER_NO_INTERACTION=") ||
-			strings.HasPrefix(upper, "COMPOSER_PROCESS_TIMEOUT=") {
+			strings.HasPrefix(upper, "COMPOSER_PROCESS_TIMEOUT=") ||
+			strings.HasPrefix(upper, "PHPRC=") {
 			continue
 		}
 		out = append(out, kv)
 	}
 	if !pathUpdated {
 		out = append(out, "PATH="+phpDir)
+	}
+	if phprcDir != "" {
+		out = append(out, "PHPRC="+phprcDir)
 	}
 	out = append(out,
 		"COMPOSER_NO_INTERACTION=1",

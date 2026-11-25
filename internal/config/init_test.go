@@ -147,4 +147,22 @@ func TestResolveEffectivePHPIniCrossVersion(t *testing.T) {
 	if got82 := ResolveEffectivePHPIni(base, php82Dir); got82 != baseIni {
 		t.Errorf("PHP 8.2 齊全時應直接復用 %s，實際回傳 %s", baseIni, got82)
 	}
+
+	// 3. 驗證 PreparePHPCLIRuntimeDir 會產生包含 extension_dir 與 openssl.cafile 的獨立 php.ini
+	sslDir := filepath.Join(base, "conf", "ssl")
+	_ = os.MkdirAll(sslDir, 0755)
+	_ = os.WriteFile(filepath.Join(sslDir, "cacert.pem"), []byte("CA"), 0644)
+
+	cliDir := PreparePHPCLIRuntimeDir(base, php73Dir)
+	if cliDir == "" {
+		t.Fatalf("PreparePHPCLIRuntimeDir 不應回傳空字串")
+	}
+	cliIniRaw, err := os.ReadFile(filepath.Join(cliDir, "php.ini"))
+	if err != nil {
+		t.Fatalf("讀取 CLI php.ini 失敗: %v", err)
+	}
+	cliIni := string(cliIniRaw)
+	if !strings.Contains(cliIni, "extension=gd2") || !strings.Contains(cliIni, "extension_dir =") || !strings.Contains(cliIni, "openssl.cafile =") {
+		t.Errorf("CLI php.ini 內容缺少預期設定:\n%s", cliIni)
+	}
 }

@@ -142,18 +142,43 @@ function isSafeExternalUrl(url: string): boolean {
   return /^https?:\/\//i.test(url);
 }
 
+// 模擬終端機同列覆寫（\r、\x1b[1G、\x1b[2K），避免 Symfony / Composer 進度條重複印出多筆
+function normalizeTerminalOverwrites(raw: string): string {
+  if (!raw) return '';
+  const unified = raw.replace(/\r\n/g, '\n');
+  const lines = unified.split('\n');
+  const normalized = lines.map((line) => {
+    if (!line.includes('\r') && !line.includes('\x1b[')) {
+      return line;
+    }
+    const withCR = line
+      .replace(/\x1b\[(?:0|1)?G/g, '\r')
+      .replace(/\x1b\[2K/g, '\r')
+      .replace(/\x1b\[[01]?K/g, '');
+    if (!withCR.includes('\r')) {
+      return withCR;
+    }
+    const parts = withCR.split('\r');
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].length > 0) {
+        return parts[i];
+      }
+    }
+    return '';
+  });
+  return normalized.join('\n');
+}
+
 function stripAnsiAndOsc(raw: string): string {
   if (!raw) return '';
-  return raw
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
+  return normalizeTerminalOverwrites(raw)
     .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '')
     .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '');
 }
 
 function renderAnsiText(raw: string): React.ReactNode {
   if (!raw) return null;
-  const clean = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const clean = normalizeTerminalOverwrites(raw);
   // 同時支援 OSC 8 終端超連結 (\x1b]8;;URL\x1b\\text\x1b]8;;\x1b\\)、其他 OSC 序列、SGR 色彩碼與其餘 CSI 控制碼
   const tokenRegex = /\x1b\]8;[^;\x07\x1b]*;([^\x07\x1b]*)(?:\x07|\x1b\\)|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[([0-9;]*)m|\x1b\[[0-9;?]*[A-Za-z]/g;
   const nodes: React.ReactNode[] = [];

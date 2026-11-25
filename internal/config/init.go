@@ -307,6 +307,45 @@ func ResolveEffectivePHPIni(baseDir, phpDir string) string {
 	return targetPath
 }
 
+// PreparePHPCLIRuntimeDir 為指定 PHP 版本建立含獨立 php.ini（含 extension_dir 與 CA 路徑）的目錄，
+// 供 PHPRC 環境變數使用，確保 Composer 衍生的 @php 子行程（如 @php artisan ...）也能完整載入擴充與憑證。
+func PreparePHPCLIRuntimeDir(baseDir, phpDir string) string {
+	effIni := ResolveEffectivePHPIni(baseDir, phpDir)
+	data, err := os.ReadFile(effIni)
+	if err != nil {
+		return ""
+	}
+
+	versionKey := filepath.Base(filepath.Clean(phpDir))
+	if versionKey == "" || versionKey == "." {
+		versionKey = "default"
+	}
+	cliDir := filepath.Join(baseDir, "conf", "php", ".runtime", versionKey)
+	if err := os.MkdirAll(cliDir, 0755); err != nil {
+		return ""
+	}
+
+	extDir := filepath.ToSlash(filepath.Join(phpDir, "ext"))
+	cacertPath := filepath.Join(baseDir, "conf", "ssl", "cacert.pem")
+	var extra strings.Builder
+	extra.WriteString("\n; === WinCMP CLI Runtime Overrides ===\n")
+	extra.WriteString("extension_dir = \"" + extDir + "\"\n")
+	if _, err := os.Stat(cacertPath); err == nil {
+		caSlash := filepath.ToSlash(cacertPath)
+		extra.WriteString("openssl.cafile = \"" + caSlash + "\"\n")
+		extra.WriteString("curl.cainfo = \"" + caSlash + "\"\n")
+	}
+
+	rendered := string(data) + extra.String()
+	targetIni := filepath.Join(cliDir, "php.ini")
+	if existing, err := os.ReadFile(targetIni); err != nil || string(existing) != rendered {
+		if err := os.WriteFile(targetIni, []byte(rendered), 0644); err != nil {
+			return ""
+		}
+	}
+	return cliDir
+}
+
 func parseActivePHPExtensionName(line string) (string, bool) {
 	trimmed := strings.TrimSpace(line)
 	if trimmed == "" || strings.HasPrefix(trimmed, ";") || strings.HasPrefix(trimmed, "#") {
