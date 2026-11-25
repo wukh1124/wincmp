@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle, GripVertical, Lightbulb, Lock } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle, GripVertical, Lightbulb, Lock, MoreHorizontal } from 'lucide-react';
 import ProjectTerminal from './ProjectTerminal';
 import {
   GetConfig, SaveConfig, GetScanResult, GetServicesStatus,
@@ -51,6 +52,56 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dragEnabledIndex, setDragEnabledIndex] = useState<number | null>(null);
+  const [actionMenu, setActionMenu] = useState<{
+    idx: number;
+    top?: number;
+    bottom?: number;
+    right: number;
+  } | null>(null);
+
+  // 全域監聽關閉操作下拉選單（外部點擊、Esc 鍵、視窗縮放）
+  useEffect(() => {
+    if (!actionMenu) return;
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.project-action-menu-popover') && !target.closest('.project-action-menu-trigger')) {
+        setActionMenu(null);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActionMenu(null);
+    };
+    const handleResize = () => setActionMenu(null);
+
+    window.addEventListener('click', handleGlobalClick);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('click', handleGlobalClick);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [actionMenu]);
+
+  // 計算 Portal 懸浮位置，確保靠近底部時自動向上展開不被容器裁切
+  const handleToggleActionMenu = (e: React.MouseEvent<HTMLButtonElement>, idx: number) => {
+    e.stopPropagation();
+    if (actionMenu?.idx === idx) {
+      setActionMenu(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceBelow < 185 && rect.top > 185;
+    const right = Math.max(8, window.innerWidth - rect.right);
+
+    setActionMenu({
+      idx,
+      right,
+      top: openUpward ? undefined : rect.bottom + 6,
+      bottom: openUpward ? window.innerHeight - rect.top + 6 : undefined,
+    });
+  };
 
   // 全域監聽 mouseup，確保放開滑鼠時一律重設拖曳把手啟用狀態
   useEffect(() => {
@@ -613,7 +664,11 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       </div>
 
       {/* Project List */}
-      <div className="flex-1 overflow-auto" style={{ background: 'var(--main-content-bg, var(--bg))' }}>
+      <div
+        className="flex-1 overflow-auto"
+        style={{ background: 'var(--main-content-bg, var(--bg))' }}
+        onScroll={() => { if (actionMenu) setActionMenu(null); }}
+      >
         {config?.projects && config.projects.length > 0 ? (
           <table className="w-full text-left text-xs table-auto">
             <thead>
@@ -624,7 +679,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                 <th style={thStyle}>{t("本機網域")}</th>
                 <th style={{ ...thStyle, whiteSpace: 'nowrap' }}>{t("狀態")}</th>
                 <th style={{ ...thStyle, width: 68, textAlign: 'center', whiteSpace: 'nowrap' }}>{t("啟用")}</th>
-                <th style={{ ...thStyle, width: 120, textAlign: 'center', paddingRight: 16, whiteSpace: 'nowrap' }}>
+                <th style={{ ...thStyle, width: 84, textAlign: 'center', paddingRight: 16, whiteSpace: 'nowrap' }}>
                   {t("操作")}
                 </th>
               </tr>
@@ -731,30 +786,35 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                     <td style={{ ...tdStyle, width: 68, textAlign: 'center' }}>
                       <input type="checkbox" checked={proj.enabled} onChange={() => handleToggleEnable(idx)} className="w-3.5 h-3.5 cursor-pointer accent-blue-500" />
                     </td>
-                    <td style={{ ...tdStyle, width: 120, textAlign: 'center', paddingRight: 16 }}>
+                    <td style={{ ...tdStyle, width: 84, textAlign: 'center', paddingRight: 16 }}>
                       <div className="flex gap-1.5 justify-center items-center">
-                        {hasRuntime && proj.enabled && (
-                          !running ? (
-                            <button onClick={() => handleStartRuntime(proj.name)} disabled={isAnyLoading} className="p-1.5 rounded-lg transition" style={{ background: 'var(--status-ok)', color: '#fff' }} title={t("啟動專案 Runtime")}>
-                              <Play size={11} />
-                            </button>
-                          ) : (
-                            <button onClick={() => handleStopRuntime(proj.name)} disabled={isAnyLoading} className="p-1.5 rounded-lg transition" style={{ background: 'var(--status-error)', color: '#fff' }} title={t("停止專案 Runtime")}>
-                              <Square size={11} />
-                            </button>
-                          )
-                        )}
-                        <button onClick={() => setTerminalProject(proj.name)} className="btn-custom-hover p-1.5 rounded-lg transition btn-open-terminal" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("開啟專案終端")}>
-                          <Terminal size={11} />
-                        </button>
-                        <button onClick={() => handleOpenFolder(proj.root_path)} className="btn-custom-hover p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--fg-2)' }} title={t("開啟專案資料夾")}>
-                          <FolderOpen size={11} />
-                        </button>
-                        <button onClick={() => handleOpenEditModal(proj, idx)} className="btn-custom-hover p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-info)' }} title={t("編輯專案設定")}>
-                          <Edit size={11} />
-                        </button>
-                        <button onClick={() => handleDeleteProject(idx)} className="btn-danger-hover p-1.5 rounded-lg transition" style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--status-error)' }} title={t("刪除專案")}>
-                          <Trash2 size={11} />
+                        <div className="w-[26px] h-[26px] flex items-center justify-center shrink-0">
+                          {hasRuntime && proj.enabled && (
+                            !running ? (
+                              <button onClick={() => handleStartRuntime(proj.name)} disabled={isAnyLoading} className="p-1.5 rounded-lg transition" style={{ background: 'var(--status-ok)', color: '#fff' }} title={t("啟動專案 Runtime")}>
+                                <Play size={11} />
+                              </button>
+                            ) : (
+                              <button onClick={() => handleStopRuntime(proj.name)} disabled={isAnyLoading} className="p-1.5 rounded-lg transition" style={{ background: 'var(--status-error)', color: '#fff' }} title={t("停止專案 Runtime")}>
+                                <Square size={11} />
+                              </button>
+                            )
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleActionMenu(e, idx)}
+                          aria-haspopup="menu"
+                          aria-expanded={actionMenu?.idx === idx}
+                          className="project-action-menu-trigger btn-custom-hover p-1.5 rounded-lg transition"
+                          style={{
+                            background: actionMenu?.idx === idx ? 'var(--surface-hover)' : 'var(--input-bg)',
+                            border: `1px solid ${actionMenu?.idx === idx ? 'var(--border-strong, var(--border))' : 'var(--input-border)'}`,
+                            color: 'var(--fg-2)'
+                          }}
+                          title={t("更多操作")}
+                        >
+                          <MoreHorizontal size={12} />
                         </button>
                       </div>
                     </td>
@@ -1070,6 +1130,81 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
       )}
 
       <ProjectTerminal projectName={terminalProject || ''} isOpen={terminalProject !== null} onClose={() => setTerminalProject(null)} />
+
+      {actionMenu !== null && config?.projects?.[actionMenu.idx] && createPortal(
+        <div
+          role="menu"
+          className="project-action-menu-popover fixed min-w-[180px] rounded-xl border p-1.5 z-50 animate-fade-in select-none"
+          style={{
+            top: actionMenu.top,
+            bottom: actionMenu.bottom,
+            right: actionMenu.right,
+            backgroundColor: 'var(--menu-bg, var(--bg-deep))',
+            borderColor: 'var(--menu-border, var(--border))',
+            boxShadow: 'var(--menu-shadow, 0 12px 28px rgba(0,0,0,0.25))',
+            backdropFilter: 'blur(16px)',
+          }}
+        >
+          {(() => {
+            const targetProj: Project = config.projects[actionMenu.idx];
+            const targetIdx = actionMenu.idx;
+            return (
+              <>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setActionMenu(null);
+                    setTerminalProject(targetProj.name);
+                  }}
+                  className="dropdown-menu-item btn-open-terminal w-full text-left text-xs rounded-lg flex items-center gap-2.5 text-[var(--fg)] transition whitespace-nowrap"
+                >
+                  <Terminal size={13} className="shrink-0" style={{ color: 'var(--status-info)' }} />
+                  <span>{t("開啟專案終端")}</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setActionMenu(null);
+                    handleOpenFolder(targetProj.root_path);
+                  }}
+                  className="dropdown-menu-item w-full text-left text-xs rounded-lg flex items-center gap-2.5 text-[var(--fg)] transition whitespace-nowrap"
+                >
+                  <FolderOpen size={13} className="shrink-0" style={{ color: 'var(--fg-2)' }} />
+                  <span>{t("開啟專案資料夾")}</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setActionMenu(null);
+                    handleOpenEditModal(targetProj, targetIdx);
+                  }}
+                  className="dropdown-menu-item w-full text-left text-xs rounded-lg flex items-center gap-2.5 text-[var(--fg)] transition whitespace-nowrap"
+                >
+                  <Edit size={13} className="shrink-0" style={{ color: 'var(--status-info)' }} />
+                  <span>{t("編輯專案設定")}</span>
+                </button>
+                <div className="my-1 border-t border-[var(--border-soft)]" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setActionMenu(null);
+                    handleDeleteProject(targetIdx);
+                  }}
+                  className="dropdown-menu-item dropdown-menu-item-danger w-full text-left text-xs rounded-lg flex items-center gap-2.5 text-[var(--status-error)] transition whitespace-nowrap"
+                >
+                  <Trash2 size={13} className="shrink-0" />
+                  <span>{t("刪除專案")}</span>
+                </button>
+              </>
+            );
+          })()}
+        </div>,
+        document.body
+      )}
     </div>
   );
 
