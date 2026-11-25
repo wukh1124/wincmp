@@ -515,6 +515,15 @@ var enTranslations = map[string]string{
 	"核心依賴缺失":                         "Dependency Missing",
 	"自動下載 (推薦)":                      "Auto Download (Recommended)",
 	"稍後設定":                           "Configure Later",
+	"偵測到專案所需的 %s 未安裝":               "Missing %s Required by Active Projects",
+	"專案管理中有啟用中的專案使用 %s，但本機尚未安裝該版本。請先完成依賴安裝以確保服務正常運作。": "Enabled project(s) in Projects require %s, which is not installed locally. Please install it first to ensure services run properly.",
+	"偵測到專案所需的 PHP 環境未安裝":            "Missing PHP Runtime Required by Active Projects",
+	"專案管理中有啟用中的 PHP 專案，但本機尚未安裝任何 PHP 版本。請先完成依賴安裝以確保服務正常運作。": "Enabled PHP project(s) exist in Projects, but no PHP version is installed locally. Please install PHP first to ensure services run properly.",
+	"偵測到專案所需的 %s 尚未啟動":              "Required %s Not Running",
+	"專案管理中有啟用中的專案使用 %s，但對應的 PHP-CGI 服務目前未運行。請啟動服務以確保網站正常存取。": "Enabled project(s) in Projects use %s, but the corresponding PHP-CGI service is not running. Start it to ensure sites are accessible.",
+	"偵測到 Caddy 反向代理服務尚未啟動":         "Caddy Reverse Proxy Not Running",
+	"專案管理中有啟用中的專案，但 Caddy Web 伺服器目前未運行。請啟動 Caddy 以確保網站網域可正常存取。": "Enabled project(s) exist in Projects, but Caddy Web Server is not running. Start Caddy to ensure local domains are accessible.",
+	"立即啟動":                           "Start Now",
 
 	// app.go & bridge.go new errors & logs
 	"釋放預設設定檔失敗":         "Failed to restore default configuration",

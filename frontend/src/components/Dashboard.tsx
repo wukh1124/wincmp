@@ -98,7 +98,8 @@ export default function Dashboard() {
   const [isScanning, setIsScanning] = useState(false);
   const [showDepManager, setShowDepManager] = useState(false);
   const [missingCore, setMissingCore] = useState<{ caddy: boolean }>({ caddy: false });
-  const [dismissBanner, setDismissBanner] = useState(false);
+  const [dismissedWarnings, setDismissedWarnings] = useState<Record<string, boolean>>({});
+  const [isStartingWarningService, setIsStartingWarningService] = useState(false);
   const [showDepGuide, setShowDepGuide] = useState(false);
 
   // PHP 分支支援狀態查表（EOL / 即將停止支援），供服務卡片標示
@@ -337,6 +338,165 @@ export default function Dashboard() {
     return restorePending && !!config?.global?.restore_last_state && !!fallbackLastEnabled;
   };
 
+  const handleStartStoppedCaddy = async (caddy: scanner.ServiceInfo) => {
+    setIsStartingWarningService(true);
+    setLoadingServices(prev => ({ ...prev, ['caddy-start']: true }));
+    try {
+      await StartCaddy(caddy.Version, caddy.ExePath);
+      triggerAutoExpandLogs();
+    } catch (err: any) {
+      (window as any).customAlert(`${t("操作失敗")}: ${err}`);
+    } finally {
+      setLoadingServices(prev => ({ ...prev, ['caddy-start']: false }));
+      await updateStatus();
+      setIsStartingWarningService(false);
+    }
+  };
+
+  const handleStartStoppedPhp = async (targets: scanner.PHPVersionInfo[]) => {
+    if (targets.length === 0) return;
+    setIsStartingWarningService(true);
+    try {
+      for (const php of targets) {
+        const key = `php-${php.Version}-start`;
+        setLoadingServices(prev => ({ ...prev, [key]: true }));
+        try {
+          await StartPHP(php.Version);
+        } finally {
+          setLoadingServices(prev => ({ ...prev, [key]: false }));
+        }
+      }
+      triggerAutoExpandLogs();
+    } catch (err: any) {
+      (window as any).customAlert(`${t("操作失敗")}: ${err}`);
+    } finally {
+      await updateStatus();
+      setIsStartingWarningService(false);
+    }
+  };
+
+  // 依優先度決定單一儀表板警告（同時僅顯示最高優先度的一條）：
+  // 1. Caddy 未安裝 -> 2. 啟用中 PHP 專案所需 PHP 未安裝 -> 3. 有啟用中專案時 Caddy 未啟動 -> 4. 啟用中 PHP 專案所需 PHP 未啟動
+  const activeWarning = (() => {
+    if (missingCore.caddy) {
+      return {
+        key: 'caddy-missing',
+        severity: 'error' as const,
+        title: t("偵測到核心依賴 Caddy 缺失"),
+        description: t("本機未安裝 Caddy Web 伺服器。請先完成依賴安裝以確保服務正常運作。"),
+        actionType: 'download' as const,
+        caddyTarget: undefined as scanner.ServiceInfo | undefined,
+        phpTargets: [] as scanner.PHPVersionInfo[],
+      };
+    }
+
+    if (!config || !scanResult) return null;
+
+    const enabledProjects = (config.projects || []).filter((p: any) => !!p?.enabled);
+    if (enabledProjects.length === 0) return null;
+
+    const enabledPhpProjects = enabledProjects.filter(
+      (p: any) => p?.type === 'php' || p?.type === 'laravel'
+    );
+
+    const phpList: scanner.PHPVersionInfo[] = scanResult.PHPList || [];
+    const missingVersions: string[] = [];
+    const seenMissing = new Set<string>();
+    let hasUnversionedMissingPhp = false;
+
+    const stoppedTargets: scanner.PHPVersionInfo[] = [];
+    const seenStopped = new Set<string>();
+
+    for (const proj of enabledPhpProjects) {
+      const ver = String(proj.php_version || '').trim();
+      if (!ver) {
+        if (phpList.length === 0) {
+          hasUnversionedMissingPhp = true;
+        }
+        continue;
+      }
+
+      const matched = phpList.find((p) => p.MajorMin === ver || p.Version === ver);
+      if (!matched) {
+        if (!seenMissing.has(ver)) {
+          seenMissing.add(ver);
+          missingVersions.push(ver);
+        }
+        continue;
+      }
+
+      if (isStatusReady) {
+        const serviceKey = `php-${matched.Version}`;
+        const running = isRunning(serviceKey);
+        const restoring = isRestoring(serviceKey, config?.global?.last_service_state?.php?.[matched.Version]);
+        if (!running && !restoring && !seenStopped.has(matched.Version)) {
+          seenStopped.add(matched.Version);
+          stoppedTargets.push(matched);
+        }
+      }
+    }
+
+    if (missingVersions.length > 0) {
+      const sorted = [...missingVersions].sort();
+      const labels = sorted.map((v) => `PHP ${v}`).join(t("、"));
+      return {
+        key: `php-missing:${sorted.join(',')}`,
+        severity: 'error' as const,
+        title: t("偵測到專案所需的 %s 未安裝", labels),
+        description: t("專案管理中有啟用中的專案使用 %s，但本機尚未安裝該版本。請先完成依賴安裝以確保服務正常運作。", labels),
+        actionType: 'download' as const,
+        caddyTarget: undefined as scanner.ServiceInfo | undefined,
+        phpTargets: [] as scanner.PHPVersionInfo[],
+      };
+    }
+
+    if (hasUnversionedMissingPhp) {
+      return {
+        key: 'php-missing:none',
+        severity: 'error' as const,
+        title: t("偵測到專案所需的 PHP 環境未安裝"),
+        description: t("專案管理中有啟用中的 PHP 專案，但本機尚未安裝任何 PHP 版本。請先完成依賴安裝以確保服務正常運作。"),
+        actionType: 'download' as const,
+        caddyTarget: undefined as scanner.ServiceInfo | undefined,
+        phpTargets: [] as scanner.PHPVersionInfo[],
+      };
+    }
+
+    // 有任何啟用中的專案時，優先於 PHP 啟動檢查確認 Caddy 是否已啟動
+    const caddy = scanResult.CaddyList?.[0];
+    if (caddy && isStatusReady) {
+      const caddyRunning = isRunning('caddy');
+      const caddyRestoring = isRestoring('caddy', config?.global?.last_service_state?.caddy);
+      if (!caddyRunning && !caddyRestoring) {
+        return {
+          key: 'caddy-stopped',
+          severity: 'warn' as const,
+          title: t("偵測到 Caddy 反向代理服務尚未啟動"),
+          description: t("專案管理中有啟用中的專案，但 Caddy Web 伺服器目前未運行。請啟動 Caddy 以確保網站網域可正常存取。"),
+          actionType: 'start_caddy' as const,
+          caddyTarget: caddy,
+          phpTargets: [] as scanner.PHPVersionInfo[],
+        };
+      }
+    }
+
+    if (stoppedTargets.length > 0) {
+      const sorted = [...stoppedTargets].sort((a, b) => a.MajorMin.localeCompare(b.MajorMin));
+      const labels = sorted.map((p) => `PHP ${p.MajorMin || p.Version}`).join(t("、"));
+      return {
+        key: `php-stopped:${sorted.map((p) => p.Version).join(',')}`,
+        severity: 'warn' as const,
+        title: t("偵測到專案所需的 %s 尚未啟動", labels),
+        description: t("專案管理中有啟用中的專案使用 %s，但對應的 PHP-CGI 服務目前未運行。請啟動服務以確保網站正常存取。", labels),
+        actionType: 'start_php' as const,
+        caddyTarget: undefined as scanner.ServiceInfo | undefined,
+        phpTargets: sorted,
+      };
+    }
+
+    return null;
+  })();
+
   // ─── Reusable Styles ──────────────────────────────────────
   const cardStyle: React.CSSProperties = {
     background: 'var(--card)',
@@ -350,30 +510,57 @@ export default function Dashboard() {
   return (
     <div className="p-6 overflow-y-auto h-full space-y-6">
 
-      {/* ─── Missing Dependencies Banner ────────────────────── */}
-      {missingCore.caddy && !dismissBanner && (
-        <div className="relative rounded-xl p-4 pr-10 md:pr-14 flex flex-col md:flex-row justify-between items-start md:items-center gap-4" style={{ background: 'var(--status-error-bg)', border: '1px solid var(--status-error)', boxShadow: 'var(--shadow-md)' }}>
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="p-2.5 rounded-lg shrink-0" style={{ background: 'var(--status-error-bg)', color: 'var(--status-error)' }}>
-              <AlertTriangle size={18} />
+      {/* ─── Priority Warning Banner (Single Active) ────────── */}
+      {activeWarning && !dismissedWarnings[activeWarning.key] && (() => {
+        const isWarn = activeWarning.severity === 'warn';
+        const toneColor = isWarn ? 'var(--status-warn)' : 'var(--status-error)';
+        const toneBg = isWarn ? 'var(--status-warn-bg)' : 'var(--status-error-bg)';
+        return (
+          <div className="relative rounded-xl p-4 pr-10 md:pr-14 flex flex-col md:flex-row justify-between items-start md:items-center gap-4" style={{ background: toneBg, border: `1px solid ${toneColor}`, boxShadow: 'var(--shadow-md)' }}>
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="p-2.5 rounded-lg shrink-0" style={{ background: toneBg, color: toneColor }}>
+                <AlertTriangle size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="font-bold block text-sm" style={{ color: toneColor }}>{activeWarning.title}</span>
+                <span className="text-xs mt-0.5 block" style={{ color: 'var(--fg-2)' }}>
+                  {activeWarning.description}
+                </span>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <span className="font-bold block text-sm" style={{ color: 'var(--status-error)' }}>⚠️ {t("偵測到核心依賴 Caddy 缺失")}</span>
-              <span className="text-xs mt-0.5 block" style={{ color: 'var(--fg-2)' }}>
-                {t("本機未安裝 Caddy Web 伺服器。請先完成依賴安裝以確保服務正常運作。")}
-              </span>
+            <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
+              {activeWarning.actionType === 'download' ? (
+                <button onClick={() => setShowDepManager(true)} className="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition whitespace-nowrap" style={{ background: 'var(--status-error)', color: '#fff' }}>
+                  <Package size={14} /> {t("立即下載")}
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (activeWarning.actionType === 'start_caddy' && activeWarning.caddyTarget) {
+                      handleStartStoppedCaddy(activeWarning.caddyTarget);
+                    } else {
+                      handleStartStoppedPhp(activeWarning.phpTargets);
+                    }
+                  }}
+                  disabled={isStartingWarningService}
+                  className="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition whitespace-nowrap"
+                  style={{ background: 'var(--status-ok)', color: '#fff', opacity: isStartingWarningService ? 0.7 : 1 }}
+                >
+                  <Play size={14} /> {isStartingWarningService ? t("啟動中...") : t("立即啟動")}
+                </button>
+              )}
             </div>
-          </div>
-          <div className="flex items-center gap-3 w-full md:w-auto shrink-0">
-            <button onClick={() => setShowDepManager(true)} className="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition whitespace-nowrap" style={{ background: 'var(--status-error)', color: '#fff' }}>
-              <Package size={14} /> {t("立即下載")}
+            <button
+              onClick={() => setDismissedWarnings(prev => ({ ...prev, [activeWarning.key]: true }))}
+              className="absolute top-3 right-3 p-1 rounded-lg transition"
+              style={{ color: 'var(--muted)' }}
+              title={t("關閉")}
+            >
+              <X size={16} />
             </button>
           </div>
-          <button onClick={() => setDismissBanner(true)} className="absolute top-3 right-3 p-1 rounded-lg transition" style={{ color: 'var(--muted)' }} title={t("關閉")}>
-            <X size={16} />
-          </button>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ─── Header ─────────────────────────────────────────── */}
       <div className="flex justify-between items-center select-none">
