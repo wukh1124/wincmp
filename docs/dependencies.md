@@ -19,6 +19,7 @@ WinCMP 依賴的二進位檔案目錄定義於 [`conf/dependencies.json`](../con
 | `php83` | PHP 8.3 | 8.3.37 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.3.37/php-cgi.exe` |
 | `php84` | PHP 8.4 | 8.4.28 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.4.28/php-cgi.exe` |
 | `php85` | PHP 8.5 | 8.5.13 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.5.13/php-cgi.exe` |
+| `php86` | PHP 8.6 | 8.6.0 | PHP-3.01 | [GitHub](https://github.com/php/php-src) | `php/php-8.6.0/php-cgi.exe` |
 | `php_redis_*` | PHP Redis 擴充 | 5.3.7 / 6.3.0 | PHP-3.01 | [GitHub](https://github.com/phpredis/phpredis) | 解壓後的 `php_redis.dll` → `php/php-*/ext/`（6.3.0 涵蓋 8.2～8.5） |
 | `redis` | Redis | 5.0.14.1 | BSD-3-Clause | [GitHub](https://github.com/tporadowski/redis) | `redis/redis-5.0.14.1/redis-server.exe` |
 | `mailpit` | Mailpit | 1.34.0 | MIT | [GitHub](https://github.com/axllent/mailpit) | `mailpit/mailpit-1.34.0/mailpit.exe` |
@@ -34,6 +35,8 @@ wincmp/bin/
 ├── caddy/caddy-2.11.9/caddy.exe
 ├── mariadb/mariadb-11.4.14/bin/mariadbd.exe
 ├── php/
+│   ├── php-8.6.0/
+│   │   └── php-cgi.exe
 │   ├── php-8.5.13/
 │   │   ├── php-cgi.exe
 │   │   └── ext/php_redis.dll

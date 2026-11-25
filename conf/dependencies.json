@@ -103,6 +103,14 @@
     "homepage": "https://www.php.net",
     "source_url": "https://github.com/php/php-src"
   },
+  "php86": {
+    "version": "8.6.0",
+    "url": "https://downloads.php.net/~windows/releases/php-8.6.0-nts-Win32-vs18-x64.zip",
+    "sha256": "d4783fffe1f4ab072600daff1622a7a2df936957a787a338c59e3dbd4d846d98",
+    "license": "PHP-3.01",
+    "homepage": "https://www.php.net",
+    "source_url": "https://github.com/php/php-src"
+  },
   "php_redis_74": {
     "version": "5.3.7",
     "url": "https://downloads.php.net/~windows/pecl/releases/redis/5.3.7/php_redis-5.3.7-7.4-nts-vc15-x64.zip",

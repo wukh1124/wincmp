@@ -20,6 +20,7 @@ func TestLookupState(t *testing.T) {
 		{"8.2", StateWarning},   // 2026-12-31，距 2026-10-22 約 70 天，進入預警期
 		{"8.3", StateSupported}, // 2027-12-31，仍在支援期
 		{"8.5", StateSupported}, // 2029-12-31
+		{"8.6", StateSupported}, // 2030-12-31
 	}
 	for _, c := range cases {
 		got, ok := Lookup(c.majorMin, fixedNow())
@@ -57,8 +58,8 @@ func TestAllSorted(t *testing.T) {
 	if len(list) == 0 {
 		t.Fatal("生命週期清單不可為空")
 	}
-	if list[0].MajorMin != "8.5" {
-		t.Errorf("排序後第一筆應為 8.5，實際 %q", list[0].MajorMin)
+	if list[0].MajorMin != "8.6" {
+		t.Errorf("排序後第一筆應為 8.6，實際 %q", list[0].MajorMin)
 	}
 	if last := list[len(list)-1]; last.MajorMin != "5.6" {
 		t.Errorf("排序後最後一筆應為 5.6，實際 %q", last.MajorMin)

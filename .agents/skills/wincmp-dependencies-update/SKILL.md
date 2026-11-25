@@ -22,11 +22,11 @@ description: Check, audit, and update WinCMP bundled binary dependencies in conf
 
 ## 1. 依賴項目與上游檢查策略
 
-`conf/dependencies.json` 目前包含 19 個項目，檢查時依下列策略對照上游官方發布：
+`conf/dependencies.json` 目前包含 20 個項目，檢查時依下列策略對照上游官方發布：
 
 | 群組 | Keys | 上游來源與檢查重點 | 檔名 / 編譯器規則 |
 | :--- | :--- | :--- | :--- |
-| **PHP 活躍分支** | `php82`, `php83`, `php84`, `php85` | `php.net/releases/` 與 `downloads.php.net/~windows/releases/`（優先關注 Security Release） | `php-<ver>-nts-Win32-<vc>-x64.zip`；`8.2`/`8.3` 用 `vs16`，`8.4`/`8.5` 用 `vs17` |
+| **PHP 活躍分支** | `php82`, `php83`, `php84`, `php85`, `php86` | `php.net/releases/` 與 `downloads.php.net/~windows/releases/`（優先關注 Security Release） | `php-<ver>-nts-Win32-<vc>-x64.zip`；`8.2`/`8.3` 用 `vs16`，`8.4`/`8.5` 用 `vs17`，`8.6` 用 `vs18` |
 | **PHP EOL 分支** | `php73`, `php74` | 已停止維護，固定指向 `windows.php.net/downloads/releases/archives/` | 僅確認連結存活，不主動更動版本 |
 | **PHP Redis 擴充** | `php_redis_74`, `php_redis_82`..`85` | `github.com/phpredis/phpredis/releases` 與 `downloads.php.net/~windows/pecl/releases/redis/` | `7.4` 鎖定 `5.3.7` (`vc15`)；`8.2`..`8.5` 跟隨 `6.x`（`8.2`/`8.3` 用 `vs16`，`8.4`/`8.5` 用 `vs17`） |
 | **GitHub Releases** | `caddy`, `composer`, `heidisql`, `mailpit`, `redis` | 查詢各 `source_url` 對應之 GitHub Releases | `caddy`: `caddy_<ver>_windows_amd64.zip`<br>`composer`: `composer.phar`<br>`heidisql`: `HeidiSQL_<ver>_64_Portable.zip`<br>`mailpit`: `mailpit-windows-amd64.zip`<br>`redis`: `Redis-x64-<ver>.zip` (`tporadowski/redis`) |
