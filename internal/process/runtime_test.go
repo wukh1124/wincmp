@@ -1,8 +1,11 @@
 package process
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"wincmp/internal/config"
 )
 
 func TestGetPortOccupiedProcess_SecurityProtection(t *testing.T) {
@@ -149,5 +152,82 @@ func TestIsPortAvailable_BindSemantics(t *testing.T) {
 	available := IsPortAvailable(59999)
 	if !available && IsPortAvailable(59999) && FindPIDByPort(59999) == 0 {
 		t.Log("port 59999 bind 失敗但無 LISTEN PID，屬環境特殊狀態")
+	}
+}
+
+func TestBuildRuntimeCommand_PythonPresets(t *testing.T) {
+	// 模擬目錄同時含有 fastapi 與 django 標記檔案，驗證 buildRuntimeCommand 仍尊重使用者選定的 Type
+	tmpDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmpDir, "requirements.txt"), []byte("fastapi\nuvicorn\n"), 0644); err != nil {
+		t.Fatalf("建立測試 requirements.txt 失敗: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "manage.py"), []byte("print('django')\n"), 0644); err != nil {
+		t.Fatalf("建立測試 manage.py 失敗: %v", err)
+	}
+
+	cases := []struct {
+		name string
+		proj config.ProjectConfig
+		want string
+	}{
+		{
+			name: "python_http_not_overridden",
+			proj: config.ProjectConfig{
+				Type:        "python",
+				RuntimeType: "python",
+				RuntimePort: 8033,
+				RootPath:    tmpDir,
+			},
+			want: "python -m http.server 8033 --bind 0.0.0.0",
+		},
+		{
+			name: "python_fastapi_default",
+			proj: config.ProjectConfig{
+				Type:        "python_fastapi",
+				RuntimeType: "python",
+				RuntimePort: 8000,
+				RootPath:    tmpDir,
+			},
+			want: "python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload",
+		},
+		{
+			name: "python_django_default",
+			proj: config.ProjectConfig{
+				Type:        "python_django",
+				RuntimeType: "python",
+				RuntimePort: 8001,
+				RootPath:    tmpDir,
+			},
+			want: "python manage.py runserver 0.0.0.0:8001",
+		},
+		{
+			name: "python_flask_default_port",
+			proj: config.ProjectConfig{
+				Type:        "python_flask",
+				RuntimeType: "python",
+				RootPath:    tmpDir,
+			},
+			want: "python -m flask run --host=0.0.0.0 --port=5000",
+		},
+		{
+			name: "python_custom_command",
+			proj: config.ProjectConfig{
+				Type:        "python",
+				RuntimeType: "custom",
+				RuntimePort: 8033,
+				RootPath:    tmpDir,
+				Command:     "python -m http.server %PORT%",
+			},
+			want: "python -m http.server 8033",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildRuntimeCommand(tc.proj, "")
+			if got != tc.want {
+				t.Errorf("buildRuntimeCommand(%s) = %q, want %q", tc.name, got, tc.want)
+			}
+		})
 	}
 }

@@ -212,7 +212,7 @@ func buildRuntimeCommand(project config.ProjectConfig, exePath string) string {
 
 	switch project.Type {
 	case "python", "python_django", "python_fastapi", "python_flask":
-		return preset.BuildPythonCommandFromRoot(project.RootPath, port)
+		return preset.BuildStartCommand(project.Type, resolvedRuntime, port, project.Command)
 
 	case "go_api":
 		if resolvedRuntime == "go_run" {

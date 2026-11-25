@@ -139,7 +139,7 @@ var presets = map[string]Preset{
 	},
 	TypePython: {
 		ID:             TypePython,
-		Label:          "Python App",
+		Label:          "Python HTTP",
 		DefaultPort:    8000,
 		DefaultRuntime: RuntimePython,
 		RuntimeOptions: []string{RuntimePython, RuntimeCustom},

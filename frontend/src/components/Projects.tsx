@@ -212,6 +212,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
     { value: 'python_fastapi', label: t('Python FastAPI') },
     { value: 'python_django', label: t('Python Django') },
     { value: 'python_flask', label: t('Python Flask') },
+    { value: 'python', label: t('Python HTTP') },
     { value: 'go_api', label: t('Go Web API') },
     { value: 'pocketbase', label: t('PocketBase') },
     { value: 'custom', label: t('Custom') }
