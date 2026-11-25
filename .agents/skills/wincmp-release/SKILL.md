@@ -122,7 +122,10 @@ wincmp/
 - 中文：`- **粗體功能名稱**：動詞...`
 - 英文：`- **Feature Name**: Verb...`
 - **零 Commit 污染**：release notes 絕不包含 commit hash 或 PR 編號
-- **拒絕官腔**：聚焦使用者與操作影響
+- **寫給不懂內部原理的一般用戶看（中英文皆同）**：
+  - 文字務必精簡（每條 1～2 句內），直接講清楚「改了什麼、解決了什麼困擾、使用上有什麼好處」。
+  - **禁止出現內部實作細節或工程術語**（例如：`Portal`、`JSONL`、`原子寫入`、`模組快取`、`狀態快照`、`--restart`、`PHPRC`、設定欄位名 `last_service_state`、CSS 變數 `--status-warn-bg`、`ext/` 目錄或 `conf/dependencies.json` 等）；除非是使用者看得到或會操作的項目（如 `WinCMP.exe`、依賴管理器），否則一律轉寫成使用者可感知的行為。
+  - 所有程式碼層級的技術細節只寫在 `audit_commits.md`，不放進對外的雙語 `release_notes*.md`。
 
 ---
 
