@@ -98,3 +98,53 @@ func TestIsPHPIniRedisExtensionLine(t *testing.T) {
 		}
 	}
 }
+
+func TestResolveEffectivePHPIniCrossVersion(t *testing.T) {
+	base := t.TempDir()
+	confPhpDir := filepath.Join(base, "conf", "php")
+	if err := os.MkdirAll(confPhpDir, 0755); err != nil {
+		t.Fatalf("建立 conf/php 失敗: %v", err)
+	}
+	baseIni := filepath.Join(confPhpDir, "php.ini")
+	iniContent := "extension=curl\nextension=gd\nextension=zip\nextension=redis\n"
+	if err := os.WriteFile(baseIni, []byte(iniContent), 0644); err != nil {
+		t.Fatalf("寫入 php.ini 失敗: %v", err)
+	}
+
+	// 1. 模擬 PHP 7.3：只有 php_gd2.dll，無 php_zip.dll（內建）也無 php_redis.dll
+	php73Dir := filepath.Join(base, "bin", "php", "php-7.3.33")
+	php73Ext := filepath.Join(php73Dir, "ext")
+	if err := os.MkdirAll(php73Ext, 0755); err != nil {
+		t.Fatalf("建立 php-7.3 ext 失敗: %v", err)
+	}
+	_ = os.WriteFile(filepath.Join(php73Ext, "php_gd2.dll"), []byte{}, 0644)
+
+	got73 := ResolveEffectivePHPIni(base, php73Dir)
+	if got73 == baseIni {
+		t.Fatalf("PHP 7.3 應產生調整後的版本專屬 ini，不應直接回傳 %s", baseIni)
+	}
+	raw73, err := os.ReadFile(got73)
+	if err != nil {
+		t.Fatalf("讀取 PHP 7.3 ini 失敗: %v", err)
+	}
+	str73 := string(raw73)
+	if !strings.Contains(str73, "extension=gd2") {
+		t.Errorf("PHP 7.3 應將 extension=gd 轉為 extension=gd2，實際:\n%s", str73)
+	}
+	if strings.Contains(str73, "\nextension=zip") || strings.Contains(str73, "\nextension=redis") {
+		t.Errorf("PHP 7.3 應註解掉缺失的 zip/redis，實際:\n%s", str73)
+	}
+
+	// 2. 模擬 PHP 8.2（齊全）：php_gd.dll + php_zip.dll + php_redis.dll，應直接復用原 php.ini
+	php82Dir := filepath.Join(base, "bin", "php", "php-8.2.36")
+	php82Ext := filepath.Join(php82Dir, "ext")
+	if err := os.MkdirAll(php82Ext, 0755); err != nil {
+		t.Fatalf("建立 php-8.2 ext 失敗: %v", err)
+	}
+	for _, dll := range []string{"php_gd.dll", "php_zip.dll", "php_redis.dll"} {
+		_ = os.WriteFile(filepath.Join(php82Ext, dll), []byte{}, 0644)
+	}
+	if got82 := ResolveEffectivePHPIni(base, php82Dir); got82 != baseIni {
+		t.Errorf("PHP 8.2 齊全時應直接復用 %s，實際回傳 %s", baseIni, got82)
+	}
+}

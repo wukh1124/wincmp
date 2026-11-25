@@ -16,8 +16,10 @@ import (
 	"time"
 	"unsafe"
 
-	"golang.org/x/sys/windows"
+	"wincmp/internal/config"
 	"wincmp/internal/i18n"
+
+	"golang.org/x/sys/windows"
 )
 
 const (
@@ -392,7 +394,7 @@ func buildPHPComposerArgs(baseDir string, opts RunOptions) []string {
 
 	phpDir := filepath.Dir(opts.PHPExe)
 	extDir := filepath.Join(phpDir, "ext")
-	phpIniPath := filepath.Join(baseDir, "conf", "php", "php.ini")
+	phpIniPath := config.ResolveEffectivePHPIni(baseDir, phpDir)
 	cacertPath := filepath.Join(baseDir, "conf", "ssl", "cacert.pem")
 
 	// 注入 WinCMP 統一的 php.ini、對應版本的 extension_dir 與 SSL CA 憑證，

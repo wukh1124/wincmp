@@ -47,8 +47,8 @@ func (m *Manager) StartPHPCGI(phpInfo scanner.PHPVersionInfo) error {
 	// 確保 php.ini 已具備 OPcache 優化配置（相容舊版本升級與手動重啟場景）
 	_ = config.EnsurePHPIniOptimizations(m.baseDir)
 
-	// 使用通用的 conf/php/php.ini，並動態注入 extension_dir
-	phpIniPath := filepath.Join(m.baseDir, "conf", "php", "php.ini")
+	// 使用通用的 conf/php/php.ini 作為來源，並依版本 ext/ 實際 DLL 狀況解析相容設定
+	phpIniPath := config.ResolveEffectivePHPIni(m.baseDir, phpDir)
 	extDir := filepath.Join(phpDir, "ext")
 
 	// 檢查並自動下載 cacert.pem

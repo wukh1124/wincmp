@@ -208,3 +208,119 @@ extension=redis
 
 	return nil
 }
+
+// ResolveEffectivePHPIni 依據指定 PHP 版本的 ext 目錄實際 DLL 狀況，回傳可直接使用的 php.ini 路徑。
+// 主要處理跨版本相容差異：
+//   - gd ↔ gd2（PHP 7.3/7.4 為 php_gd2.dll，PHP 8.0+ 為 php_gd.dll）
+//   - zip（PHP 7.3 為內建模組無 php_zip.dll，PHP 7.4+ 才需載入 DLL）
+//   - redis（未安裝 php_redis.dll 時省略，避免啟動與 CLI 噴 Warning）
+// 若當前版本完全相容主設定檔，直接回傳原 conf/php/php.ini 路徑，不額外產生檔案。
+func ResolveEffectivePHPIni(baseDir, phpDir string) string {
+	baseIniPath := filepath.Join(baseDir, "conf", "php", "php.ini")
+	data, err := os.ReadFile(baseIniPath)
+	if err != nil {
+		return baseIniPath
+	}
+
+	extDir := filepath.Join(phpDir, "ext")
+	if info, err := os.Stat(extDir); err != nil || !info.IsDir() {
+		return baseIniPath
+	}
+
+	hasDLL := func(name string) bool {
+		_, err := os.Stat(filepath.Join(extDir, name))
+		return err == nil
+	}
+
+	hasGD := hasDLL("php_gd.dll")
+	hasGD2 := hasDLL("php_gd2.dll")
+	hasZip := hasDLL("php_zip.dll")
+	hasRedis := hasDLL("php_redis.dll")
+
+	content := string(data)
+	lineEnding := "\n"
+	if strings.Contains(content, "\r\n") {
+		lineEnding = "\r\n"
+	}
+	rawLines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
+	changed := false
+
+	for i, line := range rawLines {
+		extName, ok := parseActivePHPExtensionName(line)
+		if !ok {
+			continue
+		}
+		switch extName {
+		case "gd", "php_gd":
+			if !hasGD {
+				if hasGD2 {
+					rawLines[i] = "extension=gd2"
+				} else {
+					rawLines[i] = "; [WinCMP] omitted missing gd"
+				}
+				changed = true
+			}
+		case "gd2", "php_gd2":
+			if !hasGD2 {
+				if hasGD {
+					rawLines[i] = "extension=gd"
+				} else {
+					rawLines[i] = "; [WinCMP] omitted missing gd2"
+				}
+				changed = true
+			}
+		case "zip", "php_zip":
+			if !hasZip {
+				rawLines[i] = "; [WinCMP] omitted zip (built-in or missing)"
+				changed = true
+			}
+		case "redis", "php_redis":
+			if !hasRedis {
+				rawLines[i] = "; [WinCMP] omitted missing redis"
+				changed = true
+			}
+		}
+	}
+
+	if !changed {
+		return baseIniPath
+	}
+
+	runtimeDir := filepath.Join(baseDir, "conf", "php", ".runtime")
+	if err := os.MkdirAll(runtimeDir, 0755); err != nil {
+		return baseIniPath
+	}
+
+	versionKey := filepath.Base(filepath.Clean(phpDir))
+	if versionKey == "" || versionKey == "." {
+		versionKey = "default"
+	}
+	targetPath := filepath.Join(runtimeDir, versionKey+".ini")
+	rendered := strings.Join(rawLines, lineEnding)
+
+	if existing, err := os.ReadFile(targetPath); err == nil && string(existing) == rendered {
+		return targetPath
+	}
+	if err := os.WriteFile(targetPath, []byte(rendered), 0644); err != nil {
+		return baseIniPath
+	}
+	return targetPath
+}
+
+func parseActivePHPExtensionName(line string) (string, bool) {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" || strings.HasPrefix(trimmed, ";") || strings.HasPrefix(trimmed, "#") {
+		return "", false
+	}
+	// 剝除行尾註解（例：extension=exif      ; 備註）
+	if idx := strings.IndexAny(trimmed, ";#"); idx >= 0 {
+		trimmed = strings.TrimSpace(trimmed[:idx])
+	}
+	normalized := strings.ToLower(strings.ReplaceAll(trimmed, " ", ""))
+	if !strings.HasPrefix(normalized, "extension=") {
+		return "", false
+	}
+	val := strings.TrimPrefix(normalized, "extension=")
+	val = strings.TrimSuffix(val, ".dll")
+	return val, val != ""
+}

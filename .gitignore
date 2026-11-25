@@ -73,6 +73,7 @@ vendor/
 !/conf/ssl/.gitkeep
 /conf/sites/*
 !/conf/sites/.gitkeep
+/conf/php/.runtime/
 
 .sisyphus/
 .memory-bank/
