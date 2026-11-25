@@ -3,6 +3,7 @@
 import {updater} from '../models';
 import {main} from '../models';
 import {config} from '../models';
+import {composer} from '../models';
 import {resource} from '../models';
 import {process} from '../models';
 import {scanner} from '../models';
@@ -13,6 +14,8 @@ export function CheckMissingCoreDependencies():Promise<Record<string, boolean>>;
 export function CheckNewVersion(arg1:boolean):Promise<updater.ReleaseInfo>;
 
 export function CheckPortConflicts():Promise<Record<string, boolean>>;
+
+export function ClearComposerHistory(arg1:string):Promise<void>;
 
 export function DetectProjectPath(arg1:string):Promise<main.ProjectDetectResult>;
 
@@ -27,6 +30,8 @@ export function GetAppVersion():Promise<string>;
 export function GetCategoryLogFilePath(arg1:string,arg2:string):Promise<main.LogFileInfo>;
 
 export function GetCategoryLogs(arg1:string,arg2:string):Promise<Array<main.LogEntry>>;
+
+export function GetComposerHistory(arg1:string,arg2:number,arg3:number):Promise<composer.HistoryPage>;
 
 export function GetConfig():Promise<config.WincmpConfig>;
 
@@ -90,6 +95,8 @@ export function RestartApp():Promise<void>;
 
 export function RestartRedis(arg1:string,arg2:string,arg3:number):Promise<void>;
 
+export function RunComposerCommand(arg1:string,arg2:string,arg3:Array<string>):Promise<string>;
+
 export function SaveConfig(arg1:config.WincmpConfig):Promise<void>;
 
 export function SaveQuickSettings(arg1:string,arg2:string,arg3:string):Promise<void>;
@@ -121,6 +128,8 @@ export function StartRedis(arg1:string,arg2:string,arg3:number):Promise<void>;
 export function StartTerminalSession(arg1:string,arg2:number,arg3:number):Promise<string>;
 
 export function StopCaddy():Promise<void>;
+
+export function StopComposerCommand(arg1:string):Promise<void>;
 
 export function StopMailpit():Promise<void>;
 

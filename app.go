@@ -14,6 +14,7 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"fyne.io/systray"
+	"wincmp/internal/composer"
 	"wincmp/internal/config"
 	"wincmp/internal/i18n"
 	"wincmp/internal/process"
@@ -31,9 +32,10 @@ type App struct {
 	baseDir    string
 	procMgr    *process.Manager
 	resMonitor *resource.Monitor
-	appCfg     *config.WincmpConfig
-	scanRes    *scanner.ScanResult
-	termMgr    *terminal.Manager
+	appCfg      *config.WincmpConfig
+	scanRes     *scanner.ScanResult
+	termMgr     *terminal.Manager
+	composerMgr *composer.Manager
 
 	// 日誌寫入器相關
 	appLogWriter      *lumberjack.Logger
@@ -178,6 +180,9 @@ func (a *App) startup(ctx context.Context) {
 	// 5.6 初始化終端管理器
 	a.termMgr = terminal.NewManager()
 
+	// 5.7 初始化 Composer 執行管理器
+	a.composerMgr = composer.NewManager(a.baseDir)
+
 	// 6. 啟動背景掃描與服務狀態恢復 (避免阻塞 Wails 視窗顯示與 JS 載入)
 	go func() {
 		a.handleLog("system", i18n.T("掃描 ./bin 目錄中的服務版本..."))
@@ -299,6 +304,9 @@ func (a *App) stopAllServices() {
 	}
 	if a.termMgr != nil {
 		a.termMgr.StopAll()
+	}
+	if a.composerMgr != nil {
+		a.composerMgr.StopAll()
 	}
 	a.closeDBPool()
 }

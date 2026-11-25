@@ -122,3 +122,33 @@ func TestScanBinDirConcurrentAndInvalidate(t *testing.T) {
 		t.Errorf("預期失效快取後掃描到 PHP 8.4.11，實際為 %+v", res.PHPList)
 	}
 }
+
+// TestScanBinDirComposerPharAndBat 驗證同時支援 composer.phar 與 composer.bat 的多版本掃描與降序排序
+func TestScanBinDirComposerPharAndBat(t *testing.T) {
+	base := t.TempDir()
+	pharDir := filepath.Join(base, "bin", "composer", "composer-2.11.2")
+	batDir := filepath.Join(base, "bin", "composer", "composer-2.2.25")
+	if err := os.MkdirAll(pharDir, 0755); err != nil {
+		t.Fatalf("建立 composer-2.11.2 目錄失敗: %v", err)
+	}
+	if err := os.MkdirAll(batDir, 0755); err != nil {
+		t.Fatalf("建立 composer-2.2.25 目錄失敗: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(pharDir, "composer.phar"), []byte{}, 0644); err != nil {
+		t.Fatalf("建立 composer.phar 失敗: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(batDir, "composer.bat"), []byte{}, 0644); err != nil {
+		t.Fatalf("建立 composer.bat 失敗: %v", err)
+	}
+
+	res, err := scanBinDirInternal(base)
+	if err != nil {
+		t.Fatalf("掃描 Composer 失敗: %v", err)
+	}
+	if len(res.ComposerList) != 2 {
+		t.Fatalf("預期掃描到 2 個 Composer 版本，實際為 %d", len(res.ComposerList))
+	}
+	if res.ComposerList[0].Version != "2.11.2" || res.ComposerList[1].Version != "2.2.25" {
+		t.Errorf("預期依版本由新到舊排序 [2.11.2, 2.2.25]，實際為 %+v", res.ComposerList)
+	}
+}

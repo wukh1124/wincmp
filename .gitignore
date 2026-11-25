@@ -45,6 +45,8 @@ vendor/
 /data/mailpit/*
 !/data/mailpit/.gitkeep
 
+/data/composer_history/
+
 /logs/*
 !/logs/.gitkeep
 

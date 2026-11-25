@@ -14,6 +14,10 @@ export function CheckPortConflicts() {
   return window['go']['main']['App']['CheckPortConflicts']();
 }
 
+export function ClearComposerHistory(arg1) {
+  return window['go']['main']['App']['ClearComposerHistory'](arg1);
+}
+
 export function DetectProjectPath(arg1) {
   return window['go']['main']['App']['DetectProjectPath'](arg1);
 }
@@ -40,6 +44,10 @@ export function GetCategoryLogFilePath(arg1, arg2) {
 
 export function GetCategoryLogs(arg1, arg2) {
   return window['go']['main']['App']['GetCategoryLogs'](arg1, arg2);
+}
+
+export function GetComposerHistory(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetComposerHistory'](arg1, arg2, arg3);
 }
 
 export function GetConfig() {
@@ -166,6 +174,10 @@ export function RestartRedis(arg1, arg2, arg3) {
   return window['go']['main']['App']['RestartRedis'](arg1, arg2, arg3);
 }
 
+export function RunComposerCommand(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RunComposerCommand'](arg1, arg2, arg3);
+}
+
 export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
 }
@@ -228,6 +240,10 @@ export function StartTerminalSession(arg1, arg2, arg3) {
 
 export function StopCaddy() {
   return window['go']['main']['App']['StopCaddy']();
+}
+
+export function StopComposerCommand(arg1) {
+  return window['go']['main']['App']['StopComposerCommand'](arg1);
 }
 
 export function StopMailpit() {

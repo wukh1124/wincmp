@@ -325,9 +325,16 @@ func scanBinDirInternal(baseDir string) (*ScanResult, error) {
 			if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "composer-") {
 				continue
 			}
+			version := strings.TrimPrefix(entry.Name(), "composer-")
+			composerPhar := filepath.Join(composerDir, entry.Name(), "composer.phar")
 			composerBat := filepath.Join(composerDir, entry.Name(), "composer.bat")
-			if _, err := os.Stat(composerBat); err == nil {
-				version := strings.TrimPrefix(entry.Name(), "composer-")
+			if _, err := os.Stat(composerPhar); err == nil {
+				result.ComposerList = append(result.ComposerList, ServiceInfo{
+					Name:    "composer",
+					Version: version,
+					ExePath: composerPhar,
+				})
+			} else if _, err := os.Stat(composerBat); err == nil {
 				result.ComposerList = append(result.ComposerList, ServiceInfo{
 					Name:    "composer",
 					Version: version,

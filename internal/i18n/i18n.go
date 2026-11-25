@@ -689,5 +689,20 @@ var enTranslations = map[string]string{
 	"已終止 %d 個殘留 PHP-CGI 行程: %v": "Terminated %d lingering PHP-CGI processes: %v",
 	"終止殘留 PHP-CGI 行程失敗: %s": "Failed to terminate lingering PHP-CGI processes: %s",
 	"自動啟動中...": "Auto-starting...",
+
+	// Composer 控制台與執行引擎
+	"請輸入要執行的 Composer 指令":                                     "Please enter a Composer command to run",
+	"找不到有效的專案目錄":                                           "Valid project directory not found",
+	"找不到對應的 php.exe":                                       "Corresponding php.exe not found",
+	"找不到 composer.phar":                                     "composer.phar not found",
+	"啟動 Composer 進程失敗":                                      "Failed to start Composer process",
+	"該執行工作已結束或不存在":                                         "Execution job has finished or does not exist",
+	"設定檔尚未載入":                                              "Configuration is not loaded yet",
+	"找不到指定專案":                                              "Specified project not found",
+	"專案設定的 PHP %s 尚未安裝，請先至依賴庫管理安裝":                           "PHP %s configured for this project is not installed; please install it in Dependency Manager first",
+	"尚未安裝 Composer，請先至依賴庫管理下載安裝":                              "Composer is not installed; please download it in Dependency Manager first",
+	"[WinCMP] 執行總時間超過 %d 秒上限，已自動終止進程。":                        "[WinCMP] Execution exceeded the %d-second hard timeout and was terminated.",
+	"[WinCMP] 超過 %d 秒無任何輸出，疑似網路卡死或等待互動輸入，已自動終止。":            "[WinCMP] No output received for %d seconds (possible network hang or interactive prompt); process terminated.",
+	"... [已省略 %d bytes / %d 行，原始總計 %d bytes / %d 行] ...": "... [omitted %d bytes / %d lines, total %d bytes / %d lines] ...",
 }
 

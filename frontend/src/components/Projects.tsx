@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle, GripVertical, Lightbulb, Lock, MoreHorizontal } from 'lucide-react';
+import { Play, Square, Plus, Edit, FolderOpen, Link, Check, X, Shield, Settings, Trash2, Copy, Globe, Terminal, HelpCircle, GripVertical, Lightbulb, Lock, MoreHorizontal, Package } from 'lucide-react';
 import ProjectTerminal from './ProjectTerminal';
+import ComposerModal from './ComposerModal';
 import {
   GetConfig, SaveConfig, GetScanResult, GetServicesStatus,
   StartProjectRuntime, StopProjectRuntime, ReloadCaddy,
@@ -42,6 +43,7 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
   const [isDetecting, setIsDetecting] = useState(false);
   const [detected, setDetected] = useState(false);
   const [terminalProject, setTerminalProject] = useState<string | null>(null);
+  const [composerProject, setComposerProject] = useState<Project | null>(null);
   const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [useCustomCmd, setUseCustomCmd] = useState(false);
@@ -1131,6 +1133,13 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
 
       <ProjectTerminal projectName={terminalProject || ''} isOpen={terminalProject !== null} onClose={() => setTerminalProject(null)} />
 
+      <ComposerModal
+        project={composerProject}
+        scanResult={scanResult}
+        isOpen={composerProject !== null}
+        onClose={() => setComposerProject(null)}
+      />
+
       {actionMenu !== null && config?.projects?.[actionMenu.idx] && createPortal(
         <div
           role="menu"
@@ -1162,6 +1171,20 @@ export default function Projects({ highlightedProjectName, clearHighlight }: { h
                   <Terminal size={13} className="shrink-0" style={{ color: 'var(--status-info)' }} />
                   <span>{t("開啟專案終端")}</span>
                 </button>
+                {(targetProj.type === 'laravel' || targetProj.type === 'php') && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setActionMenu(null);
+                      setComposerProject(targetProj);
+                    }}
+                    className="dropdown-menu-item w-full text-left text-xs rounded-lg flex items-center gap-2.5 text-[var(--fg)] transition whitespace-nowrap"
+                  >
+                    <Package size={13} className="shrink-0" style={{ color: 'var(--status-ok)' }} />
+                    <span>{t("Composer")}</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   role="menuitem"
