@@ -1,6 +1,6 @@
 # WinCMP v2.1.11
 
-Release date: 2026-11-25
+Release date: 2026-11-26
 
 This update adds a built-in Composer console for PHP projects, clearer dashboard service alerts, and smoother automatic updates and multi-PHP compatibility.
 

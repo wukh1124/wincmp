@@ -3,7 +3,7 @@
 > **審核說明**：本檔案為發行前代碼變更之真實性、完整性核對底稿。
 
 - **比對基準**：`v2.1.10..HEAD`
-- **發行日期**：2026-11-25
+- **發行日期**：2026-11-26
 
 ## 1. 變更條目與代碼核對矩陣 (Audit Matrix)
 
@@ -68,12 +68,15 @@
 ## 2. 未納入發布說明的 Commit 查驗
 | Commit | 類型 | 標題 | 未納入原因 |
 | :--- | :--- | :--- | :--- |
-| （無） | - | - | `v2.1.10..HEAD` 全部 10 筆 Commit 皆已核對並納入發布說明 |
+| `5f36a12` | chore | `prepare v2.1.11 release notes and version bump` | 發行版號與 Release Notes 元數據提交 |
+| `0ea573c` | docs | `update app screenshots for v2.1.11` | 官網／專案截圖資產更新，非 App 功能異動 |
+| `69712c3` | docs | `polish landing page style, copy, and capture scripts` | 官網樣式文案與截圖腳本調整，非 App 功能異動 |
+| `5247234` | docs | `add bilingual technical documentation page and release check rule` | 官網 Docs 專頁與 Release Skill 規範更新 |
 
 ## 3. 發布前動作確認清單
 - [x] 1. 條目代碼核對通過
 - [x] 2. `node .agents/skills/wincmp-release/scripts/validate_release.js` 通過
 - [ ] 3. `cd frontend && npm run build` 通過
 - [x] 4. `go test ./...` 通過
-- [ ] 5. `wails dev` 已啟動且 `node scripts/capture.js --sync-website` 完成
+- [x] 5. `wails dev` 已啟動且 `node scripts/capture.js --sync-website` 完成
 - [ ] 6. `.\release.bat` 成功生成 Release 壓縮包
