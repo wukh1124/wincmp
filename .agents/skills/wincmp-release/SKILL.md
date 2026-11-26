@@ -64,6 +64,14 @@ git log <last_tag>..HEAD --oneline
 git diff --name-only <last_tag>..HEAD -- frontend/ internal/ app.go bridge.go
 ```
 
+### 1.1 官網技術文檔同步檢查（`website/docs.js`）
+- **低維護原則**：`website/docs.js` 面向進階使用者，刻意**不寫死依賴版號**，採 `<version>` 與通用規則撰寫。
+- **何時需要更新**：僅當本版有**新增或變更核心機制**時才需同步檢查更新，例如：
+  - `bin/` 掃描路徑或資料夾命名規則變更（`internal/scanner`）
+  - 新增／修改框架 Preset 或預設啟動指令（`internal/preset`）
+  - 新增內建工具入口、調整預設埠口或變更權限／隔離行為
+- **無需更新的情況**：單純依賴版本升級（`conf/dependencies.json`）、UI 微調或內部 Bug 修復，**不需**更動 `website/docs.js`。
+
 ---
 
 ## 2. 唯一內容來源：Release Notes 雙語檔案

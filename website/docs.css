@@ -1,0 +1,415 @@
+/* ==========================================================================
+   WinCMP Documentation Page Styles (複用 style.css 的 SKETCH / Dark 變數)
+   ========================================================================== */
+
+.docs-body {
+    min-height: 100vh;
+}
+
+.docs-nav-links .nav-link.active {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* 雙欄主容器 */
+.docs-layout {
+    display: grid;
+    grid-template-columns: 268px minmax(0, 1fr);
+    gap: 40px;
+    padding-top: 96px;
+    padding-bottom: 72px;
+    align-items: start;
+}
+
+/* 左側目錄側欄 */
+.docs-sidebar {
+    position: sticky;
+    top: 96px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 20px 14px;
+}
+
+.docs-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px 12px 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.docs-sidebar-label {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.docs-sidebar-close {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.docs-group {
+    margin-bottom: 18px;
+}
+
+.docs-group:last-child {
+    margin-bottom: 0;
+}
+
+.docs-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    padding: 4px 10px 6px 10px;
+    text-transform: uppercase;
+}
+
+.docs-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.docs-menu-item:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-card-hover);
+}
+
+.docs-menu-item.active {
+    color: var(--primary);
+    background-color: var(--highlight-col-bg);
+    border-color: var(--highlight-col-border);
+    font-weight: 600;
+}
+
+.docs-menu-num {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 18px;
+}
+
+.docs-menu-item.active .docs-menu-num {
+    color: var(--primary);
+}
+
+/* 右側正文卡片 */
+.docs-main {
+    min-width: 0;
+}
+
+.docs-mobile-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.docs-mobile-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.docs-mobile-menu-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.docs-mobile-current {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.docs-article {
+    display: block;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 36px 42px;
+}
+
+.docs-article h1 {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    letter-spacing: -0.4px;
+}
+
+.docs-article h2 {
+    font-size: 20px;
+    margin-top: 32px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.docs-article h3 {
+    font-size: 16px;
+    margin-top: 22px;
+    margin-bottom: 8px;
+}
+
+.docs-article p,
+.docs-article li {
+    font-size: 15px;
+    line-height: 1.72;
+    color: var(--text-secondary);
+}
+
+.docs-article strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.docs-article blockquote {
+    margin: 18px 0;
+    padding: 12px 16px;
+    border-left: 3px solid var(--primary);
+    background-color: var(--highlight-col-bg);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.docs-article blockquote p {
+    margin-bottom: 0;
+    font-size: 14px;
+}
+
+.docs-article pre {
+    margin: 16px 0;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    background-color: var(--pre-bg);
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+    line-height: 1.55;
+}
+
+.docs-article pre code {
+    font-size: 13.5px;
+    color: var(--text-primary);
+}
+
+.docs-article code {
+    font-size: 13.5px;
+}
+
+/* 表格樣式 */
+.docs-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    margin: 16px 0 20px 0;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+.docs-article table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.docs-article th,
+.docs-article td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: top;
+}
+
+.docs-article th {
+    background-color: var(--window-header-bg);
+    color: var(--text-primary);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.docs-article tr:last-child td {
+    border-bottom: none;
+}
+
+/* 上一篇 / 下一篇 */
+.docs-pager {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.docs-pager-btn {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 20px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.docs-pager-btn:hover {
+    border-color: var(--primary);
+    background-color: var(--bg-card-hover);
+}
+
+.docs-pager-next {
+    text-align: right;
+}
+
+.docs-pager-dir {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.docs-pager-title {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.docs-pager-btn.hidden {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.docs-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 109;
+}
+
+/* SKETCH 主題專屬對齊 */
+[data-theme="sketch"] .docs-sidebar,
+[data-theme="sketch"] .docs-article,
+[data-theme="sketch"] .docs-pager-btn,
+[data-theme="sketch"] .docs-mobile-bar {
+    border-width: 1.5px;
+    border-color: var(--border-color);
+    box-shadow: 3px 3px 0 var(--border-color);
+}
+
+[data-theme="sketch"] .docs-pager-btn:hover {
+    border-color: var(--primary);
+    box-shadow: 4px 4px 0 var(--border-strong);
+}
+
+[data-theme="sketch"] .docs-article h1,
+[data-theme="sketch"] .docs-article h2,
+[data-theme="sketch"] .docs-sidebar-header,
+[data-theme="sketch"] .docs-article th,
+[data-theme="sketch"] .docs-article td {
+    border-bottom-style: dashed;
+}
+
+/* 覆蓋 style.css 在 769px+ 的 min-width: 1000px，讓 Docs 在窄桌機也能平順自適應 */
+@media (min-width: 769px) {
+    .docs-body,
+    .docs-body .navbar {
+        min-width: 0;
+    }
+}
+
+/* 響應式：平板與手機版收合側欄 */
+@media (max-width: 900px) {
+    .docs-layout {
+        grid-template-columns: 1fr;
+        gap: 0;
+        padding-top: 88px;
+    }
+
+    .docs-mobile-bar {
+        display: flex;
+    }
+
+    .docs-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        max-height: 100vh;
+        border-radius: 0;
+        z-index: 110;
+        transform: translateX(-100%);
+        transition: transform var(--transition-normal);
+    }
+
+    .docs-sidebar.open {
+        transform: translateX(0);
+    }
+
+    .docs-sidebar-close {
+        display: inline-flex;
+    }
+
+    .docs-backdrop.open {
+        display: block;
+    }
+
+    .docs-article {
+        padding: 24px 20px;
+    }
+
+    .docs-article h1 {
+        font-size: 24px;
+    }
+
+    .docs-pager {
+        grid-template-columns: 1fr;
+    }
+
+    .docs-pager-next {
+        text-align: left;
+    }
+}
