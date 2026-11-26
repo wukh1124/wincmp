@@ -104,11 +104,11 @@ document.addEventListener('DOMContentLoaded', () => {
             theme_btn_dark: "Dark",
             theme_btn_sketch: "Sketch",
             hero_badge_prefix: "Latest Version:",
-            hero_title: "Lightweight & Portable<br><span class=\"gradient-text\">Local Dev Control Panel</span> for Windows",
-            hero_subtitle: "Integrated with <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> + <strong>Redis</strong> and an interactive project terminal. Core services run without admin privileges — lightweight, portable, and practical.",
+            hero_title: "<span class=\"gradient-text\">No-Install</span> Local Dev Panel<br>for Windows",
+            hero_subtitle: "Integrates <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> + <strong>Redis</strong> and an interactive terminal—with multi-version PHP and common app runtimes out of the box.",
             hero_download_btn: "Download for Windows",
             hero_github_btn: "View GitHub Repo",
-            features_title: "Why Choose WinCMP?",
+            features_title: "Features",
             features_subtitle: "A portable control panel for local Web development on Windows. Core binaries stay out of system PATH; dependencies can be fetched from the built-in downloader.",
             feat_1_title: "Lightweight",
             feat_1_desc: "Statically compiled in Go + Wails, rendering via native Windows WebView2 instead of Electron. Fast startup; idle memory is about 150-250MB (includes WebView2).",
@@ -116,20 +116,20 @@ document.addEventListener('DOMContentLoaded', () => {
             feat_2_desc: "Caddy, PHP-CGI, MariaDB, Mailpit, and Redis run under restricted user permissions. No registry writes or global PATH pollution. Note: Hosts sync and some dependency downloads may require UAC.",
             feat_3_title: "Interactive Terminal Drawer",
             feat_3_desc: "Built-in Windows ConPTY and xterm.js at the project root. Slide out a terminal drawer for PowerShell/CMD/Git Bash/WSL with interactive commands and TAB completion.",
-            feat_4_title: "PHP Multi-Process Balancing",
-            feat_4_desc: "Uses Caddy upstream load balancing to run multiple independent FastCGI processes per PHP version (default 3, adjustable) for more reliable local development.",
+            feat_4_title: "PHP Multi-Process & Composer",
+            feat_4_desc: "Runs multiple independent FastCGI processes per PHP version via Caddy load balancing, and includes a built-in Composer console bound to each project's PHP version with command history.",
             feat_5_title: "Runtime Multi-Environment",
-            feat_5_desc: "Supports Node.js, Bun, Python, Go and more. Auto-detects presets such as Laravel, Next.js, Nuxt, Astro, Vite, Django/FastAPI/Flask, PocketBase, and Go API; start in background or a separate terminal.",
+            feat_5_desc: "Supports Node.js, Bun, Python, Go and more. Auto-detects presets such as Laravel, Next.js, Nuxt, Astro, Vite, Django/FastAPI/Flask/Python HTTP, PocketBase, and Go API; start in background or a separate terminal.",
             feat_6_title: "Hosts Sync & Backup (Needs Admin)",
             feat_6_desc: "Sync custom local domains to the Windows hosts file. Because Windows protects this file, write and backup require UAC elevation.",
             feat_7_title: "Portable Single-EXE",
             feat_7_desc: "Runs via a single executable without installation. Migrate by taking conf/wincmp.json and the /bin directory to any new location.",
             feat_8_title: "One-Click Dependency Downloader",
-            feat_8_desc: "Built-in downloader for Caddy, PHP, MariaDB, Mailpit, Redis, Node.js, Bun, Composer, HeidiSQL and more — place binaries under /bin and WinCMP scans them automatically.",
+            feat_8_desc: "Built-in downloader for Caddy, PHP, MariaDB, Mailpit, Redis, Node.js, Composer, HeidiSQL and more — place other binaries such as Bun under /bin and WinCMP scans them automatically.",
             feat_9_title: "Database Explorer",
             feat_9_desc: "Browse databases and tables from the panel, then open the same connection in HeidiSQL with one click when you need a full GUI client.",
-            gallery_title: "Intuitive & Modern User Interface",
-            gallery_subtitle: "Every screen is carefully polished, with smooth micro-interactions and real-time service status monitoring.",
+            gallery_title: "Screenshots",
+            gallery_subtitle: "Switch between Dark and Sketch themes across each workspace screen.",
             gallery_tab_dashboard: "Dashboard",
             gallery_tab_projects: "Projects",
             gallery_tab_terminal: "Built-in Terminal",
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gallery_tab_settings: "Preferences",
             gallery_tab_dependencies: "Dependency Downloader",
             compare_title: "WinCMP Architecture & Configuration",
-            compare_subtitle: "Technical stack, managed services, and default configuration of the current WinCMP release (not a historical version comparison):",
+            compare_subtitle: "Technical stack, managed services, and default configuration of the current WinCMP release:",
             compare_head_item: "Item",
             compare_head_desc: "Current WinCMP",
             compare_row_1_name: "App Architecture",
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
             compare_row_4_name: "Privilege Model",
             compare_row_4_val: "Core services run in user space; Hosts sync and some dependency downloads may prompt for UAC",
             compare_row_5_name: "PHP Runtime",
-            compare_row_5_val: "Multi-version parallel execution; default 3 FastCGI processes per version (configurable); port rule 3&lt;major&gt;&lt;minor&gt;&lt;index&gt;",
+            compare_row_5_val: "Multi-version parallel execution (7.3–8.6); default 3 FastCGI processes per version (configurable); built-in Composer console; port rule 3&lt;major&gt;&lt;minor&gt;&lt;index&gt;",
             compare_row_6_name: "App Runtimes",
             compare_row_6_val: "Node.js / Bun / Python / Go / Custom; Background or Terminal launch modes",
             compare_row_7_name: "Built-in Terminal",
@@ -161,13 +161,13 @@ document.addEventListener('DOMContentLoaded', () => {
             compare_row_9_name: "Idle Footprint",
             compare_row_9_val: "Control panel UI itself is about 150-250MB idle (includes WebView2; varies by environment)",
             compare_row_10_name: "Dependency Manager",
-            compare_row_10_val: "Built-in downloader: Caddy, PHP, MariaDB, Mailpit, Redis, Node.js, Bun, Composer, HeidiSQL",
+            compare_row_10_val: "Built-in downloader: Caddy, PHP, MariaDB, Mailpit, Redis, Node.js, Composer, HeidiSQL (auto-scans /bin for Bun, etc.)",
             compare_row_11_name: "Database Tools",
             compare_row_11_val: "Built-in DB Explorer; one-click open in HeidiSQL",
             compare_row_12_name: "Portability",
             compare_row_12_val: "Migrate with conf/wincmp.json + /bin directory only",
             compare_row_13_name: "Framework Presets",
-            compare_row_13_val: "Auto-detect Laravel, Next.js, Nuxt, Astro, Vite, Django/FastAPI/Flask, PocketBase, Go API and more",
+            compare_row_13_val: "Auto-detect Laravel, Next.js, Nuxt, Astro, Vite, Django/FastAPI/Flask/Python HTTP, PocketBase, Go API and more",
             compare_table_note: "* Note: Idle RAM refers to the control panel UI itself. Actual usage varies with the OS environment and which services are running.",
             arch_title: "How WinCMP Works",
             arch_subtitle: "Design principles behind isolation and service management:",
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
             arch_card_2_desc: "Ports are allocated by a deterministic rule (for example PHP 8.2 uses 38200-382xx) so versions do not collide. When site settings change, WinCMP rewrites conf/sites and reloads Caddy in the background.",
             changelog_title: "Latest Updates",
             changelog_subtitle: "See what new features and fixes have been added recently",
-            changelog_loading: "Fetching latest changelog from GitHub...",
+            changelog_loading: "Loading latest release notes...",
             changelog_view_more: "View all releases on GitHub",
             footer_desc: "WinCMP gratefully integrates and acknowledges open-source projects including Caddy, MariaDB, PHP, Mailpit, Redis, Node.js, Composer, HeidiSQL, Wails, and React."
         },
@@ -192,11 +192,11 @@ document.addEventListener('DOMContentLoaded', () => {
             theme_btn_dark: "Dark",
             theme_btn_sketch: "Sketch",
             hero_badge_prefix: "最新版本:",
-            hero_title: "專為 Windows 打造的<br><span class=\"gradient-text\">輕量快速免安裝</span>開發面板",
-            hero_subtitle: "整合 <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> + <strong>Redis</strong> 與專案互動終端。核心開發服務啟動免管理員權限，輕量、可攜、好上手！",
+            hero_title: "Windows <span class=\"gradient-text\">免安裝</span>本地開發面板",
+            hero_subtitle: "整合 <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> + <strong>Mailpit</strong> + <strong>Redis</strong> 與互動終端；支援多版本 PHP 與常見前後端 Runtime，隨放隨用。",
             hero_download_btn: "立即下載 Windows 版",
             hero_github_btn: "瀏覽 GitHub 倉庫",
-            features_title: "為什麼選擇 WinCMP？",
+            features_title: "功能與特色",
             features_subtitle: "可攜式 Windows 本地 Web 開發控制面板。核心執行檔不寫入系統 PATH，所需依賴可透過內建下載器取得。",
             feat_1_title: "輕量 (Statically Compiled)",
             feat_1_desc: "基於 Go + Wails 靜態編譯，透過 Windows 原生 WebView2 渲染，無需 Electron。啟動快速，日常閒置記憶體約 150-250MB（含 WebView2 引擎）。",
@@ -204,20 +204,20 @@ document.addEventListener('DOMContentLoaded', () => {
             feat_2_desc: "Caddy、PHP-CGI、MariaDB、Mailpit、Redis 等核心服務皆在受限用戶權限下執行，免寫系統登錄檔、免污染全域環境變數。註：Hosts 同步與部分依賴下載可能需要 UAC。",
             feat_3_title: "整合式互動終端 Drawer",
             feat_3_desc: "集成 Windows ConPTY 與 xterm.js，在專案根目錄一鍵滑出互動式終端（支援 PowerShell / CMD / Git Bash / WSL），可執行動態指令並支援 TAB 補齊。",
-            feat_4_title: "PHP 多進程負載均衡",
-            feat_4_desc: "利用 Caddy 的 upstream 負載均衡，為每個 PHP 版本啟動多個獨立 FastCGI 進程（預設 3 個，可依需求調整），提升本地開發穩定度。",
+            feat_4_title: "PHP 多進程與內建 Composer",
+            feat_4_desc: "透過 Caddy 負載均衡為每個 PHP 版本啟動多個獨立 FastCGI 進程（預設 3 個，可調整）；並內建專案專屬 Composer 控制台，自動綁定專案 PHP 版本並保留指令歷史。",
             feat_5_title: "運行時多環境支援",
-            feat_5_desc: "支援 Node.js、Bun、Python、Go 等 Runtime，並自動偵測 Laravel、Next.js、Nuxt、Astro、Vite、Django/FastAPI/Flask、PocketBase、Go API 等 Preset；可選背景執行或獨立終端啟動。",
+            feat_5_desc: "支援 Node.js、Bun、Python、Go 等 Runtime，並自動偵測 Laravel、Next.js、Nuxt、Astro、Vite、Django/FastAPI/Flask/Python HTTP、PocketBase、Go API 等 Preset；可選背景執行或獨立終端啟動。",
             feat_6_title: "Hosts 備份與更新 (需要 Admin)",
             feat_6_desc: "支援一鍵同步自訂網域到 Windows Hosts 檔案。因系統安全防護，此寫入與自動備份功能需要 UAC 提權確認。",
             feat_7_title: "單檔運作與綠色便攜",
             feat_7_desc: "只需單個 executable 即可獨立運作，啟動時自動生成設定檔。遷移時將 conf/wincmp.json 與整個 /bin 目錄帶走即可。",
             feat_8_title: "依賴一鍵下載器",
-            feat_8_desc: "內建下載 Caddy、PHP、MariaDB、Mailpit、Redis、Node.js、Bun、Composer、HeidiSQL 等元件；放入 /bin 後由 WinCMP 自動掃描版本。",
+            feat_8_desc: "內建下載 Caddy、PHP、MariaDB、Mailpit、Redis、Node.js、Composer、HeidiSQL 等元件；亦會自動掃描 /bin 中手動放置的 Bun 等執行檔。",
             feat_9_title: "資料庫管理器",
             feat_9_desc: "可在面板內瀏覽資料庫與資料表，需要完整 GUI 時一鍵以 HeidiSQL 開啟同一連線。",
-            gallery_title: "直觀、美觀的現代介面",
-            gallery_subtitle: "每一處 UI 都經過細心打磨，具備流暢的微動畫與即時服務狀態監控。",
+            gallery_title: "介面預覽",
+            gallery_subtitle: "支援暗色與手繪雙主題介面，切換頁籤查看各功能畫面。",
             gallery_tab_dashboard: "主控台",
             gallery_tab_projects: "專案管理",
             gallery_tab_terminal: "內建終端",
@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
             gallery_tab_settings: "偏好設定",
             gallery_tab_dependencies: "依賴下載器",
             compare_title: "WinCMP 架構與配置",
-            compare_subtitle: "以下為目前版本的技術棧、核心服務與預設配置說明（非歷史版本對比）：",
+            compare_subtitle: "目前版本的技術棧、核心服務與預設配置一覽：",
             compare_head_item: "項目",
             compare_head_desc: "目前 WinCMP",
             compare_row_1_name: "應用架構",
@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
             compare_row_4_name: "權限模型",
             compare_row_4_val: "核心服務於用戶空間執行；Hosts 同步與部分依賴下載可能需要 UAC",
             compare_row_5_name: "PHP 執行",
-            compare_row_5_val: "多版本並行；每版預設 3 個 FastCGI 進程（可調整）；Port 規則為 3&lt;主版本&gt;&lt;次版本&gt;&lt;序號&gt;",
+            compare_row_5_val: "多版本並行（7.3–8.6）；每版預設 3 個 FastCGI 進程（可調整）；內建專案 Composer 控制台；Port 規則為 3&lt;主版本&gt;&lt;次版本&gt;&lt;序號&gt;",
             compare_row_6_name: "應用 Runtime",
             compare_row_6_val: "Node.js / Bun / Python / Go / Custom；Background 或 Terminal 雙模式",
             compare_row_7_name: "內建終端",
@@ -249,13 +249,13 @@ document.addEventListener('DOMContentLoaded', () => {
             compare_row_9_name: "閒置資源",
             compare_row_9_val: "控制面板本身約 150-250MB（含 WebView2；依環境略有差異）",
             compare_row_10_name: "依賴管理",
-            compare_row_10_val: "內建下載器：Caddy、PHP、MariaDB、Mailpit、Redis、Node.js、Bun、Composer、HeidiSQL",
+            compare_row_10_val: "內建下載器：Caddy、PHP、MariaDB、Mailpit、Redis、Node.js、Composer、HeidiSQL（並自動掃描 /bin 內的 Bun 等工具）",
             compare_row_11_name: "資料庫工具",
             compare_row_11_val: "內建 DB Explorer，可一鍵以 HeidiSQL 開啟",
             compare_row_12_name: "可攜性",
             compare_row_12_val: "遷移只需 conf/wincmp.json 與 /bin 目錄",
             compare_row_13_name: "框架 Preset",
-            compare_row_13_val: "自動偵測 Laravel、Next.js、Nuxt、Astro、Vite、Django/FastAPI/Flask、PocketBase、Go API 等",
+            compare_row_13_val: "自動偵測 Laravel、Next.js、Nuxt、Astro、Vite、Django/FastAPI/Flask/Python HTTP、PocketBase、Go API 等",
             compare_table_note: "* 註：閒置記憶體指控制面板主程式本身；實際數值會因系統環境與已啟動服務而異。",
             arch_title: "WinCMP 運作原理",
             arch_subtitle: "環境隔離與服務管理背後的設計原則：",
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
             arch_card_2_desc: "連接埠依固定規則分配（例如 PHP 8.2 使用 38200-382xx），避免版本互相衝突。站台設定變更時會重寫 conf/sites 並在背景熱重載 Caddy。",
             changelog_title: "最新版本更新日誌",
             changelog_subtitle: "查看最近 WinCMP 的更新和修正項目",
-            changelog_loading: "正在從 GitHub 獲取最新發布日誌...",
+            changelog_loading: "正在載入最新發布日誌...",
             changelog_view_more: "前往 GitHub 查看所有歷史發布與日誌",
             footer_desc: "WinCMP 整合並致敬優秀的開源生態組件，包括 Caddy、MariaDB、PHP、Mailpit、Redis、Node.js、Composer、HeidiSQL、Wails 與 React。"
         }
@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderReleaseInfo(data) {
-        const tagName = data.tag_name || 'v2.0.0';
+        const tagName = data.tag_name || 'v2.1.11';
         latestTagEl.innerText = tagName;
         downloadBtn.href = data.exe_url || `https://github.com/${owner}/${repo}/releases/latest`;
 
@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderFallback() {
-        latestTagEl.innerText = 'v2.0.0';
+        latestTagEl.innerText = 'v2.1.11';
         downloadBtn.href = `https://github.com/${owner}/${repo}/releases/latest`;
         changelogLoading.style.display = 'none';
         changelogContent.style.display = 'block';
@@ -396,16 +396,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentLang = localStorage.getItem('wincmp_lang') || 'en';
         if (currentLang === 'zh') {
             changelogContent.innerHTML = `
-                <h3>無法動態載入更新日誌</h3>
-                <p>由於 GitHub API 請求頻率限制或網路連線問題，暫時無法抓取最新更新詳情。</p>
-                <p>請直接點擊下方連結前往 GitHub Releases 頁面查看：</p>
+                <h3>無法載入更新日誌</h3>
+                <p>目前無法讀取發布日誌資料（若以檔案路徑直接開啟網頁，請透過本機 HTTP 伺服器預覽）。</p>
+                <p>您也可以直接前往 GitHub Releases 頁面查看完整版本紀錄：</p>
                 <p><a href="https://github.com/${owner}/${repo}/releases" target="_blank" style="color: var(--primary-hover); text-decoration: underline;">前往 GitHub 查看所有歷史發布與日誌</a></p>
             `;
         } else {
             changelogContent.innerHTML = `
-                <h3>Unable to load changelog dynamically</h3>
-                <p>Due to GitHub API rate limiting or networking issues, we couldn't fetch the latest release details.</p>
-                <p>Please click the link below to view it directly on GitHub:</p>
+                <h3>Unable to load release notes</h3>
+                <p>Could not read the release notes data (if opening this page via file://, please serve it over a local HTTP server).</p>
+                <p>You can also view the full release history directly on GitHub:</p>
                 <p><a href="https://github.com/${owner}/${repo}/releases" target="_blank" style="color: var(--primary-hover); text-decoration: underline;">Go to GitHub Releases to view history</a></p>
             `;
         }

@@ -191,7 +191,10 @@ async function main() {
         console.log('\n[同步官網] 偵測到 --sync-website，正在同步至 website/...');
         const syncScript = path.join(__dirname, 'sync-website.js');
         if (fs.existsSync(syncScript)) {
-            require(syncScript);
+            const { syncWebsite } = require(syncScript);
+            if (typeof syncWebsite === 'function') {
+                syncWebsite();
+            }
         }
     } else {
         console.log('\n提示: 如需同步截圖至官網目錄進行本地測試，可執行:');

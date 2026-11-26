@@ -95,12 +95,12 @@
                             id="latest-tag">Loading...</span>
                     </span>
                 </div>
-                <h1 class="hero-title" data-i18n="hero_title">Lightweight & Portable<br><span
-                        class="gradient-text">Local Dev Control Panel</span> for Windows</h1>
+                <h1 class="hero-title" data-i18n="hero_title"><span class="gradient-text">No-Install</span> Local Dev
+                    Panel<br>for Windows</h1>
                 <p class="hero-subtitle" data-i18n="hero_subtitle">
-                    Integrated with <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> +
-                    <strong>Mailpit</strong> + <strong>Redis</strong> and an interactive project terminal. Core
-                    services run without admin privileges — lightweight, portable, and practical.
+                    Integrates <strong>Caddy</strong> + <strong>MariaDB</strong> + <strong>PHP</strong> +
+                    <strong>Mailpit</strong> + <strong>Redis</strong> and an interactive terminal—with multi-version
+                    PHP and common app runtimes out of the box.
                 </p>
                 <div class="hero-actions">
                     <a href="https://github.com/wukh1124/wincmp/releases/latest" target="_blank" class="btn btn-primary"
@@ -131,7 +131,8 @@
                         <div class="window-title" id="gallery-main-window-title">WinCMP Control Panel</div>
                     </div>
                     <img src="screenshot/dark/dashboard.png" alt="WinCMP Dashboard" class="hero-screenshot"
-                        id="hero-main-img" data-img-dark="screenshot/dark/dashboard.png" data-img-sketch="screenshot/sketch/dashboard.png">
+                        id="hero-main-img" data-img-dark="screenshot/dark/dashboard.png"
+                        data-img-sketch="screenshot/sketch/dashboard.png">
                 </div>
             </div>
         </section>
@@ -140,7 +141,7 @@
         <section id="features" class="features-section">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title" data-i18n="features_title">Why Choose WinCMP?</h2>
+                    <h2 class="section-title" data-i18n="features_title">Features</h2>
                     <p class="section-subtitle" data-i18n="features_subtitle">A portable control panel for local Web
                         development on Windows. Core binaries stay out of system PATH; dependencies can be fetched
                         from the built-in downloader.</p>
@@ -181,10 +182,10 @@
                         <div class="feature-icon">
                             <i data-lucide="shuffle"></i>
                         </div>
-                        <h3 class="feature-card-title" data-i18n="feat_4_title">PHP Multi-Process Balancing</h3>
-                        <p class="feature-card-desc" data-i18n="feat_4_desc">Uses Caddy upstream load balancing to run
-                            multiple independent FastCGI processes per PHP version (default 3, adjustable) for more
-                            reliable local development.</p>
+                        <h3 class="feature-card-title" data-i18n="feat_4_title">PHP Multi-Process & Composer</h3>
+                        <p class="feature-card-desc" data-i18n="feat_4_desc">Runs multiple independent FastCGI processes
+                            per PHP version via Caddy load balancing, and includes a built-in Composer console bound
+                            to each project's PHP version with command history.</p>
                     </div>
                     <!-- 卡片 5 -->
                     <div class="feature-card">
@@ -194,7 +195,7 @@
                         <h3 class="feature-card-title" data-i18n="feat_5_title">Runtime Multi-Environment</h3>
                         <p class="feature-card-desc" data-i18n="feat_5_desc">Supports Node.js, Bun, Python, Go and
                             more. Auto-detects presets such as Laravel, Next.js, Nuxt, Astro, Vite,
-                            Django/FastAPI/Flask, PocketBase, and Go API; start in background or a separate
+                            Django/FastAPI/Flask/Python HTTP, PocketBase, and Go API; start in background or a separate
                             terminal.</p>
                     </div>
                     <!-- 卡片 6 -->
@@ -224,8 +225,8 @@
                         </div>
                         <h3 class="feature-card-title" data-i18n="feat_8_title">One-Click Dependency Downloader</h3>
                         <p class="feature-card-desc" data-i18n="feat_8_desc">Built-in downloader for Caddy, PHP,
-                            MariaDB, Mailpit, Redis, Node.js, Bun, Composer, HeidiSQL and more — place binaries under
-                            /bin and WinCMP scans them automatically.</p>
+                            MariaDB, Mailpit, Redis, Node.js, Composer, HeidiSQL and more — place other binaries
+                            such as Bun under /bin and WinCMP scans them automatically.</p>
                     </div>
                     <!-- 卡片 9 -->
                     <div class="feature-card">
@@ -245,35 +246,43 @@
         <section id="gallery" class="gallery-section">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title" data-i18n="gallery_title">Intuitive & Modern User Interface</h2>
-                    <p class="section-subtitle" data-i18n="gallery_subtitle">Every screen is carefully polished, with
-                        smooth micro-interactions and real-time service status monitoring.</p>
+                    <h2 class="section-title" data-i18n="gallery_title">Screenshots</h2>
+                    <p class="section-subtitle" data-i18n="gallery_subtitle">Switch between Dark and Sketch themes
+                        across each workspace screen.</p>
                 </div>
 
                 <div class="gallery-tabs" id="gallery-tabs">
-                    <button class="gallery-tab active" data-img-dark="screenshot/dark/dashboard.png" data-img-sketch="screenshot/sketch/dashboard.png">
+                    <button class="gallery-tab active" data-img-dark="screenshot/dark/dashboard.png"
+                        data-img-sketch="screenshot/sketch/dashboard.png">
                         <i data-lucide="layout-dashboard"></i> <span data-i18n="gallery_tab_dashboard">Dashboard</span>
                     </button>
-                    <button class="gallery-tab" data-img-dark="screenshot/dark/add_new_project.png" data-img-sketch="screenshot/sketch/add_new_project.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/add_new_project.png"
+                        data-img-sketch="screenshot/sketch/add_new_project.png">
                         <i data-lucide="folder-plus"></i> <span data-i18n="gallery_tab_add_project">Add Project</span>
                     </button>
-                    <button class="gallery-tab" data-img-dark="screenshot/dark/projects.png" data-img-sketch="screenshot/sketch/projects.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/projects.png"
+                        data-img-sketch="screenshot/sketch/projects.png">
                         <i data-lucide="folder-kanban"></i> <span data-i18n="gallery_tab_projects">Projects</span>
                     </button>
-                    <button class="gallery-tab" data-img-dark="screenshot/dark/project_terminal.png" data-img-sketch="screenshot/sketch/project_terminal.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/project_terminal.png"
+                        data-img-sketch="screenshot/sketch/project_terminal.png">
                         <i data-lucide="terminal-square"></i> <span data-i18n="gallery_tab_terminal">Built-in
                             Terminal</span>
                     </button>
-                    <button class="gallery-tab" data-img-dark="screenshot/dark/db_explorer.png" data-img-sketch="screenshot/sketch/db_explorer.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/db_explorer.png"
+                        data-img-sketch="screenshot/sketch/db_explorer.png">
                         <i data-lucide="database"></i> <span data-i18n="gallery_tab_db">Database Explorer</span>
                     </button>
-                    <button class="gallery-tab" data-img-dark="screenshot/dark/resource_monitor.png" data-img-sketch="screenshot/sketch/resource_monitor.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/resource_monitor.png"
+                        data-img-sketch="screenshot/sketch/resource_monitor.png">
                         <i data-lucide="activity"></i> <span data-i18n="gallery_tab_resource">Resource Monitor</span>
                     </button>
-                    <button class="gallery-tab" data-img-dark="screenshot/dark/settings.png" data-img-sketch="screenshot/sketch/settings.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/settings.png"
+                        data-img-sketch="screenshot/sketch/settings.png">
                         <i data-lucide="settings"></i> <span data-i18n="gallery_tab_settings">Preferences</span>
                     </button>
-                    <button class="gallery-tab" data-img-dark="screenshot/dark/wincmp_dependencies.png" data-img-sketch="screenshot/sketch/wincmp_dependencies.png">
+                    <button class="gallery-tab" data-img-dark="screenshot/dark/wincmp_dependencies.png"
+                        data-img-sketch="screenshot/sketch/wincmp_dependencies.png">
                         <i data-lucide="download-cloud"></i> <span data-i18n="gallery_tab_dependencies">Dependency
                             Downloader</span>
                     </button>
@@ -302,8 +311,7 @@
                 <div class="section-header">
                     <h2 class="section-title" data-i18n="compare_title">WinCMP Architecture & Configuration</h2>
                     <p class="section-subtitle" data-i18n="compare_subtitle">Technical stack, managed services, and
-                        default configuration of the current WinCMP release (not a historical version
-                        comparison):</p>
+                        default configuration of the current WinCMP release:</p>
                 </div>
 
                 <div class="table-responsive">
@@ -337,8 +345,9 @@
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_5_name">PHP Runtime</td>
-                                <td data-i18n="compare_row_5_val">Multi-version parallel execution; default 3 FastCGI
-                                    processes per version (configurable); port rule 3&lt;major&gt;&lt;minor&gt;&lt;index&gt;</td>
+                                <td data-i18n="compare_row_5_val">Multi-version parallel execution (7.3–8.6); default 3
+                                    FastCGI processes per version (configurable); built-in Composer console; port rule
+                                    3&lt;major&gt;&lt;minor&gt;&lt;index&gt;</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_6_name">App Runtimes</td>
@@ -363,7 +372,7 @@
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_10_name">Dependency Manager</td>
                                 <td data-i18n="compare_row_10_val">Built-in downloader: Caddy, PHP, MariaDB, Mailpit,
-                                    Redis, Node.js, Bun, Composer, HeidiSQL</td>
+                                    Redis, Node.js, Composer, HeidiSQL (auto-scans /bin for Bun, etc.)</td>
                             </tr>
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_11_name">Database Tools</td>
@@ -378,7 +387,7 @@
                             <tr>
                                 <td class="feature-name" data-i18n="compare_row_13_name">Framework Presets</td>
                                 <td data-i18n="compare_row_13_val">Auto-detect Laravel, Next.js, Nuxt, Astro, Vite,
-                                    Django/FastAPI/Flask, PocketBase, Go API and more</td>
+                                    Django/FastAPI/Flask/Python HTTP, PocketBase, Go API and more</td>
                             </tr>
                         </tbody>
                     </table>
@@ -429,11 +438,11 @@
                 <div class="changelog-box" id="changelog-box">
                     <div class="changelog-loading" id="changelog-loading">
                         <div class="spinner"></div>
-                        <p data-i18n="changelog_loading">Fetching latest changelog from GitHub...</p>
+                        <p data-i18n="changelog_loading">Loading latest release notes...</p>
                     </div>
                     <div class="changelog-content markdown-body" id="changelog-content"></div>
                     <div class="changelog-footer"
-                        style="margin-top: 30px; text-align: center; border-top: 1px dashed rgba(255, 255, 255, 0.1); padding-top: 20px;">
+                        style="margin-top: 30px; text-align: center; border-top: 1px dashed var(--border-color); padding-top: 20px;">
                         <a href="https://github.com/wukh1124/wincmp/releases" target="_blank"
                             class="changelog-more-link"
                             style="color: var(--primary-color); text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;"

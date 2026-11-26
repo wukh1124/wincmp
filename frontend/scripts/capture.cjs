@@ -25,6 +25,12 @@ const screenshotTasks = [
                 await cancelBtn.click();
                 await page.waitForTimeout(500); // 等待 Drawer 關閉動畫
             }
+            // 點擊第一筆專案的 "..." 按鈕展開操作選單，方便展示選單項目
+            const menuTrigger = page.locator('button.project-action-menu-trigger').first();
+            if (await menuTrigger.isVisible()) {
+                await menuTrigger.click();
+                await page.waitForTimeout(300);
+            }
         }
     },
     {
@@ -35,8 +41,16 @@ const screenshotTasks = [
                 await cancelBtn.click();
                 await page.waitForTimeout(500);
             }
-            // 點擊列表裡第一個專案的 Terminal 按鈕 (使用 btn-open-terminal class)
+            // 若操作選單未展開，先點擊第一筆專案的 "..." 按鈕打開選單
             const terminalBtn = page.locator('button.btn-open-terminal').first();
+            if (!(await terminalBtn.isVisible())) {
+                const menuTrigger = page.locator('button.project-action-menu-trigger').first();
+                if (await menuTrigger.isVisible()) {
+                    await menuTrigger.click();
+                    await page.waitForTimeout(300);
+                }
+            }
+            // 點擊選單中的「開啟專案終端」按鈕 (使用 btn-open-terminal class)
             if (await terminalBtn.isVisible()) {
                 await terminalBtn.click();
                 await page.waitForTimeout(1200); // 等待終端展開動畫與 PTY 啟動
@@ -44,28 +58,52 @@ const screenshotTasks = [
         }
     },
     {
-        name: 'db_explorer', selector: null, action: async (page) => {
+        name: 'db_explorer', selector: null, action: async (page, ctx) => {
             // 在進入 db_explorer 前，關閉前面的專案終端，避免遮罩遮擋點擊
             const closeTerminalBtn = page.locator('#btn-close-terminal');
             if (await closeTerminalBtn.isVisible()) {
                 await closeTerminalBtn.click();
                 await page.waitForTimeout(500); // 等待關閉動畫
             }
-            await page.click('#nav-btn-db_explorer');
-            await page.waitForTimeout(600); // 等待頁面載入
 
-            // 點擊 'information_schema' 資料庫並等待資料表渲染
+            // 確保 MariaDB 已啟動，避免擷取到 "MariaDB is not running"
+            if (ctx && ctx.ensureMariaDB) {
+                await ctx.ensureMariaDB();
+            }
+
+            await page.click('#nav-btn-db_explorer');
+            await page.waitForTimeout(600); // 等待頁面載入與 QueryDatabases
+
+            // 等待並點擊 'information_schema' 資料庫，再等待資料表渲染
             const schemaBtn = page.locator('button', { hasText: 'information_schema' }).first();
-            if (await schemaBtn.isVisible()) {
+            try {
+                try {
+                    await schemaBtn.waitFor({ state: 'visible', timeout: 3000 });
+                } catch (_) {
+                    // 若首次查詢撞到剛啟動瞬間導致 DATABASES (0)，點擊 Refresh 再等一次
+                    const refreshBtn = page.locator('button', { hasText: /^(Refresh|重新整理)$/ }).first();
+                    if (await refreshBtn.isVisible()) {
+                        await refreshBtn.click();
+                    }
+                    await schemaBtn.waitFor({ state: 'visible', timeout: 5000 });
+                }
                 await schemaBtn.click();
                 await page.waitForTimeout(800); // 等待資料表載入與渲染
+            } catch (e) {
+                console.warn('   [db_explorer] 未看到 information_schema 按鈕（請確認本機是否已安裝 MariaDB）');
             }
         }
     },
     {
         name: 'resource_monitor', selector: '#nav-btn-resources', action: async (page) => {
-            // 系統資源數據載入與圖表繪製需要時間，多等待 2.5 秒以避免擷取到 Loading 畫面
-            await page.waitForTimeout(2500);
+            // 等待資源數據載入完成（h1 標題出現代表已離開 Loading 狀態）
+            const heading = page.locator('h1', { hasText: /^(Resources|資源監控)$/ });
+            try {
+                await heading.waitFor({ state: 'visible', timeout: 15000 });
+                await page.waitForTimeout(600); // 等待進度條 transition (0.5s) 與數值繪製穩定
+            } catch (e) {
+                console.warn('   [resource_monitor] 等待資源數據載入超時，將以目前畫面截圖');
+            }
         }
     },
     { name: 'settings', selector: '#nav-btn-settings', action: async (page) => { } },
@@ -368,6 +406,65 @@ async function logCaptureState(page, theme, stage) {
     }
 
     const captureReport = [];
+    let startedMariaDBVersion = null;
+
+    // 供 db_explorer 截圖前確認/啟動 MariaDB（若原本未啟動，結束時會協助停止還原）
+    const ensureMariaDB = async () => {
+        const res = await page.evaluate(async () => {
+            const App = window.go && window.go.main && window.go.main.App;
+            if (!App || !App.IsMariaDBRunning || !App.StartMariaDB) {
+                return { ok: false, reason: 'missing_api' };
+            }
+            const alreadyRunning = await App.IsMariaDBRunning();
+            if (alreadyRunning) {
+                return { ok: true, alreadyRunning: true, version: '' };
+            }
+            let version = '';
+            if (App.GetScanResult) {
+                const scan = await App.GetScanResult();
+                if (scan && Array.isArray(scan.MariaDBList) && scan.MariaDBList.length > 0) {
+                    version = scan.MariaDBList[0].Version || '';
+                }
+            }
+            let isExternal = false;
+            if (App.GetConfig) {
+                const cfg = await App.GetConfig();
+                isExternal = !!(cfg && cfg.global && cfg.global.mariadb_external);
+            }
+            if (!version && !isExternal) {
+                return { ok: false, reason: 'not_installed' };
+            }
+            try {
+                await App.StartMariaDB(version);
+                // 等待 MariaDB 實際可執行 QueryDatabases()，避免剛啟動瞬間抓到 DATABASES (0)
+                if (App.QueryDatabases) {
+                    for (let i = 0; i < 20; i++) {
+                        try {
+                            const dbs = await App.QueryDatabases();
+                            if (Array.isArray(dbs) && dbs.length > 0) {
+                                break;
+                            }
+                        } catch (_) { /* 尚未就緒，稍後重試 */ }
+                        await new Promise((r) => setTimeout(r, 400));
+                    }
+                }
+                return { ok: true, alreadyRunning: false, version };
+            } catch (err) {
+                return { ok: false, reason: String(err) };
+            }
+        });
+
+        if (res.ok) {
+            if (!res.alreadyRunning) {
+                startedMariaDBVersion = res.version;
+                console.log(`   [db_explorer] 已自動啟動 MariaDB (${res.version || 'external'})`);
+                await page.waitForTimeout(600);
+            }
+        } else {
+            console.warn(`   [db_explorer] 自動啟動 MariaDB 失敗: ${res.reason}`);
+        }
+        return res.ok;
+    };
 
     for (const theme of themes) {
         console.log(`\n[主題] 切換至: [${theme.id}] -> screenshot/${theme.folder}/`);
@@ -413,7 +510,7 @@ async function logCaptureState(page, theme, stage) {
             }
 
             // 執行專屬動作
-            await task.action(page);
+            await task.action(page, { ensureMariaDB });
             await page.waitForTimeout(400); // 等待狀態穩定
 
             // 擷圖前再確認側邊欄展開、字體 / 語系仍正確
@@ -448,6 +545,21 @@ async function logCaptureState(page, theme, stage) {
         if (await closeDepBtn.isVisible()) {
             await closeDepBtn.click();
             await page.waitForTimeout(500);
+        }
+    }
+
+    // 若本次截圖腳本臨時啟動了 MariaDB，結束前協助停止以還原開發機狀態
+    if (startedMariaDBVersion !== null) {
+        try {
+            await page.evaluate(async (ver) => {
+                const App = window.go && window.go.main && window.go.main.App;
+                if (App && App.StopMariaDB) {
+                    await App.StopMariaDB(ver);
+                }
+            }, startedMariaDBVersion);
+            console.log(`\n[清理] 已停止截圖期間臨時啟動的 MariaDB (${startedMariaDBVersion || 'external'})`);
+        } catch (err) {
+            console.warn(`\n[警告] 停止臨時 MariaDB 失敗: ${err.message}`);
         }
     }
 
