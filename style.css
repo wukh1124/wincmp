@@ -1,0 +1,1345 @@
+/* ==========================================================================
+   WinCMP Landing Page Style Sheet (Vanilla CSS)
+   ========================================================================== */
+
+/* --- 變數與設計系統 --- */
+:root {
+    --bg-base: hsl(224, 71%, 4%);
+    --bg-surface: hsl(222, 47%, 8%);
+    --bg-card: hsl(222, 47%, 10%);
+    --bg-card-hover: hsl(222, 47%, 14%);
+    --border-color: rgba(255, 255, 255, 0.09);
+    --border-hover: rgba(148, 163, 184, 0.32);
+
+    --text-primary: hsl(210, 25%, 96%);
+    --text-secondary: hsl(215, 16%, 74%);
+    --text-muted: hsl(215, 14%, 54%);
+
+    --primary: hsl(215, 72%, 52%);
+    --primary-hover: hsl(215, 76%, 60%);
+    --primary-glow: rgba(59, 130, 246, 0.14);
+
+    --accent-emerald: hsl(142, 71%, 45%);
+    --accent-emerald-glow: rgba(16, 185, 129, 0.15);
+    --accent-cyan: hsl(189, 94%, 52%);
+    --accent-amber: hsl(38, 92%, 50%);
+    --accent-rose: hsl(346, 84%, 61%);
+
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-display: 'Outfit', sans-serif;
+
+    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+
+    /* Sketch 主題專用變數（預設為暗色模式不使用） */
+    --sketch-grid-color: transparent;
+    --sketch-paper-grain: none;
+    --navbar-bg: rgba(4, 5, 15, 0.75);
+    --shadow-card: 0 20px 40px -12px rgba(0, 0, 0, 0.45);
+    --shadow-gallery: 0 16px 32px rgba(0, 0, 0, 0.35);
+    --shadow-compare: 0 10px 24px rgba(0, 0, 0, 0.25);
+    --shadow-changelog: 0 8px 24px rgba(0, 0, 0, 0.2);
+    --gallery-img-bg: #0b0c10;
+    --code-bg: rgba(255, 255, 255, 0.08);
+    --pre-bg: rgba(0, 0, 0, 0.3);
+    --window-header-bg: rgba(255, 255, 255, 0.02);
+    --mobile-menu-bg: rgba(4, 5, 15, 0.96);
+    --nav-link-border: rgba(255, 255, 255, 0.05);
+    --spinner-track: rgba(255, 255, 255, 0.05);
+    --btn-secondary-bg: rgba(255, 255, 255, 0.04);
+    --btn-secondary-hover-bg: rgba(255, 255, 255, 0.08);
+    --highlight-col-bg: rgba(59, 130, 246, 0.05);
+    --highlight-col-border: rgba(59, 130, 246, 0.14);
+    --highlight-col-th-bg: rgba(59, 130, 246, 0.09);
+    --logo-gradient-start: #ffffff;
+    --hero-accent: hsl(214, 72%, 68%);
+    --active-tab-color: #ffffff;
+    --markdown-h-color: #ffffff;
+    --markdown-link-hover: #ffffff;
+    --footer-link-hover: #ffffff;
+    --footer-bg: hsl(224, 71%, 2%);
+    --theme-toggle-bg: rgba(255, 255, 255, 0.05);
+    --theme-toggle-hover-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================================
+   SKETCH 亮色主題 (對齊專案本體 themes.css — 暖米紙感與工程方格線)
+   ========================================================================== */
+[data-theme="sketch"] {
+    --bg-base: #f0ebe0;
+    --bg-surface: #faf7f0;
+    --bg-card: #fffef8;
+    --bg-card-hover: #fff9e8;
+    --border-color: #c8c0b0;
+    --border-strong: #9e9585;
+    --border-hover: #2b6cb0;
+
+    --text-primary: #2d2b28;
+    --text-secondary: #555248;
+    --text-muted: #8a8578;
+
+    --primary: #2b6cb0;
+    --primary-hover: #245b96;
+    --primary-glow: rgba(43, 108, 176, 0.12);
+
+    --accent-emerald: #2e7d32;
+    --accent-emerald-glow: rgba(46, 125, 50, 0.1);
+    --accent-cyan: #2b6cb0;
+    --accent-amber: #c08b30;
+    --accent-rose: #c62828;
+
+    --graph-line: rgba(173, 196, 222, 0.28);
+    --graph-line-major: rgba(173, 196, 222, 0.48);
+    --navbar-bg: rgba(250, 247, 240, 0.9);
+    --shadow-card: 3px 3px 0 #c8c0b0, 4px 4px 12px rgba(45, 43, 40, 0.06);
+    --shadow-gallery: 3px 3px 0 #c8c0b0, 4px 4px 12px rgba(45, 43, 40, 0.06);
+    --shadow-compare: 2px 2px 0 #c8c0b0;
+    --shadow-changelog: 3px 3px 0 #c8c0b0;
+    --gallery-img-bg: #e8e2d4;
+    --code-bg: #e8e2d4;
+    --pre-bg: #f5f0e4;
+    --window-header-bg: #f5f0e4;
+    --mobile-menu-bg: rgba(250, 247, 240, 0.97);
+    --nav-link-border: #dcd5c5;
+    --spinner-track: #e8e2d4;
+    --btn-secondary-bg: #faf7f0;
+    --btn-secondary-hover-bg: #fff9e8;
+    --highlight-col-bg: rgba(43, 108, 176, 0.06);
+    --highlight-col-border: rgba(43, 108, 176, 0.22);
+    --highlight-col-th-bg: rgba(43, 108, 176, 0.1);
+    --logo-gradient-start: var(--text-primary);
+    --hero-accent: var(--primary);
+    --active-tab-color: #fffef8;
+    --markdown-h-color: var(--text-primary);
+    --markdown-link-hover: var(--primary-hover);
+    --footer-link-hover: var(--text-primary);
+    --footer-bg: #e8e2d4;
+    --theme-toggle-bg: #e8e2d4;
+    --theme-toggle-hover-bg: #dcd5c5;
+
+    --badge-bg: #fffef8;
+    --badge-border: #c8c0b0;
+    --badge-text: #2b6cb0;
+}
+
+/* --- 基礎樣式重設 --- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    overflow-x: hidden;
+    transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+/* 錨點捲動時避開 sticky 導覽列 */
+section[id] {
+    scroll-margin-top: 88px;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+    transition: var(--transition-fast);
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* --- 版面容器與網格 --- */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+section {
+    padding: 96px 0;
+    position: relative;
+}
+
+/* --- 導覽列 (Navbar) --- */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    background-color: var(--navbar-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition-normal);
+}
+
+.nav-container {
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-img {
+    width: 32px;
+    height: 32px;
+    filter: drop-shadow(0 0 8px var(--primary-glow));
+}
+
+.logo-text {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--logo-gradient-start) 30%, var(--text-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.nav-link {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.nav-link:hover {
+    color: var(--text-primary);
+}
+
+/* 導覽功能按鈕群組 */
+.nav-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* 導覽列圖標按鈕（語言 / 主題 / GitHub） */
+.nav-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.nav-btn-icon:hover {
+    color: var(--text-primary);
+    background-color: var(--theme-toggle-bg);
+    border-color: var(--border-color);
+}
+
+.nav-btn-icon svg,
+.nav-btn-icon i {
+    width: 16px;
+    height: 16px;
+}
+
+/* 主題切換動畫 */
+.nav-btn-theme {
+    position: relative;
+}
+
+.nav-btn-theme svg {
+    transition: transform var(--transition-normal), opacity var(--transition-fast);
+}
+
+.nav-btn-theme .icon-sun,
+.nav-btn-theme .icon-moon {
+    position: absolute;
+}
+
+/* 預設（暗色模式）：顯示太陽，隱藏月亮 */
+.nav-btn-theme .icon-sun {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+.nav-btn-theme .icon-moon {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+}
+
+/* SKETCH 亮色模式：顯示月亮，隱藏太陽 */
+[data-theme="sketch"] .nav-btn-theme .icon-sun {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.5);
+}
+
+[data-theme="sketch"] .nav-btn-theme .icon-moon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+
+/* 手機版選單切換按鈕 */
+.nav-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: var(--theme-toggle-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.nav-toggle:hover {
+    background-color: var(--theme-toggle-hover-bg);
+    border-color: var(--border-hover);
+}
+
+.nav-toggle svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* 鎖定背景滾動 */
+body.menu-open {
+    overflow: hidden;
+}
+
+/* --- 按鈕系統 --- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 28px;
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.btn-primary {
+    background-color: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background-color: var(--btn-secondary-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background-color: var(--btn-secondary-hover-bg);
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
+}
+
+/* --- 主視覺強調字（改為沉穩單色，移除漸變與底線） --- */
+.gradient-text {
+    color: var(--hero-accent);
+}
+
+/* --- Section 共用 Header --- */
+.section-header {
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto 64px auto;
+}
+
+.section-title {
+    font-family: var(--font-display);
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+}
+
+.section-subtitle {
+    font-size: 18px;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+/* ==========================================================================
+   1. Hero Section
+   ========================================================================== */
+.hero-section {
+    padding-top: 160px;
+    padding-bottom: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    overflow: hidden;
+}
+
+/* 背景裝飾光暈收斂隱藏，維持低調樸實版面 */
+.hero-glow-1,
+.hero-glow-2 {
+    display: none;
+}
+
+.badge-container {
+    margin-bottom: 24px;
+}
+
+.version-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--badge-bg, rgba(59, 130, 246, 0.08));
+    border: 1px solid var(--badge-border, rgba(59, 130, 246, 0.2));
+    padding: 5px 14px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--badge-text, var(--primary-hover));
+}
+
+.pulse-dot {
+    width: 7px;
+    height: 7px;
+    background-color: var(--primary-hover);
+    border-radius: 50%;
+}
+
+.hero-title {
+    font-family: var(--font-display);
+    font-size: 46px;
+    font-weight: 700;
+    line-height: 1.28;
+    letter-spacing: -0.8px;
+    margin-bottom: 20px;
+}
+
+.hero-subtitle {
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 740px;
+    margin: 0 auto 36px auto;
+    font-weight: 400;
+    line-height: 1.7;
+}
+
+.hero-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 64px;
+}
+
+/* 主截圖視窗 */
+.hero-screenshot-container {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    position: relative;
+    transition: border-color var(--transition-normal);
+}
+
+.hero-screenshot-container:hover {
+    border-color: var(--border-hover);
+}
+
+.window-header {
+    height: 40px;
+    background-color: var(--window-header-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    position: relative;
+}
+
+.window-dots {
+    display: flex;
+    gap: 8px;
+}
+
+.window-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.window-dot.red {
+    background-color: var(--accent-rose);
+    opacity: 0.8;
+}
+
+.window-dot.yellow {
+    background-color: var(--accent-amber);
+    opacity: 0.8;
+}
+
+.window-dot.green {
+    background-color: var(--accent-emerald);
+    opacity: 0.8;
+}
+
+.window-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.hero-screenshot {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+}
+
+/* ==========================================================================
+   2. Features Section
+   ========================================================================== */
+.features-section {
+    background-color: var(--bg-surface);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+}
+
+.feature-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 36px;
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+    width: 48px;
+    height: 48px;
+    background-color: rgba(59, 130, 246, 0.1);
+    border-radius: var(--radius-sm);
+    color: var(--primary-hover);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.feature-icon-warning {
+    width: 48px;
+    height: 48px;
+    background-color: rgba(245, 158, 11, 0.1);
+    border-radius: var(--radius-sm);
+    color: var(--accent-amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.feature-icon svg,
+.feature-icon-warning svg {
+    width: 24px;
+    height: 24px;
+}
+
+.feature-card-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.feature-card-desc {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* ==========================================================================
+   3. Gallery Section
+   ========================================================================== */
+.gallery-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 40px;
+}
+
+.gallery-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.gallery-tab:hover {
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+}
+
+.gallery-tab.active {
+    color: var(--active-tab-color);
+    background-color: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+
+.gallery-tab svg {
+    width: 16px;
+    height: 16px;
+}
+
+.gallery-display-container {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-gallery);
+    overflow: hidden;
+}
+
+.gallery-img-wrapper {
+    position: relative;
+    width: 100%;
+    /* 對齊目前截圖原生比例 2528x1458，避免 object-fit 拉伸變形 */
+    aspect-ratio: 2528 / 1458;
+    background-color: var(--gallery-img-bg);
+    overflow: hidden;
+}
+
+.gallery-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: opacity 0.3s ease-in-out;
+}
+
+/* ==========================================================================
+   4. Comparison Section
+   ========================================================================== */
+.comparison-section {
+    background-color: var(--bg-surface);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-compare);
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    min-width: 480px;
+}
+
+.comparison-table th,
+.comparison-table td {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 15px;
+}
+
+.comparison-table th {
+    background-color: var(--window-header-bg);
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.comparison-table td.feature-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.comparison-table td {
+    color: var(--text-secondary);
+}
+
+.comparison-table tr:last-child td {
+    border-bottom: none;
+}
+
+.table-note {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 16px;
+    text-align: center;
+}
+
+/* 突顯 WinCMP 欄位 */
+.comparison-table .highlight-column {
+    background-color: var(--highlight-col-bg);
+    border-left: 1px solid var(--highlight-col-border);
+    border-right: 1px solid var(--highlight-col-border);
+    color: var(--text-primary);
+}
+
+.comparison-table th.highlight-column {
+    background-color: var(--highlight-col-th-bg);
+    font-size: 18px;
+    color: var(--primary-hover);
+}
+
+/* ==========================================================================
+   5. Architecture Section
+   ========================================================================== */
+.architecture-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px;
+}
+
+.arch-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 40px;
+}
+
+.arch-num {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent-cyan);
+    margin-right: 12px;
+}
+
+.arch-card-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+}
+
+.arch-card-text {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+/* ==========================================================================
+   6. Changelog Section
+   ========================================================================== */
+.changelog-section {
+    background-color: var(--bg-base);
+}
+
+.changelog-box {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 40px;
+    box-shadow: var(--shadow-changelog);
+    min-height: 200px;
+    position: relative;
+}
+
+/* 載入動畫 */
+.changelog-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-secondary);
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--spinner-track);
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Markdown 樣式渲染 */
+.markdown-body {
+    display: none;
+    /* 載入完成後由 JS 顯示 */
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+    font-family: var(--font-display);
+    color: var(--markdown-h-color);
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.markdown-body h2 {
+    font-size: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.markdown-body h3 {
+    font-size: 17px;
+}
+
+.markdown-body p {
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+}
+
+.markdown-body ul,
+.markdown-body ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+    color: var(--text-secondary);
+}
+
+.markdown-body li {
+    margin-bottom: 6px;
+}
+
+.markdown-body code {
+    font-family: Consolas, Monaco, "Andale Mono", monospace;
+    background-color: var(--code-bg);
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--accent-cyan);
+}
+
+.markdown-body pre {
+    background-color: var(--pre-bg);
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.markdown-body pre code {
+    background-color: transparent;
+    padding: 0;
+    color: var(--text-primary);
+}
+
+.markdown-body a {
+    color: var(--primary-hover);
+    text-decoration: underline;
+}
+
+.markdown-body a:hover {
+    color: var(--markdown-link-hover);
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+.footer {
+    margin-top: auto;
+    background-color: var(--footer-bg);
+    border-top: 1px solid var(--border-color);
+    padding: 48px 0;
+}
+
+.footer-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.footer-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 650px;
+    flex: 1 1 400px;
+}
+
+.footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.footer-logo-img {
+    width: 24px;
+    height: 24px;
+}
+
+.footer-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.footer-right {
+    text-align: right;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.footer-right a {
+    color: var(--text-secondary);
+}
+
+.footer-right a:hover {
+    color: var(--footer-link-hover);
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   響應式排版 (Responsive Breakpoints)
+   ========================================================================== */
+/* 避免在桌上型電腦/平板解析度中因寬度不足導致選單重疊，限制最小寬度強制水平滾動 */
+@media (min-width: 769px) {
+
+    body,
+    .navbar {
+        min-width: 1000px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .hero-title {
+        font-size: 38px;
+    }
+}
+
+@media (max-width: 768px) {
+    section {
+        padding: 40px 0;
+    }
+
+    .hero-section {
+        padding-top: 100px;
+        padding-bottom: 48px;
+    }
+
+    .hero-title {
+        font-size: 32px;
+    }
+
+    .hero-subtitle {
+        font-size: 16px;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .btn {
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .feature-card {
+        padding: 24px;
+    }
+
+    .architecture-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .arch-card {
+        padding: 24px;
+    }
+
+    .changelog-box {
+        padding: 24px;
+        min-height: 120px;
+    }
+
+    .footer {
+        padding: 32px 0;
+    }
+
+    .footer-container {
+        flex-direction: column;
+        text-align: center;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .footer-left {
+        max-width: 100%;
+        text-align: center;
+        flex: none;
+    }
+
+    .footer-right {
+        text-align: center;
+    }
+
+    /* 行動端導覽列 */
+    .nav-toggle {
+        display: inline-flex;
+    }
+
+    .nav-links {
+        display: none;
+    }
+
+    /* 手機版下拉選單（磨砂玻璃效果） */
+    .navbar.nav-open .nav-links {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 72px;
+        left: 0;
+        width: 100%;
+        height: calc(100vh - 72px);
+        background-color: var(--mobile-menu-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 40px 24px;
+        gap: 20px;
+        align-items: center;
+        border-top: 1px solid var(--border-color);
+        overflow-y: auto;
+        animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 99;
+    }
+
+    .navbar.nav-open .nav-link {
+        font-size: 16px;
+        font-weight: 500;
+        width: 100%;
+        text-align: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--nav-link-border);
+    }
+
+    /* 讓工具容器在行動選單中橫向並排，並加上淡淡的頂部分割線 */
+    .navbar.nav-open .nav-tools {
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        width: 100%;
+        gap: 24px;
+        margin-top: 16px;
+        padding-top: 20px;
+        border-top: 1px dashed var(--border-color);
+    }
+
+    /* 恢復行動端下按鈕為精巧的圓角正方形，並加大觸控範圍至 44px (符合 Apple UX 規範) */
+    .navbar.nav-open .nav-btn-icon {
+        width: 44px;
+        height: 44px;
+        background-color: var(--theme-toggle-bg);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        margin-top: 0;
+    }
+
+    /* 比較規格表行動端優化 */
+    .comparison-table {
+        min-width: 100%;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+        padding: 14px 12px;
+        font-size: 13px;
+    }
+
+    .comparison-table th.highlight-column {
+        font-size: 15px;
+    }
+
+    .comparison-table th:first-child,
+    .comparison-table td:first-child {
+        width: 35%;
+        font-weight: 600;
+    }
+
+    .comparison-table th:last-child,
+    .comparison-table td:last-child {
+        width: 65%;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================================================
+   SKETCH 主題額外樣式 (手繪風 / 圖紙感)
+   ========================================================================== */
+
+/* 圖紙方格背景（對齊 App 本體 Sketch 的雙層工程方格線與暖米紙底） */
+[data-theme="sketch"] body {
+    background-color: var(--bg-base);
+    background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
+        repeating-linear-gradient(90deg, transparent, transparent 99px, var(--graph-line-major) 99px, var(--graph-line-major) 100px),
+        repeating-linear-gradient(0deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px),
+        repeating-linear-gradient(90deg, transparent, transparent 19px, var(--graph-line) 19px, var(--graph-line) 20px);
+    background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+}
+
+/* SKETCH 模式卡片：暖鉛筆手繪邊框感 */
+[data-theme="sketch"] .feature-card,
+[data-theme="sketch"] .arch-card,
+[data-theme="sketch"] .changelog-box {
+    border-width: 1.5px;
+    border-style: solid;
+    border-color: var(--border-color);
+    box-shadow: 3px 3px 0 var(--border-color);
+}
+
+[data-theme="sketch"] .feature-card:hover,
+[data-theme="sketch"] .arch-card:hover {
+    background-color: var(--bg-card-hover);
+    box-shadow: 4px 4px 0 var(--border-strong);
+    border-color: var(--primary);
+}
+
+/* SKETCH 模式：手繪風按鈕 */
+[data-theme="sketch"] .btn-primary {
+    border: 1.5px solid var(--primary-hover);
+    box-shadow: 2px 2px 0 var(--border-strong);
+}
+
+[data-theme="sketch"] .btn-primary:hover {
+    box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+[data-theme="sketch"] .btn-secondary {
+    border: 1.5px solid var(--border-color);
+    box-shadow: 2px 2px 0 var(--border-color);
+}
+
+[data-theme="sketch"] .btn-secondary:hover {
+    border-color: var(--primary);
+    box-shadow: 3px 3px 0 var(--border-strong);
+}
+
+/* SKETCH 模式：feature icon 調整為暖紙淡藍標註框 */
+[data-theme="sketch"] .feature-icon {
+    background-color: rgba(43, 108, 176, 0.08);
+    border: 1.5px dashed var(--border-strong);
+    color: var(--primary);
+}
+
+[data-theme="sketch"] .feature-icon-warning {
+    background-color: #fff8d6;
+    border: 1.5px dashed #c08b30;
+    color: #c08b30;
+}
+
+/* SKETCH 模式：視窗標題列加上手繪感 */
+[data-theme="sketch"] .window-header {
+    border-bottom-width: 1.5px;
+    border-bottom-style: dashed;
+}
+
+/* SKETCH 模式：比較表加上更明顯的分隔線與暖紙底 */
+[data-theme="sketch"] .comparison-table th,
+[data-theme="sketch"] .comparison-table td {
+    border-bottom: 1.5px dashed var(--border-color);
+}
+
+[data-theme="sketch"] .table-responsive {
+    background-color: var(--bg-card);
+    border-width: 1.5px;
+    box-shadow: 3px 3px 0 var(--border-color);
+}
+
+/* SKETCH 模式：版本徽章調整 */
+[data-theme="sketch"] .version-badge {
+    background-color: var(--badge-bg);
+    border: 1.5px solid var(--badge-border);
+    box-shadow: 2px 2px 0 var(--border-color);
+    color: var(--badge-text);
+}
+
+/* SKETCH 模式：arch-num 調整 */
+[data-theme="sketch"] .arch-num {
+    color: var(--primary);
+}
+
+/* SKETCH 模式：保持紙感格子背景，不加額外漸層光暈 */
+[data-theme="sketch"] .hero-glow-1,
+[data-theme="sketch"] .hero-glow-2 {
+    display: none;
+}
+
+/* SKETCH 模式：gallery tab 調整 */
+[data-theme="sketch"] .gallery-tab {
+    border-width: 1.5px;
+    border-style: solid;
+    box-shadow: 2px 2px 0 var(--border-color);
+}
+
+[data-theme="sketch"] .gallery-tab.active {
+    box-shadow: 2px 2px 0 var(--border-strong);
+}
+
+/* SKETCH 模式：圓點調整 */
+[data-theme="sketch"] .pulse-dot {
+    background-color: var(--primary);
+}
+
+/* SKETCH 模式：changelog 與 footer/navbar/section 邊框 */
+[data-theme="sketch"] .changelog-section {
+    background-color: transparent;
+}
+
+[data-theme="sketch"] .changelog-section .changelog-footer {
+    border-top-style: dashed !important;
+}
+
+[data-theme="sketch"] .navbar {
+    border-bottom-width: 1.5px;
+    border-bottom-style: dashed;
+}
+
+[data-theme="sketch"] .footer {
+    border-top-width: 1.5px;
+    border-top-style: dashed;
+}
+
+[data-theme="sketch"] .features-section,
+[data-theme="sketch"] .comparison-section {
+    border-top-style: dashed;
+    border-bottom-style: dashed;
+    border-width: 1.5px;
+}
